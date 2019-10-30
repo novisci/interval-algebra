@@ -1,10 +1,10 @@
 name:                interval-algebra
 version:             0.1.0.0
-github:              "githubuser/interval-algebra"
+#github:              "githubuser/interval-algebra"
 license:             BSD3
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2019 Author name here"
+author:              "Bradley Saul"
+maintainer:          "bsaul@novisci.com"
+copyright:           "2019 NoviSci"
 
 extra-source-files:
 - README.md
@@ -22,23 +22,13 @@ description:         Please see the README on GitHub at <https://github.com/gith
 dependencies:
 - base >= 4.7 && < 5
 
+
 library:
   source-dirs: src
 
-executables:
-  interval-algebra-exe:
-    main:                Main.hs
-    source-dirs:         app
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - interval-algebra
-
 tests:
   interval-algebra-test:
-    main:                Spec.hs
+    main:                IntervalAlgebraSpec.hs
     source-dirs:         test
     ghc-options:
     - -threaded
@@ -46,3 +36,5 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - interval-algebra
+    - hspec
+    - QuickCheck
