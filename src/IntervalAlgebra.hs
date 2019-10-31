@@ -1,47 +1,44 @@
 module IntervalAlgebra(
-  Period,
-  PredicateOf,
-  period,
-  point,
-  isPoint,
-  toPeriod,
-  begin,
-  end,
-  beginPoint,
-  beginPoints,
-  endPoint,
-  endPoints,
-  beginEndPoint,
-  expandl,
-  expandlPeriods,
-  expandr,
-  expandrPeriods,
-  extentPeriod,
-  extentPeriods,
-  collapsePeriods,
-  periodGaps,
-  meets,
-  metBy,
-  before,
-  after,
-  overlaps,
-  overlappedBy,
-  mverlaps,
-  mverlappedBy,
-  starts,
-  startedBy,
-  finishes,
-  finishedBy,
-  during,
-  contains,
-  disjoint,
-  duration,
-  durations,
-  pairPeriods,
-  (<<>>),
-  (<++>),
-  comparePeriodPairs,
-  comparePeriodPairsList
+    -- Types
+      Period
+    , PredicateOf
+
+    -- Constructors and accessors
+    , period
+    , point
+    , begin
+    , end
+
+    -- IA relations
+    , meets
+    , metBy
+    , before
+    , after
+    , overlaps
+    , overlappedBy
+    , starts
+    , startedBy
+    , finishes
+    , finishedBy
+    , during
+    , contains
+
+    -- Utilities
+    , isPoint
+    , toPeriod
+    , beginPoint
+    , beginPoints
+    , endPoint
+    , endPoints
+    , beginEndPoint
+    , expandl
+    , expandlPeriods
+    , expandr
+    , expandrPeriods
+    , extentPeriod
+    , disjoint
+    , duration
+    , durations
 ) where
 
 {-
@@ -55,8 +52,9 @@ _TODO list_
 
 type PredicateOf a = (a -> a -> Bool) 
 
--- |The Periodic class specifies the functions and operators for interval
--- algebra.
+{- | The Periodic class specifies the functions and relational operators 
+according to Allen's interval algebra. -}
+
 class Periodic a where
     -- | Does x meet y? Does y meet x?
     meets, metBy             :: PredicateOf a
@@ -66,9 +64,6 @@ class Periodic a where
     
     -- | Does x overlap y? Is x overlapped by y?
     overlaps, overlappedBy   :: PredicateOf a
-    
-    -- | Does x meet or overlap y? Is x met or overlapped by y?
-    mverlaps, mverlappedBy   :: PredicateOf a
     
     -- | Does x begin y? Is x begined by y?
     starts, startedBy        :: PredicateOf a
@@ -89,7 +84,6 @@ class Periodic a where
     metBy         = flip meets
     after         = flip before
     overlappedBy  = flip overlaps
-    mverlappedBy  = flip mverlaps
     startedBy     = flip starts
     finishedBy    = flip finishes
     contains      = flip during
@@ -107,28 +101,24 @@ data Period =
 
 instance Periodic Period where
   {- These functions assume x <= y. TODO: formalize this notion -}
-  meets    x y  = (x /= y) && (begin y) == end x
+  meets    x y  = (x /= y) && begin y == end x
     -- if statement handles case that points can't meet
     -- TODO: handle this more elegantly in the IA type system
   before   x y  = end x < begin y
-  starts   x y  = (x <= y) && ((begin x) == (begin y))
-  finishes x y  = if y <= x then (end x)   == (end y)   else False
-  during   x y  = (begin x) >= (begin y) && (end x) <= (end y)
-  overlaps x y  = 
-    if x <= y 
-      then end x < end y && end x > begin y 
-    else False
-  mverlaps x y  = meets x y || overlaps x y
-  duration x    = (end x) - (begin x)
+  starts   x y  = (x <= y) && (begin x) == begin y
+  finishes x y  = if y <= x then (end x) == end y else False
+  during   x y  = (begin x) >= begin y && (end x) <= end y
+  overlaps x y  = x <= y  && end x < end y && end x > begin y 
+  duration x    = (end x) - begin x
 
 instance Ord Period where
   (<=) x y
-    | (begin x) <  (begin y) = True
-    | (begin x) == (begin y) = end x <= end y
+    | begin x <  begin y = True
+    | begin x == begin y = end x <= end y
     | otherwise = False
   (<)  x y 
-    | (begin x) <  (begin y) = True
-    | (begin x) == (begin y) = end x < end y
+    | begin x <  begin y = True
+    | begin x == begin y = end x < end y
     | otherwise = False
     --  || (starts x y && (end x < end y))
   (>=) x y = not (x < y)
@@ -136,9 +126,6 @@ instance Ord Period where
 
 instance Show Period where
    show x = "(" ++ show (begin x) ++ ", " ++ show (end x) ++ ")"
-
-type PeriodPairs = [(Period, Period)]
-type PeriodComparator a = (Period -> Period -> a)
 
 {-
  Functions for basic manipulations of a single period or element-wise in a 
@@ -208,102 +195,12 @@ beginEndPoint x
     | isPoint x = [x]
     | otherwise = [beginPoint x, endPoint x]
 
-{-
- Functions for comparing and combining multiple Periods
--}
-
 -- | From a pair of periods form a new period from the min of the begin points
 --   to the max of the end points.
 extentPeriod :: Period -> Period -> Period
 extentPeriod p1 p2 = period a b 
     where a = min (begin p1) (begin p2)
           b = max (end p1)   (end p2)
-
--- | Form the extentPeriod for each element in a PeriodPairs.
-extentPeriods :: PeriodPairs -> [Period]
-extentPeriods = map (uncurry extentPeriod)
-
--- | Link two lists of Periods by creating a linking period from the begin of 
---   the last period in the first list and the end of the first period in the 
---   second list
-(<<>>) :: [Period] -> [Period] -> [Period]
-(<<>>) xl yl
-   | null xl   = yl
-   | null yl   = xl
-   | otherwise = init xl ++ [period (begin x) (end y)] ++ tailList yl
-   where x = last xl
-         y = head yl
-
--- | Collapse two lists of Periods such that if the last period of the first 
---   list and the first period of the second overlap they are linked by `<<>>`. 
---   Otherwise, the lists are concatenated.
-(<++>) :: [Period] -> [Period] -> [Period]
-(<++>) xl yl
-   | null xl         = yl
-   | null yl         = xl
-   | x `mverlaps` y  = xl <<>> yl
-   | x `before` y    = xl ++ yl
-   where x = last xl
-         y = head yl
-
--- | TODO
---   Note this behavior on overlapping periods:
---   s3 = map toPeriod [(1, 3), (1, 7), (13, 13), (13, 16), (20, 20)]
---   *Hasklepias> periodGaps s3
---   [(1, 1),(7, 16),(20, 20)]
---
---   But for non overlapping periods:
---   *Hasklepias> periodGaps (collapsePeriods s3)
---   [(1, 1),(7, 13),(16, 20)]
-(<-->) :: [Period] -> [Period] -> [Period]
-(<-->) xl yl
-   | null xl         = beginEndPoint y
-   | null yl         = beginEndPoint x
-   | x `mverlaps` y  = init xl ++ 
-                       init (beginEndPoint x) ++ tail (beginEndPoint y) ++
-                       tailList yl
-   | x `before` y    = init xl ++ 
-                       (beginEndPoint x) <<>> (beginEndPoint y) ++ 
-                       tailList yl
-   where x = last xl
-         y = head yl
-
--- | Traverses over a list of periods collapsing the periods by `<++>` to create
---   a list of non-overlapping periods.
-collapsePeriods :: [Period] -> [Period]
-collapsePeriods x = foldr ((<++>) . (\ z -> [z])) [] x
-
--- | TODO
-periodGaps :: [Period] -> [Period]
-periodGaps = foldr ((<-->) . (\ z -> [z])) []
-
--- | Builds a list of lists of pairs of each successive head Period with the 
---   remaining tail Periods after applying headf to the head Period and 
---   tailf to the tail Periods. Returns a list of PeriodPairs of length n - 1, 
---   where n is the length of the input list. 
-pairPeriods :: (Period -> Period) -> ([Period] -> [Period]) -> [Period] -> [PeriodPairs]
-pairPeriods headf tailf (x:xs) 
-  | null xs   = []
-  | otherwise = [(s, e) | s <- [headf x], e <- tailf xs] :
-    pairPeriods headf tailf xs
-
-{-
-  Functions for deriving new information from a Period, pairs for Periods, or
-  lists of Periods
--}
-
--- | 
-comparePeriodPairs :: PeriodComparator a -> PeriodPairs -> [a]
-comparePeriodPairs f = map (uncurry f)
-
--- | 
--- An example:
--- let zz = pairPeriods id id s3
--- let ff x = duration.extentPeriod x
--- comparePeriodPairsList ff zz
--- [[6,12,15,19],[12,15,19],[3,7],[7]]
-comparePeriodPairsList :: PeriodComparator a -> [PeriodPairs] -> [[a]]
-comparePeriodPairsList f = map (comparePeriodPairs f)
 
 -- | Returns True if a Period has length 0. False else.
 isPoint :: Period -> Bool
@@ -312,12 +209,3 @@ isPoint x = duration x == 0
 -- | Returns a list of durations from a list of periods.
 durations :: [Period] -> [Int]
 durations = map duration
-
-{-
- Utility functions
--}
-
--- | Returns an empty list in the case of an empty list.
-tailList :: [a] -> [a]
-tailList (_:xs)   = xs
-tailList []       = []

@@ -2,6 +2,7 @@
 import Test.Hspec
 import Test.QuickCheck
 import IntervalAlgebra as IA
+import IntervalAlgebra.IntervalCombiner
 import Control.Monad
 
 xor :: Bool -> Bool -> Bool
