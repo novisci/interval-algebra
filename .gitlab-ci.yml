@@ -1,0 +1,13 @@
+image: haskell:8
+
+cache:
+  paths:
+    - .stack
+    - .stack-work
+    - target
+
+test:
+  stage: test
+  script:
+    - ghc --version
+    - stack --system-ghc test
