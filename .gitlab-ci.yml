@@ -1,4 +1,4 @@
-image: haskell:8
+image: haskell:8.6
 
 cache:
   paths:
