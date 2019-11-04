@@ -1,211 +1,217 @@
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+
+{-|
+Module      : Interval Algebra
+Description : Implementation of Allen's interval algebra
+Copyright   : (c) NoviSci, Inc 2019
+License     : BSD3
+Maintainer  : bsaul@novisci.com
+Stability   : experimental
+
+This module specifies the functions and relational operators according to the 
+interval-based temporal logic axiomatized in [Allen and Hayes (1987)](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.620.5144&rep=rep1&type=pdf). 
+Specifically, the module currently implements section I, "An Axiomatization of 
+Interval Time." That is, the module does not include a concept of points or 
+"zero duration time" as expressed in the paper, though this module could be 
+extended to do so. 
+-}
+
 module IntervalAlgebra(
-    -- Types
-      Period
+    -- * Classes
+       Periodable(..)
+    ,  IntervalAlgebraic(..)
+    ,  Expandable(..)
+     
+    -- * Types
+    , IntervalRelation
+    , Period
     , PredicateOf
-
-    -- Constructors and accessors
-    , period
-    , point
-    , begin
-    , end
-
-    -- IA relations
-    , meets
-    , metBy
-    , before
-    , after
-    , overlaps
-    , overlappedBy
-    , starts
-    , startedBy
-    , finishes
-    , finishedBy
-    , during
-    , contains
-
-    -- Utilities
-    , isPoint
-    , toPeriod
-    , beginPoint
-    , beginPoints
-    , endPoint
-    , endPoints
-    , beginEndPoint
-    , expandl
-    , expandlPeriods
-    , expandr
-    , expandrPeriods
-    , extentPeriod
-    , disjoint
-    , duration
-    , durations
 ) where
 
-{-
-_TODO list_
-* look at Data.Sequence (or other options) for listlike [Period] type 
-   * Consider performance implications for various types:
-     https://github.com/haskell-perf/sequences
-   * e.g. Seq are very fast for appending but slower for filter operations
-* make Period type use newtype rather than data (see Toying.hs)
+{- | 
+A 'Period a' is a simply a pair of the same type. To be useful as a @Period@ 
+of time, it will also be an instance of 'Periodable'.
 -}
 
-type PredicateOf a = (a -> a -> Bool) 
+newtype Period a = Period (a, a) deriving (Eq, Read)
 
-{- | The Periodic class specifies the functions and relational operators 
-according to Allen's interval algebra. -}
+class (Eq a, Ord a) => Periodable a where
 
-class Periodic a where
+    {-
+    The 'Periodable' typeclass specifies the functions defining periods of time. 
+    That is, instances of this class can represent /periods of time/. Such
+    entities have notions like a beginning, an end, and a duration.
+    -}
+
+    -- | Create a new @Period a@ from an @a@.
+    period :: a -> a -> Period a
+    
+    -- | Evaluate the 'beginning', 'end', or 'duration' of a Periodable object.
+    begin, end, duration :: Period a -> a
+    begin (Period x) = fst x
+    end   (Period x) = snd x
+    
+    -- | Converts a pairs of @a@ to a @Period a@.
+    toPeriod :: (a, a) -> Period a
+    toPeriod = uncurry period
+
+
+class (Periodable a, Num b) => Expandable a b where
+
+    {-
+    The 'Expandable' typeclass specifies how a 'Periodable a' can be expanded. 
+    -}
+
+    -- | Shifts an @a@ "to the right". Most often, the @b@ will be the same
+    -- type as the @a@. But for example, if @a@ is 'Day' then @b@ might be 'Int'.
+    add :: b -> a -> a
+
+    -- | Expands a 'Period a' to the "left" by @l@ and to the "right" by @r@. 
+    expand :: b -> b -> Period a -> Period a
+    expand l r p = period s e
+      where s = min (add (negate l) $ begin p) (begin p)
+            e = max (add r $ end p)   (end p)
+
+    -- | Expands a period to left by i.
+    expandl :: b -> Period a -> Period a
+    expandl i = expand i 0
+
+    -- | Expands a period to right by i.
+    expandr :: b -> Period a -> Period a
+    expandr = expand 0
+
+{-
+The 'IntervalRelation' type enumerates the thirteen possible ways that two 
+intervals can relate according to the interval algebra.
+-}
+
+data IntervalRelation = 
+      Equals
+    | Meets
+    | MetBy
+    | Before
+    | After
+    | Overlaps
+    | OverlappedBy
+    | Starts
+    | StartedBy
+    | Finishes
+    | FinishedBy
+    | During
+    | Contains
+    deriving (Show, Read)
+
+class (Periodable a) => IntervalAlgebraic a where
+
+    {-
+    ** Interval Algebra relations
+
+    The 'IntervalAlgebraic' typeclass specifies the functions and relational 
+    operators for interval-based temporal logic. The typeclass defines the 
+    relational operators for intervals, plus other useful utilities such as 
+    'disjoint'.
+    -}
+
+    -- | Compare two intervals to determine their relation.
+    intervalCompare :: Period a -> Period a -> IntervalRelation
+    intervalCompare x y
+        | x `before` y       = Before
+        | x `after`  y       = After
+        | x `meets`  y       = Meets
+        | x `metBy`  y       = MetBy
+        | x `overlaps` y     = Overlaps
+        | x `overlappedBy` y = OverlappedBy
+        | x `starts` y       = Starts
+        | x `startedBy` y    = StartedBy
+        | x `finishes` y     = Finishes
+        | x `finishedBy` y   = FinishedBy
+        | x `during` y       = During
+        | x `contains` y     = Contains
+        | otherwise          = Equals
+
+    -- | Does x equal y?
+    equals                 :: PredicateOf (Period a)
+    equals   x y  = x == y
+
     -- | Does x meet y? Does y meet x?
-    meets, metBy             :: PredicateOf a
+    meets, metBy           :: PredicateOf (Period a)
+    meets    x y  = (x /= y) && begin y == end x
+    metBy         = flip meets
 
     -- | Is x before y? Is x after y?
-    before, after            :: PredicateOf a
+    before, after          :: PredicateOf (Period a)
+    before   x y  = end x < begin y
+    after         = flip before
     
     -- | Does x overlap y? Is x overlapped by y?
-    overlaps, overlappedBy   :: PredicateOf a
-    
-    -- | Does x begin y? Is x begined by y?
-    starts, startedBy        :: PredicateOf a
-    
-    -- | Does x finishes y? Is x finished by y?
-    finishes, finishedBy     :: PredicateOf a
-    
-    -- | Is x during y? Does x contain y?
-    during, contains         :: PredicateOf a
-    
-    -- | Are x and y disjoint?
-    disjoint                 :: PredicateOf a
-    
-    -- | What is the duration of x?
-    duration                 :: a -> Int
-
-    -- default function definitions
-    metBy         = flip meets
-    after         = flip before
+    overlaps, overlappedBy :: PredicateOf (Period a)
+    overlaps x y  = x <= y  && end x < end y && end x > begin y 
     overlappedBy  = flip overlaps
+
+    -- | Does x start y? Is x started by y?
+    starts, startedBy      :: PredicateOf (Period a)
+    starts   x y  = (x <= y) && begin x == begin y
     startedBy     = flip starts
+
+    -- | Does x finish y? Is x finished by y?
+    finishes, finishedBy   :: PredicateOf (Period a)
+    finishes x y  = y <= x && end x == end y
     finishedBy    = flip finishes
+
+    -- | Is x during y? Does x contain y?
+    during, contains       :: PredicateOf (Period a)
+    during   x y  = begin x >= begin y && end x <= end y
     contains      = flip during
+
+    -- ** Interval Algebra utilities
+
+    -- | Are x and y disjoint?
+    disjoint               :: PredicateOf (Period a)
     disjoint x y  = before x y || after x y
 
--- |For now, a Period is defined in terms of Int
--- TODO: Generalize the notion of a Period to derive from arbitrary Ord types
--- see Toying.hs
+{- TODO
+class (Periodable a) => PeriodComparable a where
+    -- | From a pair of periods form a new period from the min of the begins
+    --   to the max of the ends.
+    extentPeriod :: Period a -> Period a -> Period a
 
-data Period = 
-    Point    { begin :: Int, end :: Int}
-  | Moment   { begin :: Int, end :: Int}
-  | Interval { begin :: Int, end :: Int}
-  deriving (Eq, Read)
+    -- | Returns a `t` of durations from a `t` of periods.
+    durations :: (Functor t) => t (Period a) -> t a
 
-instance Periodic Period where
-  {- These functions assume x <= y. TODO: formalize this notion -}
-  meets    x y  = (x /= y) && begin y == end x
-    -- if statement handles case that points can't meet
-    -- TODO: handle this more elegantly in the IA type system
-  before   x y  = end x < begin y
-  starts   x y  = (x <= y) && (begin x) == begin y
-  finishes x y  = if y <= x then (end x) == end y else False
-  during   x y  = (begin x) >= begin y && (end x) <= end y
-  overlaps x y  = x <= y  && end x < end y && end x > begin y 
-  duration x    = (end x) - begin x
-
-instance Ord Period where
-  (<=) x y
-    | begin x <  begin y = True
-    | begin x == begin y = end x <= end y
-    | otherwise = False
-  (<)  x y 
-    | begin x <  begin y = True
-    | begin x == begin y = end x < end y
-    | otherwise = False
-    --  || (starts x y && (end x < end y))
-  (>=) x y = not (x < y)
-  (>)  x y = not (x <= y)
-
-instance Show Period where
-   show x = "(" ++ show (begin x) ++ ", " ++ show (end x) ++ ")"
-
-{-
- Functions for basic manipulations of a single period or element-wise in a 
- list of Periods
+    durations = fmap duration
+    extentPeriod p1 p2 = period a b 
+      where a = min (begin p1) (begin p2)
+            b = max (end p1)   (end p2) 
 -}
 
--- |Constructor for Period data from Int
-period :: Int -> Int -> Period
-period a b
-  | b < a        = error "b < a" -- TODO: handle this in a more Haskelly way
-  | b == a       = Point a a
-  | b == (a + 1) = Moment a (a + 1)
-  | otherwise    = Interval a b
+-- | Defines a comparator predicate of two objects of type a
+type PredicateOf a = (a -> a -> Bool) 
 
--- |Creates point from a single Int
-point :: Int -> Period
-point a = Point a a
+instance (Periodable a) => Ord (Period a) where
+    (<=) x y
+      | begin x <  begin y = True
+      | begin x == begin y = end x <= end y
+      | otherwise = False
+    (<)  x y 
+      | begin x <  begin y = True
+      | begin x == begin y = end x < end y
+      | otherwise = False
 
--- |Converts a pairs of Int to a Period
-toPeriod :: (Int, Int) -> Period
-toPeriod = uncurry period
+instance Periodable Int where
+    duration x = end x - begin x
+    period a b
+    -- TODO: handle this in a more Haskelly way
+      | b < (a + 1) = error "b < (a + 1)" 
+      | otherwise   = Period (a, b)
 
--- | Expands a period to left by l and to the right by r
--- TODO: handle cases that l or r are negative
-expand :: Int -> Int -> Period -> Period
-expand l r p = period s e
-  where s = min (begin p - l) (begin p)
-        e = max (end p + r)   (end p)
+instance Expandable Int Int where
+    add = (+)
+
+instance IntervalAlgebraic Int
+
+instance Show (Period Int) where
+   show x = "(" ++ show (begin x) ++ ", " ++ show (end x) ++ ")"
 
 
--- | Expands a period to left by i
-expandl :: Int -> Period -> Period
-expandl i = expand i 0
 
--- | Expands each period in a list to the left by i
-expandlPeriods  :: Int -> [Period] -> [Period]
-expandlPeriods i = map (expandl i)
 
--- | Expands a period to right by i
-expandr :: Int -> Period -> Period
-expandr = expand 0
-
--- | Expands each period in a list to the right by i
-expandrPeriods  :: Int -> [Period] -> [Period]
-expandrPeriods i = map (expandr i)
-
--- | Contract a period to a Point at its begin
-beginPoint :: Period -> Period
-beginPoint x = point (begin x)
-
--- | Contract each period in the list to its begin point
-beginPoints :: [Period] -> [Period]
-beginPoints = map beginPoint
-
--- | Contract a period to a Point at its end
-endPoint :: Period -> Period
-endPoint x = point (end x)
-
--- | Contract each period in the list to its end point
-endPoints :: [Period] -> [Period]
-endPoints = map endPoint
-
--- | Form a list of two points from the begin and end of a period. If x is 
---   already a point, returns [x].
-beginEndPoint :: Period -> [Period]
-beginEndPoint x
-    | isPoint x = [x]
-    | otherwise = [beginPoint x, endPoint x]
-
--- | From a pair of periods form a new period from the min of the begin points
---   to the max of the end points.
-extentPeriod :: Period -> Period -> Period
-extentPeriod p1 p2 = period a b 
-    where a = min (begin p1) (begin p2)
-          b = max (end p1)   (end p2)
-
--- | Returns True if a Period has length 0. False else.
-isPoint :: Period -> Bool
-isPoint x = duration x == 0 
-
--- | Returns a list of durations from a list of periods.
-durations :: [Period] -> [Int]
-durations = map duration
