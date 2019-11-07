@@ -15,8 +15,8 @@ import IntervalAlgebra
 {- | 
 TODO: describe this class.
 
-Also, generalize the class to handle generalized "filterable" containers (not
-just lists)
+TODO: generalize the class to handle generalized "filterable" containers (not
+just lists).
 -}
 
 class IntervalAlgebraic a => IntervalFilter a where
