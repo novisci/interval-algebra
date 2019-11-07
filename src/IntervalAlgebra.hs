@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances, DataKinds, FunctionalDependencies #-}
 
 {-|
 Module      : Interval Algebra
@@ -10,84 +10,44 @@ Stability   : experimental
 
 This module specifies the functions and relational operators according to the 
 interval-based temporal logic axiomatized in [Allen and Hayes (1987)](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.620.5144&rep=rep1&type=pdf). 
-Specifically, the module currently implements section I, "An Axiomatization of 
-Interval Time." That is, the module does not include a concept of points or 
-"zero duration time" as expressed in the paper, though this module could be 
-extended to do so. 
 -}
 
 module IntervalAlgebra(
     -- * Classes
-       Periodable(..)
-    ,  IntervalAlgebraic(..)
+       Interval(..)
     ,  Expandable(..)
+    ,  IntervalAlgebraic(..)
      
     -- * Types
-    , IntervalRelation
+    , Intrvl
     , Period
-    , PredicateOf
+    , IntervalRelation
+    , ComparativePredicateOf
 ) where
+
+
+
+newtype Pnt a    = Pnt a deriving (Eq, Show)
+newtype Intrvl a = Intrvl (a, a) deriving (Eq)
 
 {- | 
 A 'Period a' is a simply a pair of the same type. To be useful as a @Period@ 
 of time, it will also be an instance of 'Periodable'.
 -}
 
-newtype Period a = Period (a, a) deriving (Eq, Read)
-
-class (Eq a, Ord a) => Periodable a where
-
-    {-
-    The 'Periodable' typeclass specifies the functions defining periods of time. 
-    That is, instances of this class can represent /periods of time/. Such
-    entities have notions like a beginning, an end, and a duration.
-    -}
-
-    -- | Create a new @Period a@ from an @a@.
-    period :: a -> a -> Period a
-    
-    -- | Evaluate the 'beginning', 'end', or 'duration' of a Periodable object.
-    begin, end, duration :: Period a -> a
-    begin (Period x) = fst x
-    end   (Period x) = snd x
-    
-    -- | Converts a pairs of @a@ to a @Period a@.
-    toPeriod :: (a, a) -> Period a
-    toPeriod = uncurry period
-
-
-class (Periodable a, Num b) => Expandable a b where
-
-    {-
-    The 'Expandable' typeclass specifies how a 'Periodable a' can be expanded. 
-    -}
-
-    -- | Shifts an @a@ "to the right". Most often, the @b@ will be the same
-    -- type as the @a@. But for example, if @a@ is 'Day' then @b@ might be 'Int'.
-    add :: b -> a -> a
-
-    -- | Expands a 'Period a' to the "left" by @l@ and to the "right" by @r@. 
-    expand :: b -> b -> Period a -> Period a
-    expand l r p = period s e
-      where s = min (add (negate l) $ begin p) (begin p)
-            e = max (add r $ end p)   (end p)
-
-    -- | Expands a period to left by i.
-    expandl :: b -> Period a -> Period a
-    expandl i = expand i 0
-
-    -- | Expands a period to right by i.
-    expandr :: b -> Period a -> Period a
-    expandr = expand 0
+data Period a =
+     Point a
+   | Moment (Intrvl a)
+   | TrueInterval (Intrvl a)
+   deriving (Eq)
 
 {-
 The 'IntervalRelation' type enumerates the thirteen possible ways that two 
-intervals can relate according to the interval algebra.
+'Interval a' objects can relate according to the interval algebra.
 -}
 
 data IntervalRelation = 
-      Equals
-    | Meets
+      Meets
     | MetBy
     | Before
     | After
@@ -99,21 +59,112 @@ data IntervalRelation =
     | FinishedBy
     | During
     | Contains
+    | Equals
     deriving (Show, Read)
 
-class (Periodable a) => IntervalAlgebraic a where
+{-
+The 'Interval' typeclass specifies what makes a valid interval.
+how a 'Intrvl a' is constructed. It also includes functions for getting 
+the 'begin' and 'end' of an 'Intrvl a'.
+-}
 
-    {-
-    ** Interval Algebra relations
+class (Ord a, Enum a, Show a) => Interval a where 
 
-    The 'IntervalAlgebraic' typeclass specifies the functions and relational 
-    operators for interval-based temporal logic. The typeclass defines the 
-    relational operators for intervals, plus other useful utilities such as 
-    'disjoint'.
-    -}
+    -- | Defines what happens when the inputs to forming an interval are invalid.
+    invalidInterval :: a -> a -> String
+    invalidInterval a b = show a ++ " <= " ++ show b -- TODO: there's a better way
+
+    -- | This functions _always_ creates an @Interval a@.
+    validInterval :: a -> a -> Intrvl a
+    validInterval a b = Intrvl (min a b, max a b) 
+
+    -- | Create a new @Interval a@ from an @a@.
+    interval :: a -> a -> Either String (Intrvl a)
+    interval a b 
+      | b <= a    = Left  $ invalidInterval a b
+      | otherwise = Right $ validInterval a b
+
+    -- | Converts a pairs of @a@ to an @Interval a@.
+    toInterval :: (a, a) -> Either String (Intrvl a)
+    toInterval = uncurry interval
+
+    -- | Evaluate the 'begin' or 'end' of an 'Interval a' object.
+    begin, end :: Intrvl a -> a
+    begin (Intrvl x) = fst x
+    end   (Intrvl x) = snd x
+
+-- | Imposes a total ordering on 'Intrvl a' based on first ordering the 'begin's
+--   then the 'end's.
+instance (Interval a) => Ord (Intrvl a) where
+    (<=) x y
+      | begin x <  begin y = True
+      | begin x == begin y = end x <= end y
+      | otherwise = False
+    (<)  x y 
+      | begin x <  begin y = True
+      | begin x == begin y = end x < end y
+      | otherwise = False
+
+instance (Interval a, Show a) => Show (Intrvl a) where
+   show x = "(" ++ show (begin x) ++ ", " ++ show (end x) ++ ")"
+
+{-
+The 'Expandable' typeclass specifies how a type that is an instance of 
+'Interval a' can be expanded, shifted, or flipped. 
+-}
+
+class (Interval a, Num b) => Expandable a b | a -> b where
+
+    -- | Forms an 'Intrvl a' by 'add'ing 'dur' to 'bgn'. WARNING:
+    --   This uses 'validInterval', thus do not provide a _negative_ number to 
+    --   'dur', else you could end up with an invalid interval.
+    interval' :: a -> b -> Intrvl a
+    interval' bgn dur = validInterval bgn (add dur bgn) 
+
+    -- | Determine the duration of an 'Interval a'.
+    duration :: Intrvl a -> b
+
+    -- | Shifts an @a@. Most often, the @b@ will be the same
+    -- type as the @a@. But for example, if @a@ is 'Day' then @b@ would be 'Int'.
+    add :: b -> a -> a
+
+    -- | Expands an 'Intrvl a' to the "left" by @l@ and to the "right" by @r@. 
+    expand :: b -> b -> Intrvl a -> Intrvl a
+    expand l r p = validInterval s e
+      where s = min (add (negate l) $ begin p) (begin p)
+            e = max (add r $ end p)   (end p)
+
+    -- | Expands an 'Intrvl a' to left by i.
+    expandl :: b -> Intrvl a -> Intrvl a
+    expandl i = expand i 0
+
+    -- | Expands an 'Intrvl a' to right by i.
+    expandr :: b -> Intrvl a -> Intrvl a
+    expandr = expand 0
+
+    -- | Shifts an 'Interval a' to the right by i.
+    -- TODO: because of the way expand is defined these won't work.
+    --shiftr :: b -> Intrvl a -> Intrvl a
+    --shiftr i = expand (negate i) i
+
+    -- | Shifts an 'Intrvl a' to the left by i.
+    --shiftl :: b -> Intrvl a -> Intrvl a
+    --shiftl i = expand i (negate i)
+
+
+{-
+** Interval Algebra relations
+
+The 'IntervalAlgebraic' typeclass specifies the functions and relational 
+operators for interval-based temporal logic. The typeclass defines the 
+relational operators for intervals, plus other useful utilities such as 
+'disjoint'.
+-}
+
+class (Interval a) => IntervalAlgebraic a where
 
     -- | Compare two intervals to determine their relation.
-    intervalCompare :: Period a -> Period a -> IntervalRelation
+    intervalCompare :: Intrvl a -> Intrvl a -> IntervalRelation
     intervalCompare x y
         | x `before` y       = Before
         | x `after`  y       = After
@@ -130,87 +181,83 @@ class (Periodable a) => IntervalAlgebraic a where
         | otherwise          = Equals
 
     -- | Does x equal y?
-    equals                 :: PredicateOf (Period a)
+    equals                 :: ComparativePredicateOf (Intrvl a)
     equals   x y  = x == y
 
     -- | Does x meet y? Does y meet x?
-    meets, metBy           :: PredicateOf (Period a)
-    meets    x y  = (x /= y) && begin y == end x
+    meets, metBy           :: ComparativePredicateOf (Intrvl a)
+    meets    x y  = end x == begin y
     metBy         = flip meets
 
     -- | Is x before y? Is x after y?
-    before, after          :: PredicateOf (Period a)
+    before, after          :: ComparativePredicateOf (Intrvl a)
     before   x y  = end x < begin y
     after         = flip before
     
     -- | Does x overlap y? Is x overlapped by y?
-    overlaps, overlappedBy :: PredicateOf (Period a)
-    overlaps x y  = x <= y  && end x < end y && end x > begin y 
+    overlaps, overlappedBy :: ComparativePredicateOf (Intrvl a)
+    overlaps x y  = begin x < begin y && end x < end y && end x > begin y 
     overlappedBy  = flip overlaps
 
     -- | Does x start y? Is x started by y?
-    starts, startedBy      :: PredicateOf (Period a)
-    starts   x y  = (x <= y) && begin x == begin y
+    starts, startedBy      :: ComparativePredicateOf (Intrvl a)
+    starts   x y  = begin x == begin y && (end x < end y)
     startedBy     = flip starts
 
     -- | Does x finish y? Is x finished by y?
-    finishes, finishedBy   :: PredicateOf (Period a)
-    finishes x y  = y <= x && end x == end y
+    finishes, finishedBy   :: ComparativePredicateOf (Intrvl a)
+    finishes x y  = begin x > begin y && end x == end y
     finishedBy    = flip finishes
 
     -- | Is x during y? Does x contain y?
-    during, contains       :: PredicateOf (Period a)
-    during   x y  = begin x >= begin y && end x <= end y
+    during, contains       :: ComparativePredicateOf (Intrvl a)
+    during   x y  = begin x > begin y && end x < end y
     contains      = flip during
 
     -- ** Interval Algebra utilities
 
+    -- | Compare interval relations with _or_.
+    composeRelations       :: [ComparativePredicateOf (Intrvl a)] ->
+                               ComparativePredicateOf (Intrvl a)
+    composeRelations fs x y = any (\ f -> f x y) fs
+
     -- | Are x and y disjoint?
-    disjoint               :: PredicateOf (Period a)
-    disjoint x y  = before x y || after x y
+    disjoint               :: ComparativePredicateOf (Intrvl a)
+    disjoint = composeRelations [before, after]
 
-{- TODO
-class (Periodable a) => PeriodComparable a where
-    -- | From a pair of periods form a new period from the min of the begins
-    --   to the max of the ends.
-    extentPeriod :: Period a -> Period a -> Period a
+    -- | Is x contained in y in any sense?
+    in'                    :: ComparativePredicateOf (Intrvl a)
+    in' = composeRelations [during, starts, finishes, equals]
 
-    -- | Returns a `t` of durations from a `t` of periods.
-    durations :: (Functor t) => t (Period a) -> t a
-
-    durations = fmap duration
-    extentPeriod p1 p2 = period a b 
-      where a = min (begin p1) (begin p2)
-            b = max (end p1)   (end p2) 
--}
+    -- | Ordered Union of meeting intervals.
+    (.+.) :: Intrvl a -> Intrvl a -> Maybe (Intrvl a)
+    (.+.) x y
+        | x `meets` y = Just $ validInterval (begin x) (end y)
+        | otherwise   = Nothing
 
 -- | Defines a comparator predicate of two objects of type a
-type PredicateOf a = (a -> a -> Bool) 
+type ComparativePredicateOf a = (a -> a -> Bool) 
 
-instance (Periodable a) => Ord (Period a) where
-    (<=) x y
-      | begin x <  begin y = True
-      | begin x == begin y = end x <= end y
-      | otherwise = False
-    (<)  x y 
-      | begin x <  begin y = True
-      | begin x == begin y = end x < end y
-      | otherwise = False
 
-instance Periodable Int where
-    duration x = end x - begin x
-    period a b
-    -- TODO: handle this in a more Haskelly way
-      | b < (a + 1) = error "b < (a + 1)" 
-      | otherwise   = Period (a, b)
+{-
+TODO: Expand to points, moments, and intervals
+-}
+
+instance Ord a => Ord (Pnt a) where
+    (<=) (Pnt x) (Pnt y) = x <= y
+
+{-
+Instances
+-}
+
+instance Interval Int
 
 instance Expandable Int Int where
     add = (+)
+    duration x = end x - begin x
 
 instance IntervalAlgebraic Int
 
-instance Show (Period Int) where
-   show x = "(" ++ show (begin x) ++ ", " ++ show (end x) ++ ")"
 
 
 

@@ -11,38 +11,48 @@ module IntervalAlgebra.IntervalFilter (
 
 import IntervalAlgebra
 
--- |Creates a function for filtering a list of Periods based on a predicate
-filterMaker :: PredicateOf Period -> Period -> ([Period] -> [Period])
-filterMaker f p = filter (\x -> f x p)
 
--- | Filter a list of Periods to those overlapping the Period p
-filterOverlaps :: Period -> ([Period] -> [Period])
-filterOverlaps p = filterMaker overlaps p
+{- | 
+TODO: describe this class.
 
--- | Filter a list of Periods to those overlapped by the Period p
-filterOverlappedBy :: Period -> ([Period] -> [Period])
-filterOverlappedBy p = filterMaker overlappedBy p
+Also, generalize the class to handle generalized "filterable" containers (not
+just lists)
+-}
 
--- | Filter a list of Periods to those before the Period p
-filterBefore :: Period -> ([Period] -> [Period])
-filterBefore p = filterMaker before p
+class IntervalAlgebraic a => IntervalFilter a where
 
--- | Filter a list of Periods to those before the Period p
-filterAfter :: Period -> ([Period] -> [Period])
-filterAfter p = filterMaker after p
+    -- |Creates a function for filtering a list of Intrvl as based on a predicate
+    filterMaker :: ComparativePredicateOf (Intrvl a) -> Intrvl a -> ([Intrvl a] -> [Intrvl a])
+    filterMaker f p = filter (`f` p)
 
--- | Filter a list of Periods to those meeting the Period p
-filterMeets :: Period -> ([Period] -> [Period])
-filterMeets p = filterMaker meets p
+    -- | Filter a list of Intrvl as to those overlapping the Intrvl a p
+    filterOverlaps :: Intrvl a -> ([Intrvl a] -> [Intrvl a])
+    filterOverlaps = filterMaker overlaps
 
--- | Filter a list of Periods to those meeting the Period p
-filterMetBy :: Period -> ([Period] -> [Period])
-filterMetBy p = filterMaker metBy p
+    -- | Filter a list of Intrvl as to those overlapped by the Intrvl a p
+    filterOverlappedBy :: Intrvl a -> ([Intrvl a] -> [Intrvl a])
+    filterOverlappedBy = filterMaker overlappedBy
 
--- | Filter a list of Periods to those during the Period p
-filterDuring :: Period -> ([Period] -> [Period])
-filterDuring p = filterMaker during p
+    -- | Filter a list of Intrvl as to those before the Intrvl a p
+    filterBefore :: Intrvl a -> ([Intrvl a] -> [Intrvl a])
+    filterBefore = filterMaker before
 
--- | Filter a list of Periods to those containing the Period p
-filterContains :: Period -> ([Period] -> [Period])
-filterContains p = filterMaker contains p
+    -- | Filter a list of Intrvl as to those before the Intrvl a p
+    filterAfter :: Intrvl a -> ([Intrvl a] -> [Intrvl a])
+    filterAfter = filterMaker after
+
+    -- | Filter a list of Intrvl as to those meeting the Intrvl a p
+    filterMeets :: Intrvl a -> ([Intrvl a] -> [Intrvl a])
+    filterMeets = filterMaker meets
+
+    -- | Filter a list of Intrvl as to those meeting the Intrvl a p
+    filterMetBy :: Intrvl a -> ([Intrvl a] -> [Intrvl a])
+    filterMetBy = filterMaker metBy
+
+    -- | Filter a list of Intrvl as to those during the Intrvl a p
+    filterDuring :: Intrvl a -> ([Intrvl a] -> [Intrvl a])
+    filterDuring = filterMaker during
+
+    -- | Filter a list of Intrvl as to those containing the Intrvl a p
+    filterContains :: Intrvl a -> ([Intrvl a] -> [Intrvl a])
+    filterContains = filterMaker contains

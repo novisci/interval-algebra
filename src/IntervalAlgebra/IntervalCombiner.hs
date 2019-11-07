@@ -1,13 +1,14 @@
 module IntervalAlgebra.IntervalCombiner (
-     (<<>>)
+     --(<<>>)
 ) where
 
-import IntervalAlgebra
+--import IntervalAlgebra
 
 
 {- | Link two lists of Periods by creating a linking period from the begin of 
 the last period in the first list and the end of the first period in the 
-second list -}
+second list 
+
 (<<>>) :: [Period] -> [Period] -> [Period]
 (<<>>) xl yl
    | null xl   = yl
@@ -15,6 +16,7 @@ second list -}
    | otherwise = init xl ++ [period (begin x) (end y)] ++ tailList yl
    where x = last xl
          y = head yl
+-}
 {-
 -- | Collapse two lists of Periods such that if the last period of the first 
 --   list and the first period of the second overlap they are linked by `<<>>`. 

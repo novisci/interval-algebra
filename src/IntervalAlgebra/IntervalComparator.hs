@@ -1,13 +1,13 @@
 module IntervalAlgebra.IntervalComparator (
-      extentPeriods
-    , pairPeriods
-    , comparePeriodPairs
-    , comparePeriodPairsList
+   --   extentPeriods
+   -- , pairPeriods
+   -- , comparePeriodPairs
+    --, comparePeriodPairsList
 ) where
 
-import IntervalAlgebra
+--import IntervalAlgebra
 
-
+{-
 type PeriodPairs = [(Period, Period)]
 type PeriodComparator a = (Period -> Period -> a)
 
@@ -50,6 +50,6 @@ comparePeriodPairs f = map (uncurry f)
 -- [[6,12,15,19],[12,15,19],[3,7],[7]]
 comparePeriodPairsList :: PeriodComparator a -> [PeriodPairs] -> [[a]]
 comparePeriodPairsList f = map (comparePeriodPairs f)
-
+-}
 
 
