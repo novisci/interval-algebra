@@ -15,7 +15,7 @@ interval-based temporal logic axiomatized in [Allen and Hayes (1987)](http://cit
 module IntervalAlgebra(
     -- * Classes
        Interval(..)
-    ,  Expandable(..)
+    ,  IntervalSizeable(..)
     ,  IntervalAlgebraic(..)
      
     -- * Types
@@ -109,11 +109,11 @@ instance (Interval a, Show a) => Show (Intrvl a) where
    show x = "(" ++ show (begin x) ++ ", " ++ show (end x) ++ ")"
 
 {-
-The 'Expandable' typeclass specifies how a type that is an instance of 
-'Interval a' can be expanded, shifted, or flipped. 
+The 'IntervalSizeable' typeclass specifies how the "size" of type that is an 
+instance of 'Interval a' can be determined and how the object can be expanded. 
 -}
 
-class (Interval a, Num b) => Expandable a b | a -> b where
+class (Interval a, Num b) => IntervalSizeable a b | a -> b where
 
     -- | Forms an 'Intrvl a' by 'add'ing 'dur' to 'bgn'. WARNING:
     --   This uses 'validInterval', thus do not provide a _negative_ number to 
@@ -129,6 +129,8 @@ class (Interval a, Num b) => Expandable a b | a -> b where
     add :: b -> a -> a
 
     -- | Expands an 'Intrvl a' to the "left" by @l@ and to the "right" by @r@. 
+    -- TODO: this is not safe in the sense that an interval such that the begin
+    -- equals the end could be created.
     expand :: b -> b -> Intrvl a -> Intrvl a
     expand l r p = validInterval s e
       where s = min (add (negate l) $ begin p) (begin p)
@@ -141,16 +143,6 @@ class (Interval a, Num b) => Expandable a b | a -> b where
     -- | Expands an 'Intrvl a' to right by i.
     expandr :: b -> Intrvl a -> Intrvl a
     expandr = expand 0
-
-    -- | Shifts an 'Interval a' to the right by i.
-    -- TODO: because of the way expand is defined these won't work.
-    --shiftr :: b -> Intrvl a -> Intrvl a
-    --shiftr i = expand (negate i) i
-
-    -- | Shifts an 'Intrvl a' to the left by i.
-    --shiftl :: b -> Intrvl a -> Intrvl a
-    --shiftl i = expand i (negate i)
-
 
 {-
 ** Interval Algebra relations
@@ -252,7 +244,7 @@ Instances
 
 instance Interval Int
 
-instance Expandable Int Int where
+instance IntervalSizeable Int Int where
     add = (+)
     duration x = end x - begin x
 
