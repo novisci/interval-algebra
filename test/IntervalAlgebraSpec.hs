@@ -21,9 +21,10 @@ makePos x
   | otherwise = x
 
 
--- | Safely create a valid 'Intrvl Int' from two Ints. 
+-- | Safely create a valid 'Intrvl Int' from two Ints by adding 'makepos' @dur@
+--   to @start@ to set the duration of the interval.
 safeInterval :: Int -> Int -> Intrvl Int
-safeInterval b dur = interval' b (makePos dur)
+safeInterval start dur = interval' start (makePos dur)
 
 -- | Create a 'Maybe Intrvl Int' from two Ints.
 safeInterval' :: Int -> Int -> Maybe (Intrvl Int)
@@ -206,11 +207,39 @@ prop_IAaxiomM4 x =
 If two meets are separated by intervals, then this sequence is a longer interval.
 
  \[
-   \forall i,j,k,l (i:j:l & i:k:l) \seteq j = l
+   \forall i,j,k,l (i:j:l & i:k:l) \seteq j = k
  \] 
 -}
 
--- TODO
+-- | A set used for testing M5.
+data M5set = M5set { 
+     m51 :: Intrvl Int
+   , m52 :: Intrvl Int }
+   deriving (Show)
+
+instance Arbitrary M5set where
+  arbitrary = do
+    x <- arbitrary
+    a <- arbitrary
+    b <- arbitrary
+    return $ m5set x a b
+
+-- | Smart constructor of 'M5set'.
+m5set :: Intrvl Int -> Int -> Int -> M5set
+m5set x a b = M5set p1 p2 
+  where p1 = x                         -- interval i in prop_IAaxiomM5
+        p2 = safeInterval ps a         -- interval l in prop_IAaxiomM5
+        ps = add (makePos b) (end x) -- creating l by shifting and expanding i
+
+
+prop_IAaxiomM5 :: M5set -> Property
+prop_IAaxiomM5 x = 
+   ((i `meets` j && j `meets` l) &&
+    (i `meets` k && k `meets` l))  === (j == k)
+   where i = m51 x
+         j = validInterval (end i) (begin l)
+         k = validInterval (end i) (begin l)
+         l = m52 x
 
 {-
 
@@ -281,10 +310,32 @@ prop_IAduring i j
      (j == (fromJust $ (fromJust $ k .+. i) .+. l)) === True
   | otherwise  = IA.during i j === False 
 
+{-
+For any two pair of intervals exactly one 'IntervalRelation' should hold.
+-}
+
+allIArelations:: [(ComparativePredicateOf (Intrvl Int))]
+allIArelations =   [  IA.equals
+                    , IA.meets
+                    , IA.metBy
+                    , IA.before
+                    , IA.after
+                    , IA.starts
+                    , IA.startedBy
+                    , IA.finishes
+                    , IA.finishedBy
+                    , IA.overlaps
+                    , IA.overlappedBy
+                    , IA.during
+                    , IA.contains ]
+
+prop_exclusiveRelations::  Intrvl Int -> Intrvl Int -> Property 
+prop_exclusiveRelations x y =
+  (foldl1 (xor) $ map (\r -> r x y) allIArelations) === True
 
 main :: IO ()
 main = hspec $ do
-  describe "Interval Algebra Axioms" $ --modifyMaxDiscardRatio (* 10) $
+  describe "Interval Algebra Axioms for meets property" $ --modifyMaxDiscardRatio (* 10) $
     do 
       {- 
       if two periods both meet a third, 
@@ -330,8 +381,9 @@ main = hspec $ do
 
       
       {-
+       i:j:l & i:k:l === j = k
       -}
-      it "M5" $ pending 
+      it "M5" $ property prop_IAaxiomM5 
       
       {-
         if i meets j then there exists k, m, n such that m:i:j:n and m:k:n
@@ -339,17 +391,21 @@ main = hspec $ do
       it "M4.1" $ property prop_IAaxiomM4_1
  
 
-  describe "Interval Algebra relations" $ 
+  describe "Interval Algebra relation properties" $ 
       modifyMaxSuccess (*10) $
       --modifyMaxDiscardRatio (* 10) $
-  -- https://en.wikipedia.org/wiki/Allen%27s_interval_algebra#Relations 
-  -- contains a visual of these relations
-   do
+    do
       it "before"   $ property prop_IAbefore
       it "starts"   $ property prop_IAstarts
       it "finishes" $ property prop_IAfinishes
       it "overlaps" $ property prop_IAoverlaps
       it "during"   $ property prop_IAduring
+
+  describe "Interval Algebra relation uniqueness" $ 
+      modifyMaxSuccess (*100) $
+      --modifyMaxDiscardRatio (* 10) $
+    do
+      it "exactly one relation must be true" $ property prop_exclusiveRelations
  {- 
   describe "Period expansions" $ 
     do
@@ -357,13 +413,4 @@ main = hspec $ do
         expandl (-10) (period 0 10) `shouldBe` period 0 10
       it "expandr safely shrinks a period" $
         expandr (-10) (period 0 10) `shouldBe` period 0 10
--}
-{- Examples of unit testing
-  describe "after" $ do
-    it "return False for a period before another" $
-      IA.before (period 0 1) (period 2 3) `shouldBe` True
-    it "return True for a period after another" $
-      IA.before (period 2 3) (period 0 1) `shouldBe` False
-    it "return False for a period meeting another" $
-      IA.before (period 0 1) (period 1 2) `shouldBe` False}
 -}
