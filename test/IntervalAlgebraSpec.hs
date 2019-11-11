@@ -11,8 +11,10 @@ import Control.Monad
 xor :: Bool -> Bool -> Bool
 xor a b = a /= b
 
-instance Arbitrary (Intrvl Int) where
+instance Arbitrary IntrvlPairInt where
   arbitrary = liftM2 safeInterval arbitrary arbitrary
+
+type IntrvlPairInt = Intrvl (Pair Int)
 
 makePos :: Int -> Int
 makePos x
@@ -21,24 +23,28 @@ makePos x
   | otherwise = x
 
 
--- | Safely create a valid 'Intrvl Int' from two Ints by adding 'makepos' @dur@
---   to @start@ to set the duration of the interval.
-safeInterval :: Int -> Int -> Intrvl Int
-safeInterval start dur = interval' start (makePos dur)
+-- | A function for creating intervals when you think you know what you're doing.
+interval'' :: Int -> Int -> IntrvlPairInt
+interval'' x y = Intrvl $ Pair (min x y, max x y)
 
--- | Create a 'Maybe Intrvl Int' from two Ints.
-safeInterval' :: Int -> Int -> Maybe (Intrvl Int)
+-- | Safely create a valid 'IntrvlPairInt' from two Ints by adding 'makepos' @dur@
+--   to @start@ to set the duration of the interval.
+safeInterval :: Int -> Int -> IntrvlPairInt
+safeInterval start dur = interval'' start (start + makePos dur)
+
+-- | Create a 'Maybe IntrvlPairInt' from two Ints.
+safeInterval' :: Int -> Int -> Maybe (Intrvl (Pair Int))
 safeInterval' a b 
     | b <= a    = Nothing
-    | otherwise = Just $ validInterval a b
+    | otherwise = Just $ interval'' a b
 
 
 -- | A set used for testing M1 defined so that the M1 condition is true.
 data M1set = M1set { 
-     m11 :: Intrvl Int
-   , m12 :: Intrvl Int
-   , m13 :: Intrvl Int
-   , m14 :: Intrvl Int }
+     m11 :: IntrvlPairInt
+   , m12 :: IntrvlPairInt
+   , m13 :: IntrvlPairInt
+   , m14 :: IntrvlPairInt }
    deriving (Show)
 
 instance Arbitrary M1set where
@@ -50,13 +56,13 @@ instance Arbitrary M1set where
     return $ m1set x a b c
 
 -- | Smart constructor of 'M1set'.
-m1set :: Intrvl Int -> Int -> Int -> Int -> M1set
+m1set :: IntrvlPairInt -> Int -> Int -> Int -> M1set
 m1set x a b c = M1set p1 p2 p3 p4
   where p1 = x                          -- interval i in prop_IAaxiomM1
         p2 = safeInterval (end x) a     -- interval j in prop_IAaxiomM1
         p3 = safeInterval (end x) b     -- interval k in prop_IAaxiomM1
         p4 = expandl (makePos c) pt     -- interval l in prop_IAaxiomM1
-        pt = validInterval (begin p2 - 1) (begin p2)
+        pt = interval'' (begin p2 - 1) (begin p2)
 
 {-
 
@@ -80,10 +86,10 @@ prop_IAaxiomM1 x =
 
 -- | A set used for testing M2 defined so that the M2 condition is true.
 data M2set = M2set {
-    m21 :: Intrvl Int
-  , m22 :: Intrvl Int
-  , m23 :: Intrvl Int
-  , m24 :: Intrvl Int }
+    m21 :: IntrvlPairInt
+  , m22 :: IntrvlPairInt
+  , m23 :: IntrvlPairInt
+  , m24 :: IntrvlPairInt }
   deriving (Show)
 
 instance Arbitrary M2set where
@@ -95,7 +101,7 @@ instance Arbitrary M2set where
     return $ m2set x a b c
 
 -- | Smart constructor of 'M2set'.
-m2set :: Intrvl Int -> Intrvl Int -> Int -> Int -> M2set
+m2set :: IntrvlPairInt -> IntrvlPairInt -> Int -> Int -> M2set
 m2set x y a b = M2set p1 p2 p3 p4
   where p1 = x                          -- interval i in prop_IAaxiomM2
         p2 = safeInterval (end x) a     -- interval j in prop_IAaxiomM2
@@ -140,7 +146,7 @@ prop_IAaxiomM2 x =
  \] 
 -}
 
-prop_IAaxiomML1 :: Intrvl Int -> Property
+prop_IAaxiomML1 :: IntrvlPairInt -> Property
 prop_IAaxiomML1 x = not (x `meets` x) === True
 
 {-
@@ -172,11 +178,11 @@ prop_IAaxiomML2 x =
  \] 
 -}
 
-prop_IAaxiomM3 :: Intrvl Int -> Property
+prop_IAaxiomM3 :: IntrvlPairInt -> Property
 prop_IAaxiomM3 i = 
    (j `meets` i && i `meets` k) === True
-   where j = validInterval (begin i - 1) (begin i)
-         k = validInterval (end i) (end i + 1)
+   where j = interval'' (begin i - 1) (begin i)
+         k = interval'' (end i) (end i + 1)
 
 {-
 
@@ -195,9 +201,9 @@ prop_IAaxiomM4 x =
     (m `meets` k && k `meets` n)) === True
    where i = m21 x
          j = m22 x
-         m = validInterval (begin i - 1) (begin i)
-         n = validInterval (end j) (end j + 1)
-         k = validInterval (end m) (begin n)
+         m = interval'' (begin i - 1) (begin i)
+         n = interval'' (end j) (end j + 1)
+         k = interval'' (end m) (begin n)
 
 
 {-
@@ -213,8 +219,8 @@ If two meets are separated by intervals, then this sequence is a longer interval
 
 -- | A set used for testing M5.
 data M5set = M5set { 
-     m51 :: Intrvl Int
-   , m52 :: Intrvl Int }
+     m51 :: IntrvlPairInt
+   , m52 :: IntrvlPairInt }
    deriving (Show)
 
 instance Arbitrary M5set where
@@ -225,7 +231,7 @@ instance Arbitrary M5set where
     return $ m5set x a b
 
 -- | Smart constructor of 'M5set'.
-m5set :: Intrvl Int -> Int -> Int -> M5set
+m5set :: IntrvlPairInt -> Int -> Int -> M5set
 m5set x a b = M5set p1 p2 
   where p1 = x                         -- interval i in prop_IAaxiomM5
         p2 = safeInterval ps a         -- interval l in prop_IAaxiomM5
@@ -237,8 +243,8 @@ prop_IAaxiomM5 x =
    ((i `meets` j && j `meets` l) &&
     (i `meets` k && k `meets` l))  === (j == k)
    where i = m51 x
-         j = validInterval (end i) (begin l)
-         k = validInterval (end i) (begin l)
+         j = interval'' (end i) (begin l)
+         k = interval'' (end i) (begin l)
          l = m52 x
 
 {-
@@ -258,8 +264,8 @@ prop_IAaxiomM4_1 x =
     (m `meets` ij && ij `meets` n)) === True
    where i = m21 x
          j = m22 x
-         m = validInterval (begin i - 1) (begin i)
-         n = validInterval (end j) (end j + 1)
+         m = interval'' (begin i - 1) (begin i)
+         n = interval'' (end j) (end j + 1)
          ij = fromJust $ i .+. j
 
 
@@ -267,45 +273,45 @@ prop_IAaxiomM4_1 x =
 * Interval Relation property testing 
 -}
 
-prop_IAbefore :: Intrvl Int -> Intrvl Int -> Property
+prop_IAbefore :: IntrvlPairInt -> IntrvlPairInt -> Property
 prop_IAbefore i j = 
   IA.before i j ==> (i `meets` k) && (k `meets` j)
-    where k = validInterval (end i) (begin j)
+    where k = interval'' (end i) (begin j)
 
 
-prop_IAstarts:: Intrvl Int -> Intrvl Int -> Property
+prop_IAstarts:: IntrvlPairInt -> IntrvlPairInt -> Property
 prop_IAstarts i j
   | ((IA.starts i j) == True) =
-    let k = validInterval (end i) (end j)
+    let k = interval'' (end i) (end j)
     in 
      (j == (fromJust $ i .+. k)) === True
   | otherwise = IA.starts i j === False
 
 
-prop_IAfinishes:: Intrvl Int -> Intrvl Int -> Property
+prop_IAfinishes:: IntrvlPairInt -> IntrvlPairInt -> Property
 prop_IAfinishes i j
   | ((IA.finishes i j) == True) =
-    let k = validInterval (begin j) (begin i)
+    let k = interval'' (begin j) (begin i)
     in 
      (j == (fromJust $ k .+. i)) === True
   | otherwise = IA.finishes i j === False
 
-prop_IAoverlaps:: Intrvl Int -> Intrvl Int -> Property
+prop_IAoverlaps:: IntrvlPairInt -> IntrvlPairInt -> Property
 prop_IAoverlaps i j
   | ((IA.overlaps i j) == True) = 
-    let k = validInterval (begin i) (begin j)
-        l = validInterval (begin j) (end i)
-        m = validInterval (end i)   (end j)
+    let k = interval'' (begin i) (begin j)
+        l = interval'' (begin j) (end i)
+        m = interval'' (end i)   (end j)
     in 
      ((i == (fromJust $ k .+. l )) &&
       (j == (fromJust $ l .+. m ))) === True
   | otherwise  = IA.overlaps i j === False 
 
-prop_IAduring:: Intrvl Int -> Intrvl Int -> Property
+prop_IAduring:: IntrvlPairInt -> IntrvlPairInt -> Property
 prop_IAduring i j
   | ((IA.during i j) == True) = 
-    let k = validInterval (begin j) (begin i)
-        l = validInterval (end i) (end j)
+    let k = interval'' (begin j) (begin i)
+        l = interval'' (end i) (end j)
     in 
      (j == (fromJust $ (fromJust $ k .+. i) .+. l)) === True
   | otherwise  = IA.during i j === False 
@@ -314,7 +320,7 @@ prop_IAduring i j
 For any two pair of intervals exactly one 'IntervalRelation' should hold.
 -}
 
-allIArelations:: [(ComparativePredicateOf (Intrvl Int))]
+allIArelations:: [(ComparativePredicateOf (IntrvlPairInt))]
 allIArelations =   [  IA.equals
                     , IA.meets
                     , IA.metBy
@@ -329,7 +335,7 @@ allIArelations =   [  IA.equals
                     , IA.during
                     , IA.contains ]
 
-prop_exclusiveRelations::  Intrvl Int -> Intrvl Int -> Property 
+prop_exclusiveRelations::  IntrvlPairInt -> IntrvlPairInt -> Property 
 prop_exclusiveRelations x y =
   (foldl1 (xor) $ map (\r -> r x y) allIArelations) === True
 

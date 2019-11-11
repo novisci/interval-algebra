@@ -20,7 +20,8 @@ module IntervalAlgebra(
     ,  Orderable(..)
      
     -- * Types
-    , Intrvl
+    , Intrvl(..)
+    , Pair(..)
     , Period
     , IntervalRelation
     , ComparativePredicateOf
