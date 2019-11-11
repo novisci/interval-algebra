@@ -1,17 +1,22 @@
 {-# LANGUAGE FunctionalDependencies #-}
+
+{-|
+Module      : Interval Algebra Filtrations
+Description : Offers functions for filtering list of intervals based on a 
+              reference interval.
+Copyright   : (c) NoviSci, Inc 2019
+License     : BSD3
+Maintainer  : bsaul@novisci.com
+Stability   : experimental
+
+TODO
+-}
+
 module IntervalAlgebra.IntervalFilter (
-  filterOverlaps,
-  filterOverlappedBy,
-  filterBefore,
-  filterAfter,
-  filterMeets,
-  filterMetBy,
-  filterDuring,
-  filterContains
+  IntervalFilter(..)
 ) where
 
 import IntervalAlgebra
-
 
 {- | 
 TODO: describe this class.
@@ -23,7 +28,10 @@ just lists).
 class (IntervalAlgebraic b a) => IntervalFilter b a | a -> b where
 
     -- |Creates a function for filtering a list of Intrvl (b a)s based on a predicate
-    filterMaker :: ComparativePredicateOf (Intrvl (b a)) -> Intrvl (b a) -> ([Intrvl (b a)] -> [Intrvl (b a)])
+    filterMaker :: ComparativePredicateOf (Intrvl (b a)) 
+                   -> Intrvl (b a) 
+                   -> ([Intrvl (b a)] 
+                   -> [Intrvl (b a)])
     filterMaker f p = filter (`f` p)
 
     -- | Filter a list of Intrvl (b a)s to those overlapping the Intrvl (b a) p
