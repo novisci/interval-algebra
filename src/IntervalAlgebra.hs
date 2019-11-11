@@ -17,18 +17,20 @@ module IntervalAlgebra(
        Interval(..)
     ,  IntervalSizeable(..)
     ,  IntervalAlgebraic(..)
+    ,  Orderable(..)
      
     -- * Types
-    , Intrvl
+    , Intrvl(..)
+    , Pair(..)
     , Period
     , IntervalRelation
     , ComparativePredicateOf
 ) where
 
-
-
-newtype Pnt a    = Pnt a deriving (Eq, Show)
-newtype Intrvl a = Intrvl (a, a) deriving (Eq)
+newtype Pnt a     = Pnt a deriving (Eq, Show)
+newtype Intrvl a  = Intrvl a deriving (Eq)
+newtype Pair a    = Pair (a, a) deriving (Eq, Show)
+newtype Ordered a = Ordered a deriving (Eq, Ord, Show)
 
 {- | 
 A 'Period a' is a simply a pair of the same type. To be useful as a @Period@ 
@@ -63,39 +65,49 @@ data IntervalRelation =
     deriving (Show, Read)
 
 {-
-The 'Interval' typeclass specifies what makes a valid interval.
-how a 'Intrvl a' is constructed. It also includes functions for getting 
-the 'begin' and 'end' of an 'Intrvl a'.
+The 'Orderable' typeclass defines how to create an 'Ordered b a' and how to 
+handle cases where the inputs are not in the specified order.
 -}
 
-class (Ord a, Enum a, Show a) => Interval a where 
+class (Ord a, Show a, Eq (b a)) => Orderable b a  where
 
-    -- | Defines what happens when the inputs to forming an interval are invalid.
-    invalidInterval :: a -> a -> String
-    invalidInterval a b = show a ++ " <= " ++ show b -- TODO: there's a better way
+    -- | The prototype function for parsing a pair of inputs into a 'Left' failure
+    --   or a 'Right' and 'Ordered' object. 
+    parseOrdered :: (a -> a -> Bool)    -- ^ An ordering operator (<, <=, >=, >)
+                    -> (a -> a -> b a)  -- ^ The constructor of type b of type a
+                    -> a -- 
+                    -> a
+                    -> Either String (Ordered (b a))
+    parseOrdered op cons x y
+        -- TODO: create more general framework for error handling
+        | op y x    = Left $ show x ++ " and " ++ show y ++ " are not in order"
+        | otherwise = Right $ Ordered $ cons x y
 
-    -- | This functions _always_ creates an @Interval a@.
-    validInterval :: a -> a -> Intrvl a
-    validInterval a b = Intrvl (min a b, max a b) 
+    -- | This function should require that the inputs conform to a 
+    --   [strict order](https://en.wikipedia.org/wiki/Partially_ordered_set#Strict_and_non-strict_partial_orders)
+    parseOrderedStrict :: a -> a -> Either String (Ordered (b a))
 
-    -- | Create a new @Interval a@ from an @a@.
-    interval :: a -> a -> Either String (Intrvl a)
-    interval a b 
-      | b <= a    = Left  $ invalidInterval a b
-      | otherwise = Right $ validInterval a b
+    -- | This function should require that the inputs conform to a 
+    --   [total order](https://en.wikipedia.org/wiki/Total_order
+    parseOrderedTotal :: a -> a -> Either String (Ordered (b a))
 
-    -- | Converts a pairs of @a@ to an @Interval a@.
-    toInterval :: (a, a) -> Either String (Intrvl a)
-    toInterval = uncurry interval
+{-
+The 'Interval' typeclass specifies how to create valid interval.
+how a 'Intrvl b a' is constructed. It also includes functions for getting 
+the 'begin' and 'end' of an 'Intrvl b a'.
+-}
+class (Orderable b a) => Interval b a where 
+    -- | Create a new @Intrvl b a@ from an @Ordered b a@.
+    interval :: Ordered (b a) -> Intrvl (b a)
+    interval (Ordered x) = Intrvl x
 
-    -- | Evaluate the 'begin' or 'end' of an 'Interval a' object.
-    begin, end :: Intrvl a -> a
-    begin (Intrvl x) = fst x
-    end   (Intrvl x) = snd x
+    -- | Determine the 'begin' or 'end' of an 'Interval b a' object.
+    begin, end :: Intrvl (b a) -> a
+
 
 -- | Imposes a total ordering on 'Intrvl a' based on first ordering the 'begin's
 --   then the 'end's.
-instance (Interval a) => Ord (Intrvl a) where
+instance (Interval b a) => Ord (Intrvl (b a)) where
     (<=) x y
       | begin x <  begin y = True
       | begin x == begin y = end x <= end y
@@ -105,7 +117,7 @@ instance (Interval a) => Ord (Intrvl a) where
       | begin x == begin y = end x < end y
       | otherwise = False
 
-instance (Interval a, Show a) => Show (Intrvl a) where
+instance (Interval b a, Show a) => Show (Intrvl (b a)) where
    show x = "(" ++ show (begin x) ++ ", " ++ show (end x) ++ ")"
 
 {-
@@ -113,35 +125,27 @@ The 'IntervalSizeable' typeclass specifies how the "size" of type that is an
 instance of 'Interval a' can be determined and how the object can be expanded. 
 -}
 
-class (Interval a, Num b) => IntervalSizeable a b | a -> b where
+class (Interval b a, Num c) => IntervalSizeable b a c | a -> c, a -> b where
 
-    -- | Forms an 'Intrvl a' by 'add'ing 'dur' to 'bgn'. WARNING:
-    --   This uses 'validInterval', thus do not provide a _negative_ number to 
-    --   'dur', else you could end up with an invalid interval.
-    interval' :: a -> b -> Intrvl a
-    interval' bgn dur = validInterval bgn (add dur bgn) 
+    -- | Determine the duration of an 'Interval b a'.
+    duration :: Intrvl (b a) -> c
 
-    -- | Determine the duration of an 'Interval a'.
-    duration :: Intrvl a -> b
-
-    -- | Shifts an @a@. Most often, the @b@ will be the same
-    -- type as the @a@. But for example, if @a@ is 'Day' then @b@ would be 'Int'.
-    add :: b -> a -> a
+    -- | Shifts an @a@. Most often, the @c@ will be the same
+    -- type as the @a@. But for example, if @a@ is 'Day' then @c@ would be 'Int'.
+    add :: c -> a -> a
 
     -- | Expands an 'Intrvl a' to the "left" by @l@ and to the "right" by @r@. 
-    -- TODO: this is not safe in the sense that an interval such that the begin
-    -- equals the end could be created.
-    expand :: b -> b -> Intrvl a -> Intrvl a
-    expand l r p = validInterval s e
-      where s = min (add (negate l) $ begin p) (begin p)
-            e = max (add r $ end p)   (end p)
+    -- TODO: One could implement this function in an unsafe way, in the sense 
+    -- that it does not enforce (by types) that the inputs to interval creation 
+    -- do not get parsed by 'parseOrdered'.
+    expand :: c -> c -> Intrvl (b a) -> Intrvl (b a)
 
     -- | Expands an 'Intrvl a' to left by i.
-    expandl :: b -> Intrvl a -> Intrvl a
+    expandl :: c -> Intrvl (b a) -> Intrvl (b a)
     expandl i = expand i 0
 
     -- | Expands an 'Intrvl a' to right by i.
-    expandr :: b -> Intrvl a -> Intrvl a
+    expandr :: c -> Intrvl (b a) -> Intrvl (b a)
     expandr = expand 0
 
 {-
@@ -153,10 +157,10 @@ relational operators for intervals, plus other useful utilities such as
 'disjoint'.
 -}
 
-class (Interval a) => IntervalAlgebraic a where
+class (Eq a, Interval b a) => IntervalAlgebraic b a where
 
     -- | Compare two intervals to determine their relation.
-    intervalCompare :: Intrvl a -> Intrvl a -> IntervalRelation
+    intervalCompare :: Intrvl (b a) -> Intrvl (b a) -> IntervalRelation
     intervalCompare x y
         | x `before` y       = Before
         | x `after`  y       = After
@@ -173,63 +177,59 @@ class (Interval a) => IntervalAlgebraic a where
         | otherwise          = Equals
 
     -- | Does x equal y?
-    equals                 :: ComparativePredicateOf (Intrvl a)
+    equals                 :: ComparativePredicateOf (Intrvl (b a))
     equals   x y  = x == y
 
     -- | Does x meet y? Does y meet x?
-    meets, metBy           :: ComparativePredicateOf (Intrvl a)
+    meets, metBy           :: ComparativePredicateOf (Intrvl (b a))
     meets    x y  = end x == begin y
     metBy         = flip meets
 
     -- | Is x before y? Is x after y?
-    before, after          :: ComparativePredicateOf (Intrvl a)
+    before, after          :: ComparativePredicateOf (Intrvl (b a))
     before   x y  = end x < begin y
     after         = flip before
     
     -- | Does x overlap y? Is x overlapped by y?
-    overlaps, overlappedBy :: ComparativePredicateOf (Intrvl a)
+    overlaps, overlappedBy :: ComparativePredicateOf (Intrvl (b a))
     overlaps x y  = begin x < begin y && end x < end y && end x > begin y 
     overlappedBy  = flip overlaps
 
     -- | Does x start y? Is x started by y?
-    starts, startedBy      :: ComparativePredicateOf (Intrvl a)
+    starts, startedBy      :: ComparativePredicateOf (Intrvl (b a))
     starts   x y  = begin x == begin y && (end x < end y)
     startedBy     = flip starts
 
     -- | Does x finish y? Is x finished by y?
-    finishes, finishedBy   :: ComparativePredicateOf (Intrvl a)
+    finishes, finishedBy   :: ComparativePredicateOf (Intrvl (b a))
     finishes x y  = begin x > begin y && end x == end y
     finishedBy    = flip finishes
 
     -- | Is x during y? Does x contain y?
-    during, contains       :: ComparativePredicateOf (Intrvl a)
+    during, contains       :: ComparativePredicateOf (Intrvl (b a))
     during   x y  = begin x > begin y && end x < end y
     contains      = flip during
 
     -- ** Interval Algebra utilities
 
     -- | Compare interval relations with _or_.
-    composeRelations       :: [ComparativePredicateOf (Intrvl a)] ->
-                               ComparativePredicateOf (Intrvl a)
+    composeRelations       :: [ComparativePredicateOf (Intrvl (b a))] ->
+                               ComparativePredicateOf (Intrvl (b a))
     composeRelations fs x y = any (\ f -> f x y) fs
 
     -- | Are x and y disjoint?
-    disjoint               :: ComparativePredicateOf (Intrvl a)
+    disjoint               :: ComparativePredicateOf (Intrvl (b a))
     disjoint = composeRelations [before, after]
 
     -- | Is x contained in y in any sense?
-    in'                    :: ComparativePredicateOf (Intrvl a)
+    in'                    :: ComparativePredicateOf (Intrvl (b a))
     in' = composeRelations [during, starts, finishes, equals]
 
     -- | Ordered Union of meeting intervals.
-    (.+.) :: Intrvl a -> Intrvl a -> Maybe (Intrvl a)
-    (.+.) x y
-        | x `meets` y = Just $ validInterval (begin x) (end y)
-        | otherwise   = Nothing
+    (.+.) :: Intrvl (b a) -> Intrvl (b a) -> Maybe (Intrvl (b a))
 
 -- | Defines a comparator predicate of two objects of type a
 type ComparativePredicateOf a = (a -> a -> Bool) 
-
 
 {-
 TODO: Expand to points, moments, and intervals
@@ -242,15 +242,32 @@ instance Ord a => Ord (Pnt a) where
 Instances
 -}
 
-instance Interval Int
+instance Orderable Pair Int where 
+    parseOrderedStrict = parseOrdered (<)  pair
+    parseOrderedTotal  = parseOrdered (<=) pair
 
-instance IntervalSizeable Int Int where
+instance Interval Pair Int where
+    begin (Intrvl (Pair x)) = fst x
+    end   (Intrvl (Pair x)) = snd x
+
+instance IntervalSizeable Pair Int Int where
     add = (+)
     duration x = end x - begin x
+    expand l r p = Intrvl $ pair s e
+      where s = min (add (negate l) $ begin p) (begin p)
+            e = max (add r $ end p)   (end p)
 
-instance IntervalAlgebraic Int
+instance IntervalAlgebraic Pair Int where
+   (.+.) x y
+      | x `meets` y = Just $ Intrvl $ pair (begin x) (end y)
+      | otherwise   = Nothing
 
+{-
+Utilities
+-}
 
-
+-- | A smart constructor for 'Pair a' objects
+pair :: a -> a -> Pair a
+pair x y = Pair (x, y)
 
 
