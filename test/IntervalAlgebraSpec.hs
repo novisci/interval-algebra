@@ -337,7 +337,7 @@ allIArelations =   [  IA.equals
 
 prop_exclusiveRelations::  IntrvlPairInt -> IntrvlPairInt -> Property 
 prop_exclusiveRelations x y =
-  (foldl1 (xor) $ map (\r -> r x y) allIArelations) === True
+  (  1 == length (filter id $ map (\r -> r x y) allIArelations)) === True
 
 main :: IO ()
 main = hspec $ do
