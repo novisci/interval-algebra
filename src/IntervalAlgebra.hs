@@ -27,7 +27,6 @@ module IntervalAlgebra(
     , ComparativePredicateOf
 ) where
 
-newtype Pnt a     = Pnt a deriving (Eq, Show)
 newtype Intrvl a  = Intrvl a deriving (Eq)
 newtype Pair a    = Pair (a, a) deriving (Eq, Show)
 newtype Ordered a = Ordered a deriving (Eq, Ord, Show)
@@ -84,7 +83,7 @@ class (Ord a, Show a, Eq (b a)) => Orderable b a  where
         | otherwise = Right $ Ordered $ cons x y
 
     -- | This function should require that the inputs conform to a 
-    --   [strict order](https://en.wikipedia.org/wiki/Partially_ordered_set#Strict_and_non-strict_partial_orders)
+    --   [strict order](https://en.wikipedia.org/wiki/Partially_ordered_set)
     parseOrderedStrict :: a -> a -> Either String (Ordered (b a))
 
     -- | This function should require that the inputs conform to a 
@@ -219,7 +218,7 @@ class (Eq a, Interval b a) => IntervalAlgebraic b a where
 
     -- | Are x and y disjoint?
     disjoint               :: ComparativePredicateOf (Intrvl (b a))
-    disjoint = composeRelations [before, after]
+    disjoint = composeRelations [before, after, meets, metBy]
 
     -- | Is x contained in y in any sense?
     in'                    :: ComparativePredicateOf (Intrvl (b a))
@@ -231,12 +230,6 @@ class (Eq a, Interval b a) => IntervalAlgebraic b a where
 -- | Defines a comparator predicate of two objects of type a
 type ComparativePredicateOf a = (a -> a -> Bool) 
 
-{-
-TODO: Expand to points, moments, and intervals
--}
-
-instance Ord a => Ord (Pnt a) where
-    (<=) (Pnt x) (Pnt y) = x <= y
 
 {-
 Instances
