@@ -1,11 +1,9 @@
 {-# LANGUAGE FlexibleInstances #-}
-
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck
 import IntervalAlgebra as IA
 import Data.Maybe
---import IntervalAlgebra.IntervalCombiner
 import Control.Monad
 
 xor :: Bool -> Bool -> Bool
@@ -21,7 +19,6 @@ makePos x
   | x == 0    = x + 1
   | x <  0    = negate x
   | otherwise = x
-
 
 -- | A function for creating intervals when you think you know what you're doing.
 safeInterval :: Int -> Int -> IntervalInt
@@ -62,8 +59,6 @@ m1set x a b c = M1set p1 p2 p3 p4
         p2 = safeInterval' (end x) a    -- interval j in prop_IAaxiomM1
         p3 = safeInterval' (end x) b    -- interval k in prop_IAaxiomM1
         p4 = safeInterval  (begin p2 - (makePos c)) (begin p2)
---        p4 = expandl (makePos c) pt     -- interval l in prop_IAaxiomM1
---        pt = safeInterval (begin p2 - 1) (begin p2)
 
 {-
 
@@ -111,9 +106,15 @@ m2set x y a b = M2set p1 p2 p3 p4
 
 {-
 
- ** Axiom M2
+** Axiom M2
 
- The second interval axiom of Allen and Hayes (1987):
+If period i meets period j and period k meets l, 
+then exactly one of the following holds:
+  1) i meets l; 
+  2) there is an m such that i meets m and m meets l; 
+  3) there is an n such that k meets n and n meets j.
+   
+That is,
 
  \[
    \forall i,j,k,l s.t. (i:j & k:l) \implies 
@@ -140,7 +141,7 @@ prop_IAaxiomM2 x =
 
  ** Axiom ML1
 
- An interval cannot meet itself
+ An interval cannot meet itself.
 
  \[
    \forall i \lnot i:i
@@ -152,13 +153,13 @@ prop_IAaxiomML1 x = not (x `meets` x) === True
 
 {-
 
- ** Axiom ML2
+** Axiom ML2
 
- If i meets j then j does not meet i.
+If i meets j then j does not meet i.
 
- \[
-   \forall i,j i:j \implies \lnot j:i
- \] 
+\[
+ \forall i,j i:j \implies \lnot j:i
+\] 
 -}
 
 prop_IAaxiomML2 :: M2set -> Property
@@ -170,13 +171,13 @@ prop_IAaxiomML2 x =
 
 {-
 
- ** Axiom M3
+** Axiom M3
 
- Time does not start or stop:
+Time does not start or stop:
 
- \[
-   \forall i \exists j,k s.t. j:i:k
- \] 
+\[
+ \forall i \exists j,k s.t. j:i:k
+\] 
 -}
 
 prop_IAaxiomM3 :: IntervalInt -> Property
@@ -191,9 +192,9 @@ prop_IAaxiomM3 i =
 
 If two meets are separated by intervals, then this sequence is a longer interval.
 
- \[
-   \forall i,j i:j \implies (\exists k,m,n s.t m:i:j:n & m:k:n) 
- \] 
+\[
+ \forall i,j i:j \implies (\exists k,m,n s.t m:i:j:n & m:k:n) 
+\] 
 -}
 
 prop_IAaxiomM4 :: M2set -> Property
@@ -213,9 +214,9 @@ prop_IAaxiomM4 x =
 
 If two meets are separated by intervals, then this sequence is a longer interval.
 
- \[
-   \forall i,j,k,l (i:j:l & i:k:l) \seteq j = k
- \] 
+\[
+ \forall i,j,k,l (i:j:l & i:k:l) \seteq j = k
+\] 
 -}
 
 -- | A set used for testing M5.
@@ -252,11 +253,11 @@ prop_IAaxiomM5 x =
 
 ** Axiom M4.1
 
-Ordered unions
+Ordered unions:
 
- \[
-   \forall i,j i:j \implies (\exists m,n s.t. m:i:j:n & m:(i+j):n)
- \] 
+\[
+ \forall i,j i:j \implies (\exists m,n s.t. m:i:j:n & m:(i+j):n)
+\] 
 -}
 
 prop_IAaxiomM4_1 :: M2set -> Property
@@ -342,65 +343,27 @@ prop_exclusiveRelations x y =
 
 main :: IO ()
 main = hspec $ do
-  describe "Interval Algebra Axioms for meets property" $ --modifyMaxDiscardRatio (* 10) $
+  describe "Interval Algebra Axioms for meets property" $ 
+  --modifyMaxDiscardRatio (* 10) $
     do 
-      {- 
-      if two periods both meet a third, 
-      then any period met by one must also be met by the other.
-      -}
-      it "M1" $ property prop_IAaxiomM1
-
-      {- 
-        if period i meets period j and period k meets l, 
-        then exactly one of the following holds:
-          1) i meets l; 
-          2) there is an m such that i meets m and m meets l; 
-          3) there is an n such that k meets n and n meets j.
-      -}       
+      it "M1" $ property prop_IAaxiomM1    
       it "M2" $ property prop_IAaxiomM2
-
-      {-
-        a period cannot meet itself
-      -}
       it "ML1" $ property prop_IAaxiomML1
-
-      {-
-        if i meets j then j does not meet i
-      -}
       it "ML2" $ property prop_IAaxiomML2
-
       {-
-        For all i, there does not exist m such that i meets m and m meet i
-        Not testing that this axiom holds, as I'm not sure how I would
+        ML3 says that For all i, there does not exist m such that i meets m and
+        m meet i. Not testing that this axiom holds, as I'm not sure how I would
+        test the lack of existence.
       -}
       --it "ML3" $ property prop_IAaxiomML3
-
-      {-
-        for all periods i there exist periods j and k such that j:i:k
-      -}
       it "M3" $ property prop_IAaxiomM3
-
-
-      {-
-        if i meets j then there exists k, m, n such that m:i:j:n and m:k:n
-      -}
       it "M4" $ property prop_IAaxiomM4
-
-      
-      {-
-       i:j:l & i:k:l === j = k
-      -}
       it "M5" $ property prop_IAaxiomM5 
-      
-      {-
-        if i meets j then there exists k, m, n such that m:i:j:n and m:k:n
-      -}
       it "M4.1" $ property prop_IAaxiomM4_1
  
 
   describe "Interval Algebra relation properties" $ 
       modifyMaxSuccess (*10) $
-      --modifyMaxDiscardRatio (* 10) $
     do
       it "before"   $ property prop_IAbefore
       it "starts"   $ property prop_IAstarts
@@ -410,7 +373,6 @@ main = hspec $ do
 
   describe "Interval Algebra relation uniqueness" $ 
       modifyMaxSuccess (*100) $
-      --modifyMaxDiscardRatio (* 10) $
     do
       it "exactly one relation must be true" $ property prop_exclusiveRelations
 
