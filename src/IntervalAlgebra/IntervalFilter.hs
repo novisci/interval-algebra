@@ -25,43 +25,43 @@ TODO: generalize the class to handle generalized "filterable" containers (not
 just lists).
 -}
 
-class (IntervalAlgebraic b a) => IntervalFilter b a | a -> b where
+class (IntervalAlgebraic a) => IntervalFilter a where
 
-    -- |Creates a function for filtering a list of Intrvl (b a)s based on a predicate
-    filterMaker :: ComparativePredicateOf (Intrvl (b a)) 
-                   -> Intrvl (b a) 
-                   -> ([Intrvl (b a)] 
-                   -> [Intrvl (b a)])
+    -- |Creates a function for filtering a list of Interval as based on a predicate
+    filterMaker :: ComparativePredicateOf (Interval a) 
+                   -> Interval a 
+                   -> ([Interval a] 
+                   -> [Interval a])
     filterMaker f p = filter (`f` p)
 
-    -- | Filter a list of Intrvl (b a)s to those overlapping the Intrvl (b a) p
-    filterOverlaps :: Intrvl (b a) -> ([Intrvl (b a)] -> [Intrvl (b a)])
+    -- | Filter a list of Interval as to those overlapping the Interval a p
+    filterOverlaps :: Interval a -> ([Interval a] -> [Interval a])
     filterOverlaps = filterMaker overlaps
 
-    -- | Filter a list of Intrvl (b a)s to those overlapped by the Intrvl (b a) p
-    filterOverlappedBy :: Intrvl (b a) -> ([Intrvl (b a)] -> [Intrvl (b a)])
+    -- | Filter a list of Interval as to those overlapped by the Interval a p
+    filterOverlappedBy :: Interval a -> ([Interval a] -> [Interval a])
     filterOverlappedBy = filterMaker overlappedBy
 
-    -- | Filter a list of Intrvl (b a)s to those before the Intrvl (b a) p
-    filterBefore :: Intrvl (b a) -> ([Intrvl (b a)] -> [Intrvl (b a)])
+    -- | Filter a list of Interval as to those before the Interval a p
+    filterBefore :: Interval a -> ([Interval a] -> [Interval a])
     filterBefore = filterMaker before
 
-    -- | Filter a list of Intrvl (b a)s to those before the Intrvl (b a) p
-    filterAfter :: Intrvl (b a) -> ([Intrvl (b a)] -> [Intrvl (b a)])
+    -- | Filter a list of Interval as to those before the Interval a p
+    filterAfter :: Interval a -> ([Interval a] -> [Interval a])
     filterAfter = filterMaker after
 
-    -- | Filter a list of Intrvl (b a)s to those meeting the Intrvl (b a) p
-    filterMeets :: Intrvl (b a) -> ([Intrvl (b a)] -> [Intrvl (b a)])
+    -- | Filter a list of Interval as to those meeting the Interval a p
+    filterMeets :: Interval a -> ([Interval a] -> [Interval a])
     filterMeets = filterMaker meets
 
-    -- | Filter a list of Intrvl (b a)s to those meeting the Intrvl (b a) p
-    filterMetBy :: Intrvl (b a) -> ([Intrvl (b a)] -> [Intrvl (b a)])
+    -- | Filter a list of Interval as to those meeting the Interval a p
+    filterMetBy :: Interval a -> ([Interval a] -> [Interval a])
     filterMetBy = filterMaker metBy
 
-    -- | Filter a list of Intrvl (b a)s to those during the Intrvl (b a) p
-    filterDuring :: Intrvl (b a) -> ([Intrvl (b a)] -> [Intrvl (b a)])
+    -- | Filter a list of Interval as to those during the Interval a p
+    filterDuring :: Interval a -> ([Interval a] -> [Interval a])
     filterDuring = filterMaker during
 
-    -- | Filter a list of Intrvl (b a)s to those containing the Intrvl (b a) p
-    filterContains :: Intrvl (b a) -> ([Intrvl (b a)] -> [Intrvl (b a)])
+    -- | Filter a list of Interval as to those containing the Interval a p
+    filterContains :: Interval a -> ([Interval a] -> [Interval a])
     filterContains = filterMaker contains
