@@ -6,8 +6,11 @@ License     : BSD3
 Maintainer  : bsaul@novisci.com
 Stability   : experimental
 
-This module specifies the functions and relational operators according to the 
-interval-based temporal logic axiomatized in [Allen and Hayes (1987)](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.620.5144&rep=rep1&type=pdf). 
+This module provides data types and related classes for the interval-based 
+temporal logic described in [Allen (1983)](https://doi.org/10.1145/182.358434)
+and axiomatized in [Allen and Hayes (1987)](https://doi.org/10.1111/j.1467-8640.1989.tb00329.x). 
+
+This module is under development and the API may change quickly.
 -}
 
 module IntervalAlgebra(
@@ -17,31 +20,22 @@ module IntervalAlgebra(
      
     -- * Data Types
     , Interval
-    , Period
     , IntervalRelation
     , ComparativePredicateOf
 
 ) where
 
-{- |
-TODO: Describe
+import Data.Time as DT
+
+{- | An 'Interval a' is simple a pair of @a@s \( (x, y) s.t. x < y\). The
+'Intervallic a' class provides a safe 'parseInterval' function that returns a 
+'Left' error if \(y < x\) and 'unsafeInterval' as constructor for creating an
+interval that may not be valid. 
 -}
 newtype Interval a = Interval (a,a) deriving (Eq)
 
-{- | 
-A 'Period a' is a simply a pair of the same type. To be useful as a @Period@ 
-of time, it will also be an instance of 'Periodable'.
--}
-
-data Period a =
-     Point a
-   | Moment (Interval a)
-   | TrueInterval (Interval a)
-   deriving (Eq)
-
-{-
-The 'IntervallicRelation' type enumerates the thirteen possible ways that two 
-'Intervallic a' objects can relate according to the interval algebra.
+{- | The 'IntervalRelation' type enumerates the thirteen possible ways that two 
+'Interval a' objects can relate according to the interval algebra.
 -}
 
 data IntervalRelation = 
@@ -66,24 +60,25 @@ It also includes functions for getting the 'begin' and 'end' of an 'Interval a'.
 -}
 class (Ord a, Show a) => Intervallic a where 
 
-    {- | TODO
-    -}
+    -- | Safely parse a pair of @a@s to create an 'Interval a'.
     parseInterval :: a -> a -> Either String (Interval a)
     parseInterval x y
         -- TODO: create more general framework for error handling
         |  y < x    = Left $ show x ++ " and " ++ show y ++ " are not in order"
         | otherwise = Right $ Interval (x, y)
 
-    {- | Create a new @Interval a@. This function is _not_ safe in that it does
+    {- | Create a new @Interval a@. This function is __not_) safe in that it does
        not enforce that x < y. Use with caution. It is meant to be helper 
        function in early prototyping of this package. This function may be 
        deprecated in future releases.
     -}
-    unsafeInterval :: a ->  a -> Interval a
+    unsafeInterval :: a -> a -> Interval a
     unsafeInterval x y = Interval (x, y)
 
     -- | Determine the 'begin' or 'end' of an 'Interval a' object.
     begin, end :: Interval a -> a
+    begin (Interval x) = fst x
+    end   (Interval x) = snd x
 
 {-
 ** Intervallic Algebra relations
@@ -164,9 +159,9 @@ class (Eq a, Intervallic a) => IntervalAlgebraic a where
 
     -- | Ordered Union of meeting intervals.
     (.+.) :: Interval a -> Interval a -> Maybe (Interval a)
-
--- | Defines a comparator predicate of two objects of type a
-type ComparativePredicateOf a = (a -> a -> Bool) 
+    (.+.) x y
+      | x `meets` y = Just $ Interval (begin x, end y)
+      | otherwise   = Nothing
 
 {-
 Instances
@@ -187,14 +182,20 @@ instance (Intervallic a) => Ord (Interval a) where
 instance (Intervallic a, Show a) => Show (Interval a) where
    show x = "(" ++ show (begin x) ++ ", " ++ show (end x) ++ ")"
 
-instance Intervallic Int where
-    begin (Interval x) = fst x
-    end   (Interval x) = snd x
+instance Intervallic Int
+instance IntervalAlgebraic Int
 
-instance IntervalAlgebraic Int where
-   (.+.) x y
-      | x `meets` y = Just $ Interval (begin x, end y)
-      | otherwise   = Nothing
+instance Intervallic Integer
+instance IntervalAlgebraic Integer
 
+instance Intervallic DT.Day
+instance IntervalAlgebraic DT.Day
+
+{-
+Misc Utilities
+-}
+
+-- | Defines a comparator predicate of two objects of type a
+type ComparativePredicateOf a = (a -> a -> Bool) 
 
 
