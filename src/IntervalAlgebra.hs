@@ -15,18 +15,18 @@ module IntervalAlgebra(
        Intervallic(..)
     ,  IntervalAlgebraic(..)
      
-    -- * Date Types
-    , Interval(..)
+    -- * Data Types
+    , Interval
     , Period
     , IntervalRelation
     , ComparativePredicateOf
 
-    -- * Functions
-    ,  parseInterval
 ) where
 
+{- |
+TODO: Describe
+-}
 newtype Interval a = Interval (a,a) deriving (Eq)
-newtype Ordered a  = Ordered a deriving (Eq, Ord, Show)
 
 {- | 
 A 'Period a' is a simply a pair of the same type. To be useful as a @Period@ 
@@ -36,7 +36,7 @@ of time, it will also be an instance of 'Periodable'.
 data Period a =
      Point a
    | Moment (Interval a)
-   | TrueIntervallic (Interval a)
+   | TrueInterval (Interval a)
    deriving (Eq)
 
 {-
@@ -60,20 +60,20 @@ data IntervalRelation =
     | Equals
     deriving (Show, Read)
 
--- | TODO
-
-parseInterval :: (Ord a, Show a) => a -> a -> Either String (Interval a)
-parseInterval x y
-    -- TODO: create more general framework for error handling
-    |  y < x    = Left $ show x ++ " and " ++ show y ++ " are not in order"
-    | otherwise = Right $ Interval (x, y)
-
 {-
-The 'Intervallic' typeclass specifies how to create valid interval.
-how a 'Interval a' is constructed. It also includes functions for getting 
-the 'begin' and 'end' of an 'Interval a'.
+The 'Intervallic' typeclass specifies how an 'Interval a' is constructed.
+It also includes functions for getting the 'begin' and 'end' of an 'Interval a'.
 -}
-class (Ord a) => Intervallic a where 
+class (Ord a, Show a) => Intervallic a where 
+
+    {- | TODO
+    -}
+    parseInterval :: a -> a -> Either String (Interval a)
+    parseInterval x y
+        -- TODO: create more general framework for error handling
+        |  y < x    = Left $ show x ++ " and " ++ show y ++ " are not in order"
+        | otherwise = Right $ Interval (x, y)
+
     {- | Create a new @Interval a@. This function is _not_ safe in that it does
        not enforce that x < y. Use with caution. It is meant to be helper 
        function in early prototyping of this package. This function may be 
