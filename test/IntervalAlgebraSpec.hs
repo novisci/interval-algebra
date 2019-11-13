@@ -11,10 +11,10 @@ import Control.Monad
 xor :: Bool -> Bool -> Bool
 xor a b = a /= b
 
-instance Arbitrary IntrvlPairInt where
-  arbitrary = liftM2 safeInterval arbitrary arbitrary
+instance Arbitrary IntervalInt where
+  arbitrary = liftM2 safeInterval' arbitrary arbitrary
 
-type IntrvlPairInt = Intrvl (Pair Int)
+type IntervalInt = Interval Int
 
 makePos :: Int -> Int
 makePos x
@@ -24,27 +24,27 @@ makePos x
 
 
 -- | A function for creating intervals when you think you know what you're doing.
-interval'' :: Int -> Int -> IntrvlPairInt
-interval'' x y = Intrvl $ Pair (min x y, max x y)
+safeInterval :: Int -> Int -> IntervalInt
+safeInterval x y = unsafeInterval (min x y) (max x y)
 
--- | Safely create a valid 'IntrvlPairInt' from two Ints by adding 'makepos' @dur@
+-- | Safely create a valid 'IntervalInt' from two Ints by adding 'makepos' @dur@
 --   to @start@ to set the duration of the interval.
-safeInterval :: Int -> Int -> IntrvlPairInt
-safeInterval start dur = interval'' start (start + makePos dur)
+safeInterval' :: Int -> Int -> IntervalInt
+safeInterval' start dur = safeInterval start (start + makePos dur)
 
--- | Create a 'Maybe IntrvlPairInt' from two Ints.
-safeInterval' :: Int -> Int -> Maybe (Intrvl (Pair Int))
-safeInterval' a b 
+-- | Create a 'Maybe IntervalInt' from two Ints.
+safeInterval'' :: Int -> Int -> Maybe IntervalInt
+safeInterval'' a b 
     | b <= a    = Nothing
-    | otherwise = Just $ interval'' a b
+    | otherwise = Just $ safeInterval a b
 
 
 -- | A set used for testing M1 defined so that the M1 condition is true.
 data M1set = M1set { 
-     m11 :: IntrvlPairInt
-   , m12 :: IntrvlPairInt
-   , m13 :: IntrvlPairInt
-   , m14 :: IntrvlPairInt }
+     m11 :: IntervalInt
+   , m12 :: IntervalInt
+   , m13 :: IntervalInt
+   , m14 :: IntervalInt }
    deriving (Show)
 
 instance Arbitrary M1set where
@@ -56,13 +56,14 @@ instance Arbitrary M1set where
     return $ m1set x a b c
 
 -- | Smart constructor of 'M1set'.
-m1set :: IntrvlPairInt -> Int -> Int -> Int -> M1set
+m1set :: IntervalInt -> Int -> Int -> Int -> M1set
 m1set x a b c = M1set p1 p2 p3 p4
   where p1 = x                          -- interval i in prop_IAaxiomM1
-        p2 = safeInterval (end x) a     -- interval j in prop_IAaxiomM1
-        p3 = safeInterval (end x) b     -- interval k in prop_IAaxiomM1
-        p4 = expandl (makePos c) pt     -- interval l in prop_IAaxiomM1
-        pt = interval'' (begin p2 - 1) (begin p2)
+        p2 = safeInterval' (end x) a    -- interval j in prop_IAaxiomM1
+        p3 = safeInterval' (end x) b    -- interval k in prop_IAaxiomM1
+        p4 = safeInterval  (begin p2 - (makePos c)) (begin p2)
+--        p4 = expandl (makePos c) pt     -- interval l in prop_IAaxiomM1
+--        pt = safeInterval (begin p2 - 1) (begin p2)
 
 {-
 
@@ -86,10 +87,10 @@ prop_IAaxiomM1 x =
 
 -- | A set used for testing M2 defined so that the M2 condition is true.
 data M2set = M2set {
-    m21 :: IntrvlPairInt
-  , m22 :: IntrvlPairInt
-  , m23 :: IntrvlPairInt
-  , m24 :: IntrvlPairInt }
+    m21 :: IntervalInt
+  , m22 :: IntervalInt
+  , m23 :: IntervalInt
+  , m24 :: IntervalInt }
   deriving (Show)
 
 instance Arbitrary M2set where
@@ -101,12 +102,12 @@ instance Arbitrary M2set where
     return $ m2set x a b c
 
 -- | Smart constructor of 'M2set'.
-m2set :: IntrvlPairInt -> IntrvlPairInt -> Int -> Int -> M2set
+m2set :: IntervalInt -> IntervalInt -> Int -> Int -> M2set
 m2set x y a b = M2set p1 p2 p3 p4
   where p1 = x                          -- interval i in prop_IAaxiomM2
-        p2 = safeInterval (end x) a     -- interval j in prop_IAaxiomM2
+        p2 = safeInterval' (end x) a     -- interval j in prop_IAaxiomM2
         p3 = y                          -- interval k in prop_IAaxiomM2
-        p4 = safeInterval (end y) b     -- interval l in prop_IAaxiomM2
+        p4 = safeInterval' (end y) b     -- interval l in prop_IAaxiomM2
 
 {-
 
@@ -132,8 +133,8 @@ prop_IAaxiomM2 x =
           j = m22 x
           k = m23 x
           l = m24 x
-          m = safeInterval' (end $ i) (begin $ l)
-          n = safeInterval' (end $ k) (begin $ j)
+          m = safeInterval'' (end $ i) (begin $ l)
+          n = safeInterval'' (end $ k) (begin $ j)
 
 {-
 
@@ -146,7 +147,7 @@ prop_IAaxiomM2 x =
  \] 
 -}
 
-prop_IAaxiomML1 :: IntrvlPairInt -> Property
+prop_IAaxiomML1 :: IntervalInt -> Property
 prop_IAaxiomML1 x = not (x `meets` x) === True
 
 {-
@@ -178,11 +179,11 @@ prop_IAaxiomML2 x =
  \] 
 -}
 
-prop_IAaxiomM3 :: IntrvlPairInt -> Property
+prop_IAaxiomM3 :: IntervalInt -> Property
 prop_IAaxiomM3 i = 
    (j `meets` i && i `meets` k) === True
-   where j = interval'' (begin i - 1) (begin i)
-         k = interval'' (end i) (end i + 1)
+   where j = safeInterval (begin i - 1) (begin i)
+         k = safeInterval (end i) (end i + 1)
 
 {-
 
@@ -201,9 +202,9 @@ prop_IAaxiomM4 x =
     (m `meets` k && k `meets` n)) === True
    where i = m21 x
          j = m22 x
-         m = interval'' (begin i - 1) (begin i)
-         n = interval'' (end j) (end j + 1)
-         k = interval'' (end m) (begin n)
+         m = safeInterval (begin i - 1) (begin i)
+         n = safeInterval (end j) (end j + 1)
+         k = safeInterval (end m) (begin n)
 
 
 {-
@@ -219,8 +220,8 @@ If two meets are separated by intervals, then this sequence is a longer interval
 
 -- | A set used for testing M5.
 data M5set = M5set { 
-     m51 :: IntrvlPairInt
-   , m52 :: IntrvlPairInt }
+     m51 :: IntervalInt
+   , m52 :: IntervalInt }
    deriving (Show)
 
 instance Arbitrary M5set where
@@ -231,11 +232,11 @@ instance Arbitrary M5set where
     return $ m5set x a b
 
 -- | Smart constructor of 'M5set'.
-m5set :: IntrvlPairInt -> Int -> Int -> M5set
+m5set :: IntervalInt -> Int -> Int -> M5set
 m5set x a b = M5set p1 p2 
-  where p1 = x                         -- interval i in prop_IAaxiomM5
-        p2 = safeInterval ps a         -- interval l in prop_IAaxiomM5
-        ps = add (makePos b) (end x) -- creating l by shifting and expanding i
+  where p1 = x                     -- interval i in prop_IAaxiomM5
+        p2 = safeInterval' ps a    -- interval l in prop_IAaxiomM5
+        ps = (makePos b) + (end x) -- creating l by shifting and expanding i
 
 
 prop_IAaxiomM5 :: M5set -> Property
@@ -243,8 +244,8 @@ prop_IAaxiomM5 x =
    ((i `meets` j && j `meets` l) &&
     (i `meets` k && k `meets` l))  === (j == k)
    where i = m51 x
-         j = interval'' (end i) (begin l)
-         k = interval'' (end i) (begin l)
+         j = safeInterval (end i) (begin l)
+         k = safeInterval (end i) (begin l)
          l = m52 x
 
 {-
@@ -264,8 +265,8 @@ prop_IAaxiomM4_1 x =
     (m `meets` ij && ij `meets` n)) === True
    where i = m21 x
          j = m22 x
-         m = interval'' (begin i - 1) (begin i)
-         n = interval'' (end j) (end j + 1)
+         m = safeInterval (begin i - 1) (begin i)
+         n = safeInterval (end j) (end j + 1)
          ij = fromJust $ i .+. j
 
 
@@ -273,45 +274,45 @@ prop_IAaxiomM4_1 x =
 * Interval Relation property testing 
 -}
 
-prop_IAbefore :: IntrvlPairInt -> IntrvlPairInt -> Property
+prop_IAbefore :: IntervalInt -> IntervalInt -> Property
 prop_IAbefore i j = 
   IA.before i j ==> (i `meets` k) && (k `meets` j)
-    where k = interval'' (end i) (begin j)
+    where k = safeInterval (end i) (begin j)
 
 
-prop_IAstarts:: IntrvlPairInt -> IntrvlPairInt -> Property
+prop_IAstarts:: IntervalInt -> IntervalInt -> Property
 prop_IAstarts i j
   | ((IA.starts i j) == True) =
-    let k = interval'' (end i) (end j)
+    let k = safeInterval (end i) (end j)
     in 
      (j == (fromJust $ i .+. k)) === True
   | otherwise = IA.starts i j === False
 
 
-prop_IAfinishes:: IntrvlPairInt -> IntrvlPairInt -> Property
+prop_IAfinishes:: IntervalInt -> IntervalInt -> Property
 prop_IAfinishes i j
   | ((IA.finishes i j) == True) =
-    let k = interval'' (begin j) (begin i)
+    let k = safeInterval (begin j) (begin i)
     in 
      (j == (fromJust $ k .+. i)) === True
   | otherwise = IA.finishes i j === False
 
-prop_IAoverlaps:: IntrvlPairInt -> IntrvlPairInt -> Property
+prop_IAoverlaps:: IntervalInt -> IntervalInt -> Property
 prop_IAoverlaps i j
   | ((IA.overlaps i j) == True) = 
-    let k = interval'' (begin i) (begin j)
-        l = interval'' (begin j) (end i)
-        m = interval'' (end i)   (end j)
+    let k = safeInterval (begin i) (begin j)
+        l = safeInterval (begin j) (end i)
+        m = safeInterval (end i)   (end j)
     in 
      ((i == (fromJust $ k .+. l )) &&
       (j == (fromJust $ l .+. m ))) === True
   | otherwise  = IA.overlaps i j === False 
 
-prop_IAduring:: IntrvlPairInt -> IntrvlPairInt -> Property
+prop_IAduring:: IntervalInt -> IntervalInt -> Property
 prop_IAduring i j
   | ((IA.during i j) == True) = 
-    let k = interval'' (begin j) (begin i)
-        l = interval'' (end i) (end j)
+    let k = safeInterval (begin j) (begin i)
+        l = safeInterval (end i) (end j)
     in 
      (j == (fromJust $ (fromJust $ k .+. i) .+. l)) === True
   | otherwise  = IA.during i j === False 
@@ -320,7 +321,7 @@ prop_IAduring i j
 For any two pair of intervals exactly one 'IntervalRelation' should hold.
 -}
 
-allIArelations:: [(ComparativePredicateOf (IntrvlPairInt))]
+allIArelations:: [(ComparativePredicateOf (IntervalInt))]
 allIArelations =   [  IA.equals
                     , IA.meets
                     , IA.metBy
@@ -335,7 +336,7 @@ allIArelations =   [  IA.equals
                     , IA.during
                     , IA.contains ]
 
-prop_exclusiveRelations::  IntrvlPairInt -> IntrvlPairInt -> Property 
+prop_exclusiveRelations::  IntervalInt -> IntervalInt -> Property 
 prop_exclusiveRelations x y =
   (  1 == length (filter id $ map (\r -> r x y) allIArelations)) === True
 
@@ -412,11 +413,4 @@ main = hspec $ do
       --modifyMaxDiscardRatio (* 10) $
     do
       it "exactly one relation must be true" $ property prop_exclusiveRelations
- {- 
-  describe "Period expansions" $ 
-    do
-      it "expandl safely shrinks a period" $
-        expandl (-10) (period 0 10) `shouldBe` period 0 10
-      it "expandr safely shrinks a period" $
-        expandr (-10) (period 0 10) `shouldBe` period 0 10
--}
+
