@@ -1,5 +1,3 @@
-{-# LANGUAGE FunctionalDependencies #-}
-
 {-|
 Module      : Interval Algebra Filtrations
 Description : Offers functions for filtering list of intervals based on a 
