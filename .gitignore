@@ -1,7 +1,7 @@
 .stack-work/
-interval-algebra.cabal
 *~
 *DS_Store
 *sublime-project
 *sublime-workspace
 *scratch
+*yaml.lock
