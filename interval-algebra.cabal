@@ -4,20 +4,28 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e2415ec2e6df09f304c1aa36f3d2422785d609521ab26395e35c36a6140ec3a5
+-- hash: 15ba66b4d7bad49534452e8917ed1c55ef43ecf0f84e2e9a41a33a2d222053bf
 
 name:           interval-algebra
-version:        0.1.1
-description:    Please see the README on GitHub at <https://github.com/githubuser/interval-algebra#readme>
+version:        0.1.2
+synopsis:       An implementation of Allen's interval algebra for temporal logic
+description:    Please see the README on GitHub at <https://github.com/novisci/interval-algebra>
+category:       Algebra,Time
+homepage:       https://github.com/novisci/interval-algebra#readme
+bug-reports:    https://github.com/novisci/interval-algebra/issues
 author:         Bradley Saul
 maintainer:     bsaul@novisci.com
-copyright:      2019 NoviSci
+copyright:      2020 NoviSci
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
     README.md
     ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/novisci/interval-algebra
 
 library
   exposed-modules:
