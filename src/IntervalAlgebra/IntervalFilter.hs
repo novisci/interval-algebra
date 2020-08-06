@@ -2,28 +2,27 @@
 Module      : Interval Algebra Filtrations
 Description : Offers functions for filtering list of intervals based on a 
               reference interval.
-Copyright   : (c) NoviSci, Inc 2019
+Copyright   : (c) NoviSci, Inc 2020
 License     : BSD3
 Maintainer  : bsaul@novisci.com
 Stability   : experimental
-
-TODO
 -}
 
 module IntervalAlgebra.IntervalFilter (
-  IntervalFilter(..)
+    -- * Classes
+    IntervalFilterable(..)
 ) where
 
 import IntervalAlgebra
 
 {- | 
-TODO: describe this class.
-
-TODO: generalize the class to handle generalized "filterable" containers (not
-just lists).
+The @'IntervalFilterable'@ class provides functions for filtering 'List's of 
+@'Interval'@s based on @'IntervalAlgebraic'@ relations.
 -}
+class (IntervalAlgebraic a) => IntervalFilterable a where
 
-class (IntervalAlgebraic a) => IntervalFilter a where
+-- TODO: generalize the class to handle generalized "filterable" containers (not
+-- just lists).
 
     -- |Creates a function for filtering a list of Interval as based on a predicate
     filterMaker :: ComparativePredicateOf (Interval a) 

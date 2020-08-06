@@ -1,5 +1,9 @@
 image: haskell:8.8.3
 
+variables:
+  PKG: interval-algebra
+
+
 cache:
   paths:
     - .stack

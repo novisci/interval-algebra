@@ -1,25 +1,52 @@
 {-|
-Module      : Intervallic Algebra
+Module      : Interval Algebra
 Description : Implementation of Allen's interval algebra
-Copyright   : (c) NoviSci, Inc 2019
+Copyright   : (c) NoviSci, Inc 2020
 License     : BSD3
 Maintainer  : bsaul@novisci.com
 Stability   : experimental
 
-This module provides data types and related classes for the interval-based 
-temporal logic described in [Allen (1983)](https://doi.org/10.1145/182.358434)
+The @IntervalAlgebra@ module provides data types and related classes for the 
+interval-based temporal logic described in [Allen (1983)](https://doi.org/10.1145/182.358434)
 and axiomatized in [Allen and Hayes (1987)](https://doi.org/10.1111/j.1467-8640.1989.tb00329.x). 
 
-This module is under development and the API may change quickly.
+A good primer on Allen's algebra can be [found here](https://thomasalspaugh.org/pub/fnd/allen.html).
+
+= Design
+
+The module is built around three typeclasses designed to separate concerns of 
+constructing, relating, and combining @'Interval'@s: 
+
+1. @'Intervallic'@ provides an interface to the data structure of an @'Interval'@, 
+   defining how an @'Interval' a@ is constructed.
+2. @'IntervalAlgebraic'@ provides an interface to the @'IntervalRelation's@, 
+   the workhorse of Allen's temporal logic.
+3. @'IntervalCombinable'@ provides an interface to methods of combining multiple
+   @'Interval's@.
+
+An advantage of nested typeclass design is that developers can define an 
+@'Interval'@ of type @a@ with just the amount of structure that they need.
+
+== Total Ordering of @Interval@s 
+
+The modules makes the (opinionated) choice of a total ordering for @'Intervallic'@ 
+@'Interval'@s. Namely, the ordering is based on first ordering the 'begin's 
+then the 'end's.
+
+= Development
+
+This module is under development and the API may change in the future.
 -}
 
 module IntervalAlgebra(
+
     -- * Classes
-       Intervallic(..)
-    ,  IntervalAlgebraic(..)
-     
+      Intervallic(..)
+    , IntervalAlgebraic(..)
+    , IntervalCombinable(..)
+    
     -- * Data Types
-    , Interval
+    , Interval(..)
     , IntervalRelation
     , ComparativePredicateOf
 
@@ -27,19 +54,92 @@ module IntervalAlgebra(
 
 import Data.Time as DT
 
-{- | An 'Interval a' is simple a pair of @a@s \( (x, y) s.t. x < y\). The
-'Intervallic a' class provides a safe 'parseInterval' function that returns a 
-'Left' error if \(y < x\) and 'unsafeInterval' as constructor for creating an
+{- | An @'Interval' a@ is a pair of @a@s \( (x, y) \text{ where } x < y\). The
+@'Intervallic'@ class provides a safe @'parseInterval'@ function that returns a 
+@'Left'@ error if \(y < x\) and 'unsafeInterval' as constructor for creating an
 interval that may not be valid. 
 -}
-newtype Interval a = Interval (a,a) deriving (Eq)
+newtype Interval a = Interval (a, a) deriving (Eq)
 
-{- | The 'IntervalRelation' type enumerates the thirteen possible ways that two 
-'Interval a' objects can relate according to the interval algebra.
+{- | 
+
+The 'IntervalRelation' type enumerates the thirteen possible ways that two 
+@'Interval' a@ objects can relate according to the interval algebra.
+
+=== Meets, Metby
+
+> x `meets` y
+> y `metBy` x
+
+@ 
+x: |-----|
+y:       |-----| 
+@
+
+=== Before, After
+
+> x `before` y
+> y `after` x
+
+@ 
+x: |-----|  
+y:          |-----|
+@
+
+
+=== Overlaps, OverlappedBy
+
+> x `overlaps` y
+> y `overlappedBy` x
+
+@ 
+x: |-----|
+y:     |-----|
+@
+
+=== Starts, StartedBy
+
+> x `starts` y
+> y `startedBy` x
+
+@ 
+x: |---| 
+y: |-----|
+@
+
+=== Finishes, FinishedBy
+
+> x `finishes` y
+> y `finishedBy` x
+
+@ 
+x:   |---| 
+y: |-----|
+@
+
+=== During, Contains
+
+> x `during` y
+> y `contains` x
+
+@ 
+x:   |-| 
+y: |-----|
+@
+
+=== Equal
+
+> x `equal` y
+> y `equal` x
+
+@ 
+x: |-----| 
+y: |-----|
+@
+
 -}
-
 data IntervalRelation = 
-      Meets
+      Meets 
     | MetBy
     | Before
     | After
@@ -54,46 +154,43 @@ data IntervalRelation =
     | Equals
     deriving (Show, Read)
 
-{-
-The 'Intervallic' typeclass specifies how an 'Interval a' is constructed.
-It also includes functions for getting the 'begin' and 'end' of an 'Interval a'.
+{- | 
+The @'Intervallic'@ typeclass specifies how an @'Interval' a@s is constructed.
+It also includes functions for getting the @'begin'@ and @'end'@ of an @'Interval' a@.
 -}
 class (Ord a, Show a) => Intervallic a where 
 
-    -- | Safely parse a pair of @a@s to create an 'Interval a'.
+    -- | Safely parse a pair of @a@s to create an @'Interval' a@.
     parseInterval :: a -> a -> Either String (Interval a)
     parseInterval x y
         -- TODO: create more general framework for error handling
-        |  y < x    = Left $ show x ++ " and " ++ show y ++ " are not in order"
+        |  y < x    = Left  $ show y ++ "<" ++ show x
         | otherwise = Right $ Interval (x, y)
 
-    {- | Create a new @Interval a@. This function is __not_) safe in that it does
-       not enforce that x < y. Use with caution. It is meant to be helper 
+    {- | Create a new @'Interval' a@. This function is __not__ safe as it does 
+       not enforce that \(x < y\). Use with caution. It is meant to be helper 
        function in early prototyping of this package. This function may be 
        deprecated in future releases.
     -}
     unsafeInterval :: a -> a -> Interval a
     unsafeInterval x y = Interval (x, y)
 
-    -- | Determine the 'begin' or 'end' of an 'Interval a' object.
+    -- | Access the ends of an @'Interval' a@ .
     begin, end :: Interval a -> a
-    begin (Interval x) = fst x
-    end   (Interval x) = snd x
+    begin (Interval x) = fst x --  \( \text{begin}(x, y) = x \)
+    end   (Interval x) = snd x --  \( \text{end}(x, y) = y \)
 
-{-
-** Intervallic Algebra relations
-
-The 'IntervallicAlgebraic' typeclass specifies the functions and relational 
+{- |
+The @'IntervalAlgebraic'@ typeclass specifies the functions and relational 
 operators for interval-based temporal logic. The typeclass defines the 
 relational operators for intervals, plus other useful utilities such as 
-'disjoint'.
+@'disjoint'@, @'in''@, and @'composeRelations'@.
 -}
-
 class (Eq a, Intervallic a) => IntervalAlgebraic a where
 
-    -- | Compare two intervals to determine their relation.
-    intervalCompare :: Interval a -> Interval a -> IntervalRelation
-    intervalCompare x y
+    -- | Compare two intervals to determine their 'IntervalRelation'.
+    relate :: Interval a -> Interval a -> IntervalRelation
+    relate x y
         | x `before` y       = Before
         | x `after`  y       = After
         | x `meets`  y       = Meets
@@ -112,9 +209,9 @@ class (Eq a, Intervallic a) => IntervalAlgebraic a where
     equals                 :: ComparativePredicateOf (Interval a)
     equals   x y  = x == y
 
-    -- | Does x meet y? Does y meet x?
+    -- | Does x meet y? Is y metBy x?
     meets, metBy           :: ComparativePredicateOf (Interval a)
-    meets    x y  = end x == begin y
+    meets    x y  = end x == begin y 
     metBy         = flip meets
 
     -- | Is x before y? Is x after y?
@@ -142,22 +239,32 @@ class (Eq a, Intervallic a) => IntervalAlgebraic a where
     during   x y  = begin x > begin y && end x < end y
     contains      = flip during
 
-    -- ** Intervallic Algebra utilities
+    -- ** Interval Algebra utilities
 
-    -- | Compare interval relations with _or_.
+    -- | Compose a list of interval relations with _or_ to create a new
+    -- @'ComparativePredicateOf' 'Interval' a@.For example, 
+    -- @composeRelations [before, meets]@ creates a predicate function determining
+    -- if one interval is either before or meets another interval.
     composeRelations       :: [ComparativePredicateOf (Interval a)] ->
                                ComparativePredicateOf (Interval a)
     composeRelations fs x y = any (\ f -> f x y) fs
 
-    -- | Are x and y disjoint?
+    -- | Are x and y disjoint ('before', 'after', 'meets', or 'metBy')?
     disjoint               :: ComparativePredicateOf (Interval a)
     disjoint = composeRelations [before, after, meets, metBy]
 
-    -- | Is x contained in y in any sense?
+    -- | Is x contained in y in any sense ('during', 'starts', 'finishes' 
+    -- or 'equals'?
     in'                    :: ComparativePredicateOf (Interval a)
     in' = composeRelations [during, starts, finishes, equals]
 
-    -- | Ordered Union of meeting intervals.
+
+{- |
+The @'IntervalCombinable'@ typeclass provides methods combining multiple @'Interval's@.
+-}
+class (IntervalAlgebraic a) => IntervalCombinable a where
+
+    -- | Maybe form a new @'Interval'@ by the union of two @'Interval'@s that 'meet'.
     (.+.) :: Interval a -> Interval a -> Maybe (Interval a)
     (.+.) x y
       | x `meets` y = Just $ Interval (begin x, end y)
@@ -167,7 +274,7 @@ class (Eq a, Intervallic a) => IntervalAlgebraic a where
 Instances
 -}
 
--- | Imposes a total ordering on 'Interval a' based on first ordering the 
+-- | Imposes a total ordering on @'Interval' a@ based on first ordering the 
 --   'begin's then the 'end's.
 instance (Intervallic a) => Ord (Interval a) where
     (<=) x y
@@ -184,18 +291,21 @@ instance (Intervallic a, Show a) => Show (Interval a) where
 
 instance Intervallic Int
 instance IntervalAlgebraic Int
+instance IntervalCombinable Int
 
 instance Intervallic Integer
 instance IntervalAlgebraic Integer
+instance IntervalCombinable Integer
 
 instance Intervallic DT.Day
 instance IntervalAlgebraic DT.Day
+instance IntervalCombinable DT.Day
 
 {-
 Misc Utilities
 -}
 
--- | Defines a comparator predicate of two objects of type a
+-- | Defines a predicate of two objects of type @a@.
 type ComparativePredicateOf a = (a -> a -> Bool) 
 
 
