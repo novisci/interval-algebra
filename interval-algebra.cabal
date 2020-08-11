@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 15ba66b4d7bad49534452e8917ed1c55ef43ecf0f84e2e9a41a33a2d222053bf
+-- hash: afab50a57b38d45082f7b71f75ba5ec1cb8188302aa601326ba694aaa856a8be
 
 name:           interval-algebra
 version:        0.1.2
@@ -37,7 +37,7 @@ library
       src
   build-depends:
       base >=4.7 && <5
-    , time >=1.8
+    , time >=1.8 && <2
   default-language: Haskell2010
 
 test-suite interval-algebra-test
@@ -53,5 +53,5 @@ test-suite interval-algebra-test
     , base >=4.7 && <5
     , hspec
     , interval-algebra
-    , time >=1.8
+    , time >=1.8 && <2
   default-language: Haskell2010
