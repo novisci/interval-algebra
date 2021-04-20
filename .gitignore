@@ -6,3 +6,4 @@
 *scratch
 *yaml.lock
 dist*
+.vscode*

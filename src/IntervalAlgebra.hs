@@ -16,7 +16,7 @@ A good primer on Allen's algebra can be [found here](https://thomasalspaugh.org/
 
 = Design
 
-The module is built around three typeclasses designed to separate concerns of 
+The module is built around five typeclasses designed to separate concerns of 
 constructing, relating, and combining @'Interval'@s: 
 
 1. @'Intervallic'@ provides an interface to the data structure of an @'Interval'@, 
@@ -25,6 +25,10 @@ constructing, relating, and combining @'Interval'@s:
    the workhorse of Allen's temporal logic.
 3. @'IntervalCombinable'@ provides an interface to methods of combining two
    @'Interval's@.
+4. @'IntervalSizeable'@ provides methods for measuring and modifying the size
+   of an interval.
+5. @'IntervalFilterable'@ provides methods for filtering 'Filterable' collections
+   of intervals.
 
 An advantage of nested typeclass design is that developers can define an 
 @'Interval'@ of type @a@ with just the amount of structure that they need.
