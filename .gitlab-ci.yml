@@ -5,12 +5,13 @@ variables:
 
 cache:
   paths:
-    - .stack
-    - .stack-work
-    - target
+    - dist-newstyle
 
 test:
   stage: test
   script:
     - ghc --version
+    - cabal --version
+    - cabal update
+    - cabal install witherable --lib
     - cabal test --test-show-details=always 
