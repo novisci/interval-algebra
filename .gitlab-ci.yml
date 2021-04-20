@@ -12,4 +12,5 @@ test:
   script:
     - ghc --version
     - cabal --version
+    - cabal install --lib --enable-tests
     - cabal test --test-show-details=always 
