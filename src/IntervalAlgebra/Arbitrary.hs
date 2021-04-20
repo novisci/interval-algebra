@@ -45,6 +45,7 @@ instance Arbitrary (Interval DT.Day) where
 
 type IntervalInt = Interval Int
 
+-- | Internal function for converting a number to a strictly positive value.
 makePos :: (Ord b, Num b) => b -> b
 makePos x
   | x == 0    = x + 1
@@ -55,12 +56,12 @@ makePos x
 safeInterval :: (Intervallic a) => a -> a -> Interval a
 safeInterval x y = unsafeInterval (min x y) (max x y)
 
--- | Safely create a valid 'Interval a' from two 'a' by adding 'makepos' @dur@
+-- | Safely create a valid 'Interval a' from two @a@ by adding a positive @dur@
 --   to @start@ to set the duration of the interval.
 safeInterval' :: (IntervalSizeable a b) => a -> b -> Interval a
 safeInterval' start dur = safeInterval start (add (makePos dur) start)
 
--- | Create a 'Maybe Interval a' from two 'a's.
+-- | Create a 'Maybe Interval a' from two @a@s.
 safeInterval'' :: (Intervallic a) => a -> a -> Maybe (Interval a)
 safeInterval'' x y
     | y <= x    = Nothing

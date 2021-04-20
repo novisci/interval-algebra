@@ -27,7 +27,7 @@ constructing, relating, and combining @'Interval'@s:
    @'Interval's@.
 4. @'IntervalSizeable'@ provides methods for measuring and modifying the size
    of an interval.
-5. @'IntervalFilterable'@ provides methods for filtering 'Filterable' collections
+5. @'IntervalFilterable'@ provides methods for filtering 'Witherable.Filterable' collections
    of intervals.
 
 An advantage of nested typeclass design is that developers can define an 
@@ -282,7 +282,7 @@ class (Eq a, Intervallic a) => IntervalAlgebraic a where
     in' = composeRelations [during, starts, finishes, equals]
 
 
-{-
+{- |
 The 'IntervalSizeable' typeclass provides functions to determine the size of
 and to resize an 'Interval a'.
 -}
@@ -294,7 +294,7 @@ class (Intervallic a, Num b, Ord b) => IntervalSizeable a b| a -> b where
     -- | Sets the length of a moment for an 'Interval a'.
     moment :: a -> b
     moment x = 1
-    -- TODO: The reason is function takes an argument of type 'a' is due to
+    -- TODO: The reason is function takes an argument of type @a@ is due to
     --       ambiguous types warnings. I couldn't figure out how to avoid the
     --       warnings without turning on AllowAmbiguousTypes Pragma. Is there a
     --       better way to handle this?
@@ -324,7 +324,7 @@ two @'Interval's@.
 -}
 class (IntervalAlgebraic a) => IntervalCombinable a where
 
-    -- | Maybe form a new @'Interval'@ by the union of two @'Interval'@s that 'meet'.
+    -- | Maybe form a new @'Interval'@ by the union of two @'Interval'@s that 'meets'.
     (.+.) :: Interval a -> Interval a -> Maybe (Interval a)
     (.+.) x y
       | x `meets` y = Just $ Interval (begin x, end y)
@@ -336,18 +336,18 @@ class (IntervalAlgebraic a) => IntervalCombinable a where
        where s = min (begin x) (begin y)
              e = max (end x) (end y)
 
-    -- | If 'x' is 'before' 'y', then form a new @Just Interval a@ from the 
-    --   interval in the "gap" between x and y from the 'end' of 'x' to the
-    --   'begin' of 'y'. Otherwise, 'Nothing'.
+    -- | If @x@ is 'before' @y@, then form a new @Just Interval a@ from the 
+    --   interval in the "gap" between @x@ and @y@ from the 'end' of @x@ to the
+    --   'begin' of @y@. Otherwise, 'Nothing'.
     (><) ::  Interval a -> Interval a -> Maybe (Interval a)
     (><) x y
         | x `before` y = Just $ Interval ( end x, begin y )
         | otherwise    = Nothing
 
-    -- | If 'x' is 'before' 'y', return @f x@ appended to @f y@. Otherwise, 
-    --   return 'extenterval' of 'x' and 'y' (wrapped in 'f'). This is useful for 
+    -- | If @x@ is 'before' @y@, return @f x@ appended to @f y@. Otherwise, 
+    --   return 'extenterval' of @x@ and @y@ (wrapped in @f@). This is useful for 
     --   folding over an *ordered* container of @Interval@s and combining intervals 
-    --   when 'x' is *not* 'before' 'y'.
+    --   when @x@ is *not* 'before' @y@.
     (<+>):: (Semigroup (f (Interval a)), Applicative f) =>
             Interval a ->
             Interval a ->
@@ -362,48 +362,48 @@ The @'IntervalFilterable'@ class provides functions for filtering 'Filterable's 
 -}
 class (Filterable f, IntervalAlgebraic a) => IntervalFilterable f a where
 
-    -- |Creates a function for filtering a 'Filterable' of @Interval a@s based on a predicate
+    -- |Creates a function for filtering a 'Witherable.Filterable' of @Interval a@s based on a predicate
     filterMaker :: ComparativePredicateOf (Interval a) 
                    -> Interval a 
                    -> (f (Interval a) -> f (Interval a))
     filterMaker f p = Witherable.filter (`f` p)
 
-    -- | Filter a 'Filterable' of @Interval a@s to those that 'overlap' the @Interval a@
+    -- | Filter a 'Witherable.Filterable' of @Interval a@s to those that 'overlaps' the @Interval a@
     --   in the first argument.
     filterOverlaps :: Interval a -> f (Interval a) -> f (Interval a)
     filterOverlaps = filterMaker overlaps
 
-    -- | Filter a 'Filterable' of @Interval a@s to those 'overlappedBy' the @Interval a@
+    -- | Filter a 'Witherable.Filterable' of @Interval a@s to those 'overlappedBy' the @Interval a@
     --   in the first argument.
     filterOverlappedBy :: Interval a -> f (Interval a) -> f (Interval a)
     filterOverlappedBy = filterMaker overlappedBy
 
-    -- | Filter a 'Filterable' of Interval as to those 'before' the @Interval a@
+    -- | Filter a 'Witherable.Filterable' of Interval as to those 'before' the @Interval a@
     --   in the first argument.
     filterBefore :: Interval a -> f (Interval a) -> f (Interval a)
     filterBefore = filterMaker before
 
-    -- | Filter a 'Filterable' of Interval as to those 'after' the @Interval a@
+    -- | Filter a 'Witherable.Filterable' of Interval as to those 'after' the @Interval a@
     --   in the first argument.
     filterAfter :: Interval a -> f (Interval a) -> f (Interval a)
     filterAfter = filterMaker after
 
-    -- | Filter a 'Filterable' of Interval as to those that 'meet' the @Interval a@
+    -- | Filter a 'Witherable.Filterable' of Interval as to those that 'meets' the @Interval a@
     --   in the first argument.
     filterMeets :: Interval a -> f (Interval a) -> f (Interval a)
     filterMeets = filterMaker meets
 
-    -- | Filter a 'Filterable' of Interval as to those 'metBy' the @Interval a@
+    -- | Filter a 'Witherable.Filterable' of Interval as to those 'metBy' the @Interval a@
     --   in the first argument.
     filterMetBy :: Interval a -> f (Interval a) -> f (Interval a)
     filterMetBy = filterMaker metBy
 
-    -- | Filter a 'Filterable' of Interval as to those 'during' the @Interval a@
+    -- | Filter a 'Witherable.Filterable' of Interval as to those 'during' the @Interval a@
     --   in the first argument.
     filterDuring :: Interval a -> f (Interval a) -> f (Interval a)
     filterDuring = filterMaker during
 
-    -- | Filter a 'Filterable' of Interval as to those that 'contain' the @Interval a@
+    -- | Filter a 'Witherable.Filterable' of Interval as to those that 'contains' the @Interval a@
     --   in the first argument.
     filterContains :: Interval a -> f (Interval a) -> f (Interval a)
     filterContains = filterMaker contains

@@ -23,7 +23,6 @@ import IntervalAlgebra( Interval, IntervalCombinable(..), IntervalSizeable(..) )
 import Data.Maybe (mapMaybe)
 import Data.List ( (++), null, any, head, init, last, tail )
 
-
 -- | Box to avoid overlapping instances
 newtype Box a = Box { unBox :: [a] }
 instance (IntervalCombinable a) => Semigroup (Box (Interval a)) where
@@ -45,6 +44,6 @@ combineIntervals l = unBox $ foldr ((<>) . (\z -> Box [z])) (Box []) l
 gaps :: (IntervalCombinable a) => [Interval a] -> [Interval a]
 gaps l = mapMaybe (uncurry (><)) ((zip <*> tail) l)
 
--- | Returns the 'duration' of each 'Interval' in the 'Functor' 'f'.
+-- | Returns the 'duration' of each 'Interval' in the 'Functor' @f@.
 durations :: (Functor f, IntervalSizeable a b) => f (Interval a) -> f b
 durations = fmap duration
