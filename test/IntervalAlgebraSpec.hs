@@ -1,64 +1,50 @@
 {-# LANGUAGE FlexibleInstances #-}
-import Test.Hspec
-import Test.Hspec.QuickCheck
+{-# LANGUAGE TypeApplications #-}
+
+module IntervalAlgebraSpec (spec) where
+
+import Test.Hspec ( hspec, describe, it, Spec )
+import Test.Hspec.QuickCheck ( modifyMaxSuccess, modifyMaxDiscardRatio )
 import Test.QuickCheck
 import IntervalAlgebra as IA
 import Data.Maybe
 import Control.Monad
+import IntervalAlgebra.Arbitrary
+import Data.Time as DT  
 
 xor :: Bool -> Bool -> Bool
 xor a b = a /= b
 
-instance Arbitrary IntervalInt where
-  arbitrary = liftM2 safeInterval' arbitrary arbitrary
-
-type IntervalInt = Interval Int
-
-makePos :: Int -> Int
-makePos x
-  | x == 0    = x + 1
-  | x <  0    = negate x
-  | otherwise = x
-
--- | A function for creating intervals when you think you know what you're doing.
-safeInterval :: Int -> Int -> IntervalInt
-safeInterval x y = unsafeInterval (min x y) (max x y)
-
--- | Safely create a valid 'IntervalInt' from two Ints by adding 'makepos' @dur@
---   to @start@ to set the duration of the interval.
-safeInterval' :: Int -> Int -> IntervalInt
-safeInterval' start dur = safeInterval start (start + makePos dur)
-
--- | Create a 'Maybe IntervalInt' from two Ints.
-safeInterval'' :: Int -> Int -> Maybe IntervalInt
-safeInterval'' a b 
-    | b <= a    = Nothing
-    | otherwise = Just $ safeInterval a b
-
-
 -- | A set used for testing M1 defined so that the M1 condition is true.
-data M1set = M1set { 
-     m11 :: IntervalInt
-   , m12 :: IntervalInt
-   , m13 :: IntervalInt
-   , m14 :: IntervalInt }
+data M1set a = M1set {
+     m11 :: Interval a
+   , m12 :: Interval a
+   , m13 :: Interval a
+   , m14 :: Interval a }
    deriving (Show)
 
-instance Arbitrary M1set where
+-- TODO: remove duplication like this:
+instance Arbitrary (M1set Int) where
   arbitrary = do
     x <- arbitrary
     a <- arbitrary
     b <- arbitrary
-    c <- arbitrary
-    return $ m1set x a b c
+    m1set x a b <$> arbitrary
+
+instance Arbitrary (M1set DT.Day) where
+  arbitrary = do
+    x <- arbitrary
+    a <- arbitrary
+    b <- arbitrary
+    m1set x a b <$> arbitrary
 
 -- | Smart constructor of 'M1set'.
-m1set :: IntervalInt -> Int -> Int -> Int -> M1set
+m1set :: (IntervalSizeable a b) => Interval a -> b -> b -> b -> M1set a
 m1set x a b c = M1set p1 p2 p3 p4
   where p1 = x                          -- interval i in prop_IAaxiomM1
         p2 = safeInterval' (end x) a    -- interval j in prop_IAaxiomM1
         p3 = safeInterval' (end x) b    -- interval k in prop_IAaxiomM1
-        p4 = safeInterval  (begin p2 - (makePos c)) (begin p2)
+        p4 = safeInterval  (begin (expandl (makePos c) p2)) (begin p2)
 
 {-
 
@@ -72,32 +58,44 @@ m1set x a b c = M1set p1 p2 p3 p4
    \forall i,j,k,l s.t. (i:j & i:k & l:j) \implies l:k
  \] 
 -}
-prop_IAaxiomM1 :: M1set -> Property
-prop_IAaxiomM1 x = 
+prop_IAaxiomM1 :: (IntervalAlgebraic a) => M1set a -> Property
+prop_IAaxiomM1 x =
   (i `meets` j && i `meets` k && l `meets` j) ==> (l `meets` k)
   where i = m11 x
         j = m12 x
         k = m13 x
         l = m14 x
 
+prop_IAaxiomM1_Int :: M1set Int -> Property 
+prop_IAaxiomM1_Int = prop_IAaxiomM1
+
+prop_IAaxiomM1_Day :: M1set DT.Day -> Property 
+prop_IAaxiomM1_Day = prop_IAaxiomM1
+
 -- | A set used for testing M2 defined so that the M2 condition is true.
-data M2set = M2set {
-    m21 :: IntervalInt
-  , m22 :: IntervalInt
-  , m23 :: IntervalInt
-  , m24 :: IntervalInt }
+data M2set a = M2set {
+    m21 :: Interval a
+  , m22 :: Interval a
+  , m23 :: Interval a
+  , m24 :: Interval a }
   deriving (Show)
 
-instance Arbitrary M2set where
+instance Arbitrary (M2set Int) where
   arbitrary = do
     x <- arbitrary
     a <- arbitrary
     b <- arbitrary
-    c <- arbitrary
-    return $ m2set x a b c
+    m2set x a b <$> arbitrary
+
+instance Arbitrary (M2set DT.Day) where
+  arbitrary = do
+    x <- arbitrary
+    a <- arbitrary
+    b <- arbitrary
+    m2set x a b <$> arbitrary
 
 -- | Smart constructor of 'M2set'.
-m2set :: IntervalInt -> IntervalInt -> Int -> Int -> M2set
+m2set :: (IntervalSizeable a b)=> Interval a -> Interval a -> b -> b -> M2set a
 m2set x y a b = M2set p1 p2 p3 p4
   where p1 = x                          -- interval i in prop_IAaxiomM2
         p2 = safeInterval' (end x) a     -- interval j in prop_IAaxiomM2
@@ -124,18 +122,24 @@ That is,
  \] 
 -}
 
-prop_IAaxiomM2 :: M2set -> Property
+prop_IAaxiomM2 :: (IntervalAlgebraic a) => M2set a -> Property
 prop_IAaxiomM2 x =
-  (i `meets` j && k `meets` l) ==> 
-    (i `meets` l)  `xor`  
-    (not $ isNothing m) `xor`
-    (not $ isNothing n)
+  (i `meets` j && k `meets` l) ==>
+    (i `meets` l)  `xor`
+    isJust m `xor`
+    isJust n
     where i = m21 x
           j = m22 x
           k = m23 x
           l = m24 x
-          m = safeInterval'' (end $ i) (begin $ l)
-          n = safeInterval'' (end $ k) (begin $ j)
+          m = safeInterval'' (end i) (begin l)
+          n = safeInterval'' (end k) (begin j)
+
+prop_IAaxiomM2_Int :: M2set Int -> Property
+prop_IAaxiomM2_Int = prop_IAaxiomM2
+
+prop_IAaxiomM2_Day :: M2set DT.Day -> Property
+prop_IAaxiomM2_Day = prop_IAaxiomM2
 
 {-
 
@@ -148,8 +152,14 @@ prop_IAaxiomM2 x =
  \] 
 -}
 
-prop_IAaxiomML1 :: IntervalInt -> Property
+prop_IAaxiomML1 :: (IntervalAlgebraic a) => Interval a -> Property
 prop_IAaxiomML1 x = not (x `meets` x) === True
+
+prop_IAaxiomML1_Int :: Interval Int -> Property
+prop_IAaxiomML1_Int = prop_IAaxiomML1
+
+prop_IAaxiomML1_Day :: Interval DT.Day -> Property
+prop_IAaxiomML1_Day = prop_IAaxiomML1
 
 {-
 
@@ -162,12 +172,17 @@ If i meets j then j does not meet i.
 \] 
 -}
 
-prop_IAaxiomML2 :: M2set -> Property
+prop_IAaxiomML2 :: (IntervalAlgebraic a)=> M2set a -> Property
 prop_IAaxiomML2 x =
   (i `meets` j) ==> not (j `meets` i)
   where i = m21 x
         j = m22 x
 
+prop_IAaxiomML2_Int :: M2set Int -> Property
+prop_IAaxiomML2_Int = prop_IAaxiomML2
+
+prop_IAaxiomML2_Day :: M2set DT.Day -> Property
+prop_IAaxiomML2_Day = prop_IAaxiomML2
 
 {-
 
@@ -180,11 +195,18 @@ Time does not start or stop:
 \] 
 -}
 
-prop_IAaxiomM3 :: IntervalInt -> Property
-prop_IAaxiomM3 i = 
+prop_IAaxiomM3 :: (IntervalAlgebraic a, IntervalSizeable a b)=> 
+      b -> Interval a -> Property
+prop_IAaxiomM3 b i =
    (j `meets` i && i `meets` k) === True
-   where j = safeInterval (begin i - 1) (begin i)
-         k = safeInterval (end i) (end i + 1)
+   where j = safeInterval (begin (expandl b i)) (begin i)
+         k = safeInterval (end i) (end (expandr b i))
+
+prop_IAaxiomM3_Int :: Interval Int -> Property 
+prop_IAaxiomM3_Int = prop_IAaxiomM3 1
+
+prop_IAaxiomM3_Day :: Interval Day -> Property 
+prop_IAaxiomM3_Day = prop_IAaxiomM3 1
 
 {-
 
@@ -197,16 +219,22 @@ If two meets are separated by intervals, then this sequence is a longer interval
 \] 
 -}
 
-prop_IAaxiomM4 :: M2set -> Property
-prop_IAaxiomM4 x = 
+prop_IAaxiomM4 :: (IntervalAlgebraic a, IntervalSizeable a b)=>
+     b -> M2set a -> Property
+prop_IAaxiomM4 moment x =
    ((m `meets` i && i `meets` j && j `meets` n) &&
     (m `meets` k && k `meets` n)) === True
    where i = m21 x
          j = m22 x
-         m = safeInterval (begin i - 1) (begin i)
-         n = safeInterval (end j) (end j + 1)
+         m = safeInterval (begin (expandl moment i)) (begin i)
+         n = safeInterval (end j) (end (expandr moment j))
          k = safeInterval (end m) (begin n)
 
+prop_IAaxiomM4_Int :: M2set Int -> Property 
+prop_IAaxiomM4_Int = prop_IAaxiomM4 1
+
+prop_IAaxiomM4_Day :: M2set DT.Day -> Property 
+prop_IAaxiomM4_Day = prop_IAaxiomM4 1
 
 {-
 
@@ -220,34 +248,45 @@ If two meets are separated by intervals, then this sequence is a longer interval
 -}
 
 -- | A set used for testing M5.
-data M5set = M5set { 
-     m51 :: IntervalInt
-   , m52 :: IntervalInt }
+data M5set a = M5set {
+     m51 :: Interval a
+   , m52 :: Interval a }
    deriving (Show)
 
-instance Arbitrary M5set where
+instance Arbitrary (M5set Int) where
   arbitrary = do
     x <- arbitrary
     a <- arbitrary
-    b <- arbitrary
-    return $ m5set x a b
+    m5set x a <$> arbitrary
+
+instance Arbitrary (M5set DT.Day) where
+  arbitrary = do
+    x <- arbitrary
+    a <- arbitrary
+    m5set x a <$> arbitrary
 
 -- | Smart constructor of 'M5set'.
-m5set :: IntervalInt -> Int -> Int -> M5set
-m5set x a b = M5set p1 p2 
+m5set :: (IntervalSizeable a b)=> Interval a -> b -> b -> M5set a
+m5set x a b = M5set p1 p2
   where p1 = x                     -- interval i in prop_IAaxiomM5
         p2 = safeInterval' ps a    -- interval l in prop_IAaxiomM5
-        ps = (makePos b) + (end x) -- creating l by shifting and expanding i
+        ps = end (expandr (makePos b) x) -- creating l by shifting and expanding i
 
 
-prop_IAaxiomM5 :: M5set -> Property
-prop_IAaxiomM5 x = 
+prop_IAaxiomM5 :: (IntervalAlgebraic a) => M5set a -> Property
+prop_IAaxiomM5 x =
    ((i `meets` j && j `meets` l) &&
     (i `meets` k && k `meets` l))  === (j == k)
    where i = m51 x
          j = safeInterval (end i) (begin l)
          k = safeInterval (end i) (begin l)
          l = m52 x
+
+prop_IAaxiomM5_Int :: M5set Int -> Property 
+prop_IAaxiomM5_Int = prop_IAaxiomM5
+
+prop_IAaxiomM5_Day :: M5set DT.Day -> Property 
+prop_IAaxiomM5_Day = prop_IAaxiomM5
 
 {-
 
@@ -260,69 +299,78 @@ Ordered unions:
 \] 
 -}
 
-prop_IAaxiomM4_1 :: M2set -> Property
-prop_IAaxiomM4_1 x = 
+prop_IAaxiomM4_1 :: (IntervalSizeable a b, IntervalCombinable a)=> 
+                    b -> M2set a -> Property
+prop_IAaxiomM4_1 b x =
    ((m `meets` i && i `meets` j && j `meets` n) &&
     (m `meets` ij && ij `meets` n)) === True
    where i = m21 x
          j = m22 x
-         m = safeInterval (begin i - 1) (begin i)
-         n = safeInterval (end j) (end j + 1)
+         m = safeInterval (begin (expandl b i)) (begin i)
+         n = safeInterval (end j) (end (expandr b j))
          ij = fromJust $ i .+. j
 
+prop_IAaxiomM4_1_Int :: M2set Int -> Property
+prop_IAaxiomM4_1_Int = prop_IAaxiomM4_1 1
+
+prop_IAaxiomM4_1_Day :: M2set DT.Day -> Property
+prop_IAaxiomM4_1_Day = prop_IAaxiomM4_1 1
 
 {-
 * Interval Relation property testing 
 -}
 
-prop_IAbefore :: IntervalInt -> IntervalInt -> Property
-prop_IAbefore i j = 
-  IA.before i j ==> (i `meets` k) && (k `meets` j)
-    where k = safeInterval (end i) (begin j)
+class (IntervalAlgebraic a, IntervalCombinable a)=> IntervalRelationProperties a where
 
+    prop_IAbefore :: Interval a -> Interval a -> Property
+    prop_IAbefore i j =
+      IA.before i j ==> (i `meets` k) && (k `meets` j)
+        where k = safeInterval (end i) (begin j)
 
-prop_IAstarts:: IntervalInt -> IntervalInt -> Property
-prop_IAstarts i j
-  | ((IA.starts i j) == True) =
-    let k = safeInterval (end i) (end j)
-    in 
-     (j == (fromJust $ i .+. k)) === True
-  | otherwise = IA.starts i j === False
+    prop_IAstarts:: Interval a -> Interval a -> Property
+    prop_IAstarts i j
+      | IA.starts i j =
+        let k = safeInterval (end i) (end j)
+        in
+        (j == (fromJust $ i .+. k)) === True
+      | otherwise = IA.starts i j === False
 
+    prop_IAfinishes:: Interval a -> Interval a -> Property
+    prop_IAfinishes i j
+      | IA.finishes i j =
+        let k = safeInterval (begin j) (begin i)
+        in
+        (j == (fromJust $ k .+. i)) === True
+      | otherwise = IA.finishes i j === False
 
-prop_IAfinishes:: IntervalInt -> IntervalInt -> Property
-prop_IAfinishes i j
-  | ((IA.finishes i j) == True) =
-    let k = safeInterval (begin j) (begin i)
-    in 
-     (j == (fromJust $ k .+. i)) === True
-  | otherwise = IA.finishes i j === False
+    prop_IAoverlaps:: Interval a -> Interval a -> Property
+    prop_IAoverlaps i j
+      | IA.overlaps i j =
+        let k = safeInterval (begin i) (begin j)
+            l = safeInterval (begin j) (end i)
+            m = safeInterval (end i)   (end j)
+        in
+        ((i == (fromJust $ k .+. l )) &&
+          (j == (fromJust $ l .+. m ))) === True
+      | otherwise  = IA.overlaps i j === False
 
-prop_IAoverlaps:: IntervalInt -> IntervalInt -> Property
-prop_IAoverlaps i j
-  | ((IA.overlaps i j) == True) = 
-    let k = safeInterval (begin i) (begin j)
-        l = safeInterval (begin j) (end i)
-        m = safeInterval (end i)   (end j)
-    in 
-     ((i == (fromJust $ k .+. l )) &&
-      (j == (fromJust $ l .+. m ))) === True
-  | otherwise  = IA.overlaps i j === False 
+    prop_IAduring:: Interval a -> Interval a-> Property
+    prop_IAduring i j
+      | IA.during i j =
+        let k = safeInterval (begin j) (begin i)
+            l = safeInterval (end i) (end j)
+        in
+        (j == (fromJust $ (fromJust $ k .+. i) .+. l)) === True
+      | otherwise  = IA.during i j === False
 
-prop_IAduring:: IntervalInt -> IntervalInt -> Property
-prop_IAduring i j
-  | ((IA.during i j) == True) = 
-    let k = safeInterval (begin j) (begin i)
-        l = safeInterval (end i) (end j)
-    in 
-     (j == (fromJust $ (fromJust $ k .+. i) .+. l)) === True
-  | otherwise  = IA.during i j === False 
+    -- | For any two pair of intervals exactly one 'IntervalRelation' should hold
+    prop_exclusiveRelations::  Interval a -> Interval a -> Property
+    prop_exclusiveRelations x y =
+      (  1 == length (filter id $ map (\r -> r x y) allIArelations)) === True
 
-{-
-For any two pair of intervals exactly one 'IntervalRelation' should hold.
--}
+instance IntervalRelationProperties Int
 
-allIArelations:: [(ComparativePredicateOf (IntervalInt))]
+allIArelations:: IntervalAlgebraic a => [ComparativePredicateOf (Interval a)]
 allIArelations =   [  IA.equals
                     , IA.meets
                     , IA.metBy
@@ -337,42 +385,48 @@ allIArelations =   [  IA.equals
                     , IA.during
                     , IA.contains ]
 
-prop_exclusiveRelations::  IntervalInt -> IntervalInt -> Property 
-prop_exclusiveRelations x y =
-  (  1 == length (filter id $ map (\r -> r x y) allIArelations)) === True
 
-main :: IO ()
-main = hspec $ do
-  describe "Interval Algebra Axioms for meets property" $ 
-  --modifyMaxDiscardRatio (* 10) $
-    do 
-      it "M1" $ property prop_IAaxiomM1    
-      it "M2" $ property prop_IAaxiomM2
-      it "ML1" $ property prop_IAaxiomML1
-      it "ML2" $ property prop_IAaxiomML2
+
+spec :: Spec
+spec = do
+  describe "Interval Algebra Axioms for meets property" $
+    modifyMaxSuccess (*10) $
+    do
+      it "M1 Int" $ property prop_IAaxiomM1_Int
+      it "M1 Day" $ property prop_IAaxiomM1_Day
+      it "M2_Int" $ property prop_IAaxiomM2_Int
+      it "M2_Day" $ property prop_IAaxiomM2_Day
+      it "ML1_Int" $ property prop_IAaxiomML1_Int
+      it "ML1_Day" $ property prop_IAaxiomML1_Day
+      it "ML2_Int" $ property prop_IAaxiomML2_Int
+      it "ML2_Day" $ property prop_IAaxiomML2_Day
       {-
         ML3 says that For all i, there does not exist m such that i meets m and
         m meet i. Not testing that this axiom holds, as I'm not sure how I would
         test the lack of existence.
       -}
       --it "ML3" $ property prop_IAaxiomML3
-      it "M3" $ property prop_IAaxiomM3
-      it "M4" $ property prop_IAaxiomM4
-      it "M5" $ property prop_IAaxiomM5 
-      it "M4.1" $ property prop_IAaxiomM4_1
- 
+      it "M3_Int" $ property prop_IAaxiomM3_Int
+      it "M3_Day" $ property prop_IAaxiomM3_Day
+      it "M4_Int" $ property prop_IAaxiomM4_Int
+      it "M4_Day" $ property prop_IAaxiomM4_Day
+      it "M5_Int" $ property prop_IAaxiomM5_Int
+      it "M5_Day" $ property prop_IAaxiomM5_Day
+      it "M4.1_Int" $ property prop_IAaxiomM4_1_Int
+      it "M4.1_Day" $ property prop_IAaxiomM4_1_Day
 
-  describe "Interval Algebra relation properties" $ 
+
+  describe "Interval Algebra relation properties" $
       modifyMaxSuccess (*10) $
     do
-      it "before"   $ property prop_IAbefore
-      it "starts"   $ property prop_IAstarts
-      it "finishes" $ property prop_IAfinishes
-      it "overlaps" $ property prop_IAoverlaps
-      it "during"   $ property prop_IAduring
+      it "before"   $ property (prop_IAbefore @Int)
+      it "starts"   $ property (prop_IAstarts @Int)
+      it "finishes" $ property (prop_IAfinishes @Int)
+      it "overlaps" $ property (prop_IAoverlaps @Int)
+      it "during"   $ property (prop_IAduring @Int)
 
-  describe "Interval Algebra relation uniqueness" $ 
+  describe "Interval Algebra relation uniqueness" $
       modifyMaxSuccess (*100) $
     do
-      it "exactly one relation must be true" $ property prop_exclusiveRelations
+      it "exactly one relation must be true" $ property (prop_exclusiveRelations @Int)
 
