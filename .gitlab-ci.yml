@@ -1,17 +1,16 @@
-image: haskell:8.8.3
+image: registry.novisci.com/nsstat/statocker/haskell:8.10.4
 
 variables:
   PKG: interval-algebra
 
-
 cache:
   paths:
-    - .stack
-    - .stack-work
-    - target
+    - dist-newstyle
 
 test:
   stage: test
   script:
     - ghc --version
-    - stack --system-ghc test
+    - cabal --version
+    # - cabal install --lib
+    - cabal test --test-show-details=always 
