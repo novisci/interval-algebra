@@ -1,4 +1,3 @@
-# image: haskell:8.8.3
 image: registry.novisci.com/nsstat/statocker/haskell:8.10.4
 
 variables:
@@ -13,7 +12,4 @@ test:
   script:
     - ghc --version
     - cabal --version
-    # - cabal update
-    # - cabal install witherable --lib
-    # - cabal install hspec-discover
     - cabal test --test-show-details=always 
