@@ -1,5 +1,7 @@
+{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
 {-# LANGUAGE NoImplicitPrelude #-}
+
 {-|
 Module      : Interval Algebra
 Description : Implementation of Allen's interval algebra
@@ -25,10 +27,10 @@ constructing, relating, and combining @'Interval'@s:
    the workhorse of Allen's temporal logic.
 3. @'IntervalCombinable'@ provides an interface to methods of combining two
    @'Interval's@.
-4. @'IntervalSizeable'@ provides methods for measuring and modifying the size
-   of an interval.
-5. @'IntervalFilterable'@ provides methods for filtering 'Witherable.Filterable' collections
-   of intervals.
+4. @'IntervalSizeable'@ and the related @'Moment'@ provides methods for 
+   measuring and modifying the size of an interval.
+5. @'IntervalFilterable'@ provides methods for filtering 'Witherable.Filterable' 
+   collections of intervals.
 
 An advantage of nested typeclass design is that developers can define an 
 @'Interval'@ of type @a@ with just the amount of structure that they need.
@@ -45,12 +47,14 @@ This module is under development and the API may change in the future.
 -}
 
 
+{-# LANGUAGE AllowAmbiguousTypes #-}
 module IntervalAlgebra(
 
     -- * Classes
       Intervallic(..)
     , IntervalAlgebraic(..)
     , IntervalCombinable(..)
+    , Moment(..)
     , IntervalSizeable(..)
     , IntervalFilterable(..)
 
@@ -283,32 +287,31 @@ class (Eq a, Intervallic a) => IntervalAlgebraic a where
 
 
 {- |
+The 'Moment' class fixes the smallest duration of an 'Intervallic a'.
+-}
+class (Intervallic a, Num b, Ord b) => Moment a b| a -> b where
+    moment :: b
+    moment = 1 
+
+{- |
 The 'IntervalSizeable' typeclass provides functions to determine the size of
 and to resize an 'Interval a'.
 -}
-class (Intervallic a, Num b, Ord b) => IntervalSizeable a b| a -> b where
+class (Intervallic a, Moment a b, Num b, Ord b) => IntervalSizeable a b| a -> b where
 
     -- | Determine the duration of an 'Interval a'.
     duration :: Interval a -> b
 
-    -- | Sets the length of a moment for an 'Interval a'.
-    moment :: a -> b
-    moment x = 1
-    -- TODO: The reason is function takes an argument of type @a@ is due to
-    --       ambiguous types warnings. I couldn't figure out how to avoid the
-    --       warnings without turning on AllowAmbiguousTypes Pragma. Is there a
-    --       better way to handle this?
-
-    -- | Shifts an @a@. Most often, the @c@ will be the same
-    -- type as the @a@. But for example, if @a@ is 'Day' then @c@ would be 'Int'.
+    -- | Shifts an @a@. Most often, the @b@ will be the same type as @a@. 
+    --   But for example, if @a@ is 'Day' then @b@ could be 'Int'.
     add :: b -> a -> a
 
     -- | Resize an 'Interval a' to by expanding to "left" by @max l moment@ 
     --   and to the "right" by @min r moment@. 
     expand :: b -> b -> Interval a -> Interval a
     expand l r p = Interval (s, e)
-      where s = add (negate $ max l (moment (begin p))) (begin p)
-            e = add (min r (moment (end p))) (end p)
+      where s = add (negate $ max l (moment @a)) (begin p)
+            e = add (min r (moment @a)) (end p)
 
     -- | Expands an 'Interval a' to left by i.
     expandl :: b -> Interval a -> Interval a
@@ -317,6 +320,16 @@ class (Intervallic a, Num b, Ord b) => IntervalSizeable a b| a -> b where
     -- | Expands an 'Interval a' to right by i.
     expandr :: b -> Interval a -> Interval a
     expandr = expand 0
+
+    -- | Safely creates an 'Interval a' using @x@ as the 'begin' and adding 
+    --   @max moment dur@ to @x@ as the 'end'.
+    beginerval :: b -> a -> Interval a
+    beginerval dur x = Interval (x, add (max (moment @a) dur) x)
+
+    -- | Safely creates an 'Interval a' using @x@ as the 'end' and adding
+    --   @negate max moment dur@ to @x@ as the 'begin'.
+    enderval :: b -> a -> Interval a
+    enderval dur x = Interval (add (negate $ max (moment @a) dur) x, x)
 
 {- |
 The @'IntervalCombinable'@ typeclass provides methods for (possibly) combining
@@ -430,6 +443,7 @@ instance (Intervallic a, Show a) => Show (Interval a) where
 instance Intervallic Int
 instance IntervalAlgebraic Int
 instance IntervalCombinable Int
+instance Moment Int Int
 instance IntervalSizeable Int Int where
     add = (+)
     duration x = end x - begin x
@@ -438,6 +452,7 @@ instance IntervalFilterable [] Int
 instance Intervallic Integer
 instance IntervalAlgebraic Integer
 instance IntervalCombinable Integer
+instance Moment Integer Integer 
 instance IntervalSizeable Integer Integer where
     add = (+)
     duration x = end x - begin x
@@ -446,6 +461,7 @@ instance IntervalFilterable [] Integer
 instance Intervallic DT.Day
 instance IntervalAlgebraic DT.Day
 instance IntervalCombinable DT.Day
+instance Moment DT.Day Integer
 instance IntervalSizeable DT.Day Integer where
     add = addDays
     duration x = diffDays (end x) (begin x)
