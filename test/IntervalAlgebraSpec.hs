@@ -3,17 +3,34 @@
 
 module IntervalAlgebraSpec (spec) where
 
-import Test.Hspec ( hspec, describe, it, Spec )
+import Test.Hspec ( hspec, describe, it, Spec, shouldBe )
 import Test.Hspec.QuickCheck ( modifyMaxSuccess, modifyMaxDiscardRatio )
 import Test.QuickCheck
 import IntervalAlgebra as IA
 import Data.Maybe
-import Control.Monad
-import IntervalAlgebra.Arbitrary
+import Control.Monad ()
+import IntervalAlgebra.Arbitrary ()
 import Data.Time as DT  
 
 xor :: Bool -> Bool -> Bool
 xor a b = a /= b
+
+-- | Internal function for converting a number to a strictly positive value.
+makePos :: (Ord b, Num b) => b -> b
+makePos x
+  | x == 0    = x + 1
+  | x <  0    = negate x
+  | otherwise = x
+
+-- | A function for creating intervals when you think you know what you're doing.
+safeInterval :: (Intervallic a) => a -> a -> Interval a
+safeInterval x y = unsafeInterval (min x y) (max x y)
+
+-- | Create a 'Maybe Interval a' from two @a@s.
+safeInterval'' :: (Intervallic a) => a -> a -> Maybe (Interval a)
+safeInterval'' x y
+    | y <= x    = Nothing
+    | otherwise = Just $ safeInterval x y
 
 -- | A set used for testing M1 defined so that the M1 condition is true.
 data M1set a = M1set {
@@ -42,8 +59,8 @@ instance Arbitrary (M1set DT.Day) where
 m1set :: (IntervalSizeable a b) => Interval a -> b -> b -> b -> M1set a
 m1set x a b c = M1set p1 p2 p3 p4
   where p1 = x                          -- interval i in prop_IAaxiomM1
-        p2 = safeInterval' (end x) a    -- interval j in prop_IAaxiomM1
-        p3 = safeInterval' (end x) b    -- interval k in prop_IAaxiomM1
+        p2 = beginerval a (end x)       -- interval j in prop_IAaxiomM1
+        p3 = beginerval b (end x)       -- interval k in prop_IAaxiomM1
         p4 = safeInterval  (begin (expandl (makePos c) p2)) (begin p2)
 
 {-
@@ -98,9 +115,9 @@ instance Arbitrary (M2set DT.Day) where
 m2set :: (IntervalSizeable a b)=> Interval a -> Interval a -> b -> b -> M2set a
 m2set x y a b = M2set p1 p2 p3 p4
   where p1 = x                          -- interval i in prop_IAaxiomM2
-        p2 = safeInterval' (end x) a     -- interval j in prop_IAaxiomM2
+        p2 = beginerval a (end x)       -- interval j in prop_IAaxiomM2
         p3 = y                          -- interval k in prop_IAaxiomM2
-        p4 = safeInterval' (end y) b     -- interval l in prop_IAaxiomM2
+        p4 = beginerval b (end y) -- interval l in prop_IAaxiomM2
 
 {-
 
@@ -269,7 +286,7 @@ instance Arbitrary (M5set DT.Day) where
 m5set :: (IntervalSizeable a b)=> Interval a -> b -> b -> M5set a
 m5set x a b = M5set p1 p2
   where p1 = x                     -- interval i in prop_IAaxiomM5
-        p2 = safeInterval' ps a    -- interval l in prop_IAaxiomM5
+        p2 = beginerval a ps       -- interval l in prop_IAaxiomM5
         ps = end (expandr (makePos b) x) -- creating l by shifting and expanding i
 
 
@@ -329,39 +346,31 @@ class (IntervalAlgebraic a, IntervalCombinable a)=> IntervalRelationProperties a
 
     prop_IAstarts:: Interval a -> Interval a -> Property
     prop_IAstarts i j
-      | IA.starts i j =
-        let k = safeInterval (end i) (end j)
-        in
-        (j == (fromJust $ i .+. k)) === True
-      | otherwise = IA.starts i j === False
+      | IA.starts i j = (j == fromJust (i .+. k)) === True                     
+      | otherwise     = IA.starts i j === False
+        where k  = safeInterval (end i) (end j)
 
     prop_IAfinishes:: Interval a -> Interval a -> Property
     prop_IAfinishes i j
-      | IA.finishes i j =
-        let k = safeInterval (begin j) (begin i)
-        in
-        (j == (fromJust $ k .+. i)) === True
-      | otherwise = IA.finishes i j === False
+      | IA.finishes i j = (j == fromJust ( k .+. i)) === True
+      | otherwise       = IA.finishes i j === False
+        where k = safeInterval (begin j) (begin i)
 
     prop_IAoverlaps:: Interval a -> Interval a -> Property
     prop_IAoverlaps i j
-      | IA.overlaps i j =
-        let k = safeInterval (begin i) (begin j)
-            l = safeInterval (begin j) (end i)
-            m = safeInterval (end i)   (end j)
-        in
-        ((i == (fromJust $ k .+. l )) &&
-          (j == (fromJust $ l .+. m ))) === True
-      | otherwise  = IA.overlaps i j === False
+      | IA.overlaps i j = ((i == fromJust ( k .+. l )) &&
+                          (j == fromJust ( l .+. m ))) === True
+      | otherwise       = IA.overlaps i j === False
+        where k = safeInterval (begin i) (begin j)
+              l = safeInterval (begin j) (end i)
+              m = safeInterval (end i)   (end j)
 
     prop_IAduring:: Interval a -> Interval a-> Property
     prop_IAduring i j
-      | IA.during i j =
-        let k = safeInterval (begin j) (begin i)
-            l = safeInterval (end i) (end j)
-        in
-        (j == (fromJust $ (fromJust $ k .+. i) .+. l)) === True
-      | otherwise  = IA.during i j === False
+      | IA.during i j = (j == fromJust ( fromJust (k .+. i) .+. l)) === True
+      | otherwise     = IA.during i j === False
+        where k = safeInterval (begin j) (begin i)
+              l = safeInterval (end i) (end j)
 
     -- | For any two pair of intervals exactly one 'IntervalRelation' should hold
     prop_exclusiveRelations::  Interval a -> Interval a -> Property
@@ -385,11 +394,24 @@ allIArelations =   [  IA.equals
                     , IA.during
                     , IA.contains ]
 
-
-
 spec :: Spec
 spec = do
-  describe "Interval Algebra Axioms for meets property" $
+  describe "IntervalSizeable unit tests" $
+    do 
+      it "beginerval 2 10 should be Interval (10, 12)" $
+        beginerval (2::Int) 10 `shouldBe` unsafeInterval (10::Int) (12::Int) 
+      it "beginerval 0 10 should be Interval (10, 11)" $
+        beginerval (0::Int) 10 `shouldBe` unsafeInterval (10::Int) (11::Int)
+      it "beginerval -2 10 should be Interval (10, 11)" $
+        beginerval (-2::Int) 10 `shouldBe` unsafeInterval (10::Int) (11::Int) 
+      it "enderval 2 10 should be Interval (8, 10)" $
+        enderval (2::Int) 10 `shouldBe` unsafeInterval (8::Int) (10::Int)
+      it "enderval 0 10 should be Interval (9, 10)" $
+        enderval (0::Int) 10 `shouldBe` unsafeInterval (9::Int) (10::Int) 
+      it "enderval -2 10 should be Interval (9, 10)" $
+        enderval (-2::Int) 10 `shouldBe` unsafeInterval (9::Int) (10::Int) 
+
+  describe "Interval Algebra Axioms for meets properties" $
     modifyMaxSuccess (*10) $
     do
       it "M1 Int" $ property prop_IAaxiomM1_Int
