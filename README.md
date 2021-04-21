@@ -11,7 +11,7 @@ The module is built around five typeclasses designed to separate concerns of con
 1. `Intervallic` provides an interface to the data structure of an `Interval`, defining how an `Interval a` (simply a pair `(a, a)`) is constructed.
 2. `IntervalAlgebraic` provides an interface to the `IntervalRelation`s, the workhorse of Allen's temporal logic.
 3. `IntervalCombinable` provides an interface to methods of combining multiple `Interval`s.
-4. `IntervalSizeable` provides methods for measuring and modifying the size of an interval.
+4. `IntervalSizeable` and the related `Moment` provide methods for measuring and modifying the size of an interval.
 5. `IntervalFilterable` provides methods for filtering 'Filterable' collections of intervals.
 
 An advantage of nested typeclass design is that developers can define an `Interval` of type `a` with just the amount of structure that they need.
