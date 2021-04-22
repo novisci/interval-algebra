@@ -442,8 +442,7 @@ class (Filterable f, IntervalAlgebraic a) => IntervalFilterable f a where
     -- | Filter a 'Witherable.Filterable' of Interval as to those that are 'notDisjoint'
     --   from the @Interval a@ in the first argument.
     filterNotDisjoint :: Interval a -> f (Interval a) -> f (Interval a)
-    filterNotDisjoint = filterMaker disjoint
-
+    filterNotDisjoint = filterMaker notDisjoint
 
     -- | Filter a 'Witherable.Filterable' of Interval as to those that are 'in''
     --   the @Interval a@ in the first argument.
