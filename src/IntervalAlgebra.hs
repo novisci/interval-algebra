@@ -299,7 +299,7 @@ The 'Moment' class fixes the smallest duration of an 'Intervallic a'.
 -}
 class (Intervallic a, Num b, Ord b) => Moment a b| a -> b where
     moment :: b
-    moment = 1 
+    moment = 1
 
 {- |
 The 'IntervalSizeable' typeclass provides functions to determine the size of
@@ -318,12 +318,13 @@ class (Intervallic a, Moment a b, Num b, Ord b) => IntervalSizeable a b| a -> b 
     -- | Takes the difference between two @a@ to return a @b@.
     diff :: a -> a -> b
 
-    -- | Resize an 'Interval a' to by expanding to "left" by @max l moment@ 
-    --   and to the "right" by @min r moment@. 
+    -- | Resize an 'Interval a' to by expanding to "left" by @l@ and to the 
+    --   "right" by @r@. In the case that @l@ or @r@ are less than a 'moment'
+    --   the respective endpoints are unchanged. 
     expand :: b -> b -> Interval a -> Interval a
-    expand l r p = Interval (s, e)
-      where s = add (negate $ max l (moment @a)) (begin p)
-            e = add (min r (moment @a)) (end p)
+    expand l r p = Interval (add s $ begin p, add e $ end p)
+      where s = if l < (moment @a) then 0 else negate l
+            e = if r < (moment @a) then 0 else r
 
     -- | Expands an 'Interval a' to left by i.
     expandl :: b -> Interval a -> Interval a
@@ -388,8 +389,8 @@ The @'IntervalFilterable'@ class provides functions for filtering 'Filterable's 
 class (Filterable f, IntervalAlgebraic a) => IntervalFilterable f a where
 
     -- |Creates a function for filtering a 'Witherable.Filterable' of @Interval a@s based on a predicate
-    filterMaker :: ComparativePredicateOf (Interval a) 
-                   -> Interval a 
+    filterMaker :: ComparativePredicateOf (Interval a)
+                   -> Interval a
                    -> (f (Interval a) -> f (Interval a))
     filterMaker f p = Witherable.filter (`f` p)
 
@@ -436,18 +437,18 @@ class (Filterable f, IntervalAlgebraic a) => IntervalFilterable f a where
     -- | Filter a 'Witherable.Filterable' of Interval as to those that are 'disjoint'
     --   from the @Interval a@ in the first argument.
     filterDisjoint :: Interval a -> f (Interval a) -> f (Interval a)
-    filterDisjoint = filterMaker disjoint 
+    filterDisjoint = filterMaker disjoint
 
     -- | Filter a 'Witherable.Filterable' of Interval as to those that are 'notDisjoint'
     --   from the @Interval a@ in the first argument.
     filterNotDisjoint :: Interval a -> f (Interval a) -> f (Interval a)
-    filterNotDisjoint = filterMaker disjoint 
+    filterNotDisjoint = filterMaker disjoint
 
 
     -- | Filter a 'Witherable.Filterable' of Interval as to those that are 'in''
     --   the @Interval a@ in the first argument.
     filterIn' :: Interval a -> f (Interval a) -> f (Interval a)
-    filterIn' = filterMaker disjoint 
+    filterIn' = filterMaker disjoint
 {-
 Instances
 -}
@@ -479,7 +480,7 @@ instance IntervalFilterable [] Int
 instance Intervallic Integer
 instance IntervalAlgebraic Integer
 instance IntervalCombinable Integer
-instance Moment Integer Integer 
+instance Moment Integer Integer
 instance IntervalSizeable Integer Integer where
     add = (+)
     diff = (-)
