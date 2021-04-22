@@ -1,6 +1,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeApplications #-}
 
+-- {-# LANGUAGE AllowAmbiguousTypes #-}
+-- {-# LANGUAGE FlexibleContexts #-}
 module IntervalAlgebraSpec (spec) where
 
 import Test.Hspec ( hspec, describe, it, Spec, shouldBe )
@@ -10,7 +12,7 @@ import IntervalAlgebra as IA
 import Data.Maybe
 import Control.Monad ()
 import IntervalAlgebra.Arbitrary ()
-import Data.Time as DT  
+import Data.Time as DT
 
 xor :: Bool -> Bool -> Bool
 xor a b = a /= b
@@ -83,10 +85,10 @@ prop_IAaxiomM1 x =
         k = m13 x
         l = m14 x
 
-prop_IAaxiomM1_Int :: M1set Int -> Property 
+prop_IAaxiomM1_Int :: M1set Int -> Property
 prop_IAaxiomM1_Int = prop_IAaxiomM1
 
-prop_IAaxiomM1_Day :: M1set DT.Day -> Property 
+prop_IAaxiomM1_Day :: M1set DT.Day -> Property
 prop_IAaxiomM1_Day = prop_IAaxiomM1
 
 -- | A set used for testing M2 defined so that the M2 condition is true.
@@ -212,17 +214,17 @@ Time does not start or stop:
 \] 
 -}
 
-prop_IAaxiomM3 :: (IntervalAlgebraic a, IntervalSizeable a b)=> 
+prop_IAaxiomM3 :: (IntervalAlgebraic a, IntervalSizeable a b)=>
       b -> Interval a -> Property
 prop_IAaxiomM3 b i =
    (j `meets` i && i `meets` k) === True
    where j = safeInterval (begin (expandl b i)) (begin i)
          k = safeInterval (end i) (end (expandr b i))
 
-prop_IAaxiomM3_Int :: Interval Int -> Property 
+prop_IAaxiomM3_Int :: Interval Int -> Property
 prop_IAaxiomM3_Int = prop_IAaxiomM3 1
 
-prop_IAaxiomM3_Day :: Interval Day -> Property 
+prop_IAaxiomM3_Day :: Interval Day -> Property
 prop_IAaxiomM3_Day = prop_IAaxiomM3 1
 
 {-
@@ -247,10 +249,10 @@ prop_IAaxiomM4 moment x =
          n = safeInterval (end j) (end (expandr moment j))
          k = safeInterval (end m) (begin n)
 
-prop_IAaxiomM4_Int :: M2set Int -> Property 
+prop_IAaxiomM4_Int :: M2set Int -> Property
 prop_IAaxiomM4_Int = prop_IAaxiomM4 1
 
-prop_IAaxiomM4_Day :: M2set DT.Day -> Property 
+prop_IAaxiomM4_Day :: M2set DT.Day -> Property
 prop_IAaxiomM4_Day = prop_IAaxiomM4 1
 
 {-
@@ -299,10 +301,10 @@ prop_IAaxiomM5 x =
          k = safeInterval (end i) (begin l)
          l = m52 x
 
-prop_IAaxiomM5_Int :: M5set Int -> Property 
+prop_IAaxiomM5_Int :: M5set Int -> Property
 prop_IAaxiomM5_Int = prop_IAaxiomM5
 
-prop_IAaxiomM5_Day :: M5set DT.Day -> Property 
+prop_IAaxiomM5_Day :: M5set DT.Day -> Property
 prop_IAaxiomM5_Day = prop_IAaxiomM5
 
 {-
@@ -316,7 +318,7 @@ Ordered unions:
 \] 
 -}
 
-prop_IAaxiomM4_1 :: (IntervalSizeable a b, IntervalCombinable a)=> 
+prop_IAaxiomM4_1 :: (IntervalSizeable a b, IntervalCombinable a)=>
                     b -> M2set a -> Property
 prop_IAaxiomM4_1 b x =
    ((m `meets` i && i `meets` j && j `meets` n) &&
@@ -346,7 +348,7 @@ class (IntervalAlgebraic a, IntervalCombinable a)=> IntervalRelationProperties a
 
     prop_IAstarts:: Interval a -> Interval a -> Property
     prop_IAstarts i j
-      | IA.starts i j = (j == fromJust (i .+. k)) === True                     
+      | IA.starts i j = (j == fromJust (i .+. k)) === True
       | otherwise     = IA.starts i j === False
         where k  = safeInterval (end i) (end j)
 
@@ -394,22 +396,51 @@ allIArelations =   [  IA.equals
                     , IA.during
                     , IA.contains ]
 
+prop_expandl_end ::(IntervalAlgebraic a, IntervalSizeable a b)=>
+       b
+    -> Interval a
+    -> Property
+prop_expandl_end d i = end (expandl d i) === end i
+
+
+prop_expandr_begin ::(IntervalAlgebraic a, IntervalSizeable a b)=>
+       b
+    -> Interval a
+    -> Property
+prop_expandr_begin d i = begin (expandr d i) === begin i
+
 spec :: Spec
 spec = do
-  describe "IntervalSizeable unit tests" $
-    do 
+  describe "IntervalSizeable tests" $
+    do
+      it "expandl doesn't change end"   $ property (prop_expandl_end @Int)  
+      it "expandr doesn't change begin" $ property (prop_expandr_begin @Int)  
+      it "expand 0 5 Interval (0, 1) should be Interval (0, 6)" $
+        expand 0 5 (unsafeInterval (0::Int) (1::Int)) `shouldBe` unsafeInterval (0::Int) (6::Int)
+      it "expand 5 0 Interval (0, 1) should be Interval (-5, 1)" $
+        expand 5 0 (unsafeInterval (0::Int) (1::Int)) `shouldBe` unsafeInterval (-5::Int) (1::Int)
+      it "expand 5 5 Interval (0, 1) should be Interval (-5, 6)" $
+        expand 5 5 (unsafeInterval (0::Int) (1::Int)) `shouldBe` unsafeInterval (-5::Int) (6::Int)
+      it "expand -1 5 Interval (0, 1) should be Interval (-5, 6)" $
+        expand (-1) 5 (unsafeInterval (0::Int) (1::Int)) `shouldBe` unsafeInterval (0::Int) (6::Int)
+      it "expand 5 -5 Interval (0, 1) should be Interval (-5, 1)" $
+        expand 5 (-5) (unsafeInterval (0::Int) (1::Int)) `shouldBe` unsafeInterval (-5::Int) (1::Int)
+      it "expand moment 0 Interval (0, 1) should be Interval (-1, 1)" $
+        expand (moment @Int) 0 (unsafeInterval (0::Int) (1::Int)) `shouldBe`
+         unsafeInterval (-1::Int) (1::Int)
+
       it "beginerval 2 10 should be Interval (10, 12)" $
-        beginerval (2::Int) 10 `shouldBe` unsafeInterval (10::Int) (12::Int) 
+        beginerval (2::Int) 10 `shouldBe` unsafeInterval (10::Int) (12::Int)
       it "beginerval 0 10 should be Interval (10, 11)" $
         beginerval (0::Int) 10 `shouldBe` unsafeInterval (10::Int) (11::Int)
       it "beginerval -2 10 should be Interval (10, 11)" $
-        beginerval (-2::Int) 10 `shouldBe` unsafeInterval (10::Int) (11::Int) 
+        beginerval (-2::Int) 10 `shouldBe` unsafeInterval (10::Int) (11::Int)
       it "enderval 2 10 should be Interval (8, 10)" $
         enderval (2::Int) 10 `shouldBe` unsafeInterval (8::Int) (10::Int)
       it "enderval 0 10 should be Interval (9, 10)" $
-        enderval (0::Int) 10 `shouldBe` unsafeInterval (9::Int) (10::Int) 
+        enderval (0::Int) 10 `shouldBe` unsafeInterval (9::Int) (10::Int)
       it "enderval -2 10 should be Interval (9, 10)" $
-        enderval (-2::Int) 10 `shouldBe` unsafeInterval (9::Int) (10::Int) 
+        enderval (-2::Int) 10 `shouldBe` unsafeInterval (9::Int) (10::Int)
 
   describe "Interval Algebra Axioms for meets properties" $
     modifyMaxSuccess (*10) $

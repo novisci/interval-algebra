@@ -1,5 +1,9 @@
 # Changelog for interval-algebra
 
+## 0.3.3
+
+* Fixes bug in `expand` function
+
 ## 0.3.2
 
 * Fixes bug in `filterNotDisjoint`
