@@ -1,5 +1,11 @@
 # Changelog for interval-algebra
 
+## 0.3.1
+
+* Adds the `diff` function to the `IntervalSizeable` to make comparisons of endpoints easier.
+* Adds the `notDisjoint` relation to determine if two intervals share any support.
+* Adds `filterDisjoint`, `filterNotDisjoint`, and `filterIn'` to the `IntervalFilterable` class.
+
 ## 0.3.0
 
 * Adds `beginerval` and `enderval` function to `IntervalSizeable` class for safely creating `Interval`s given a begin (or end) and a duration.
