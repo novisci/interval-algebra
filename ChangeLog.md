@@ -1,5 +1,10 @@
 # Changelog for interval-algebra
 
+## 0.4.0
+
+* Renames `composeRelations` to the more accurate `unionRelations`. 
+* Adds `<|>` as operator for "union"ing `ComparativePredicateOf (Interval a)`, as in `starts <|> overlaps === unionRelations [starts, overlaps]`.
+
 ## 0.3.3
 
 * Fixes bug in `expand` function

@@ -12,7 +12,9 @@ import IntervalAlgebra as IA
 import Data.Maybe
 import Control.Monad ()
 import IntervalAlgebra.Arbitrary ()
-import Data.Time as DT
+import Data.Time as DT ( Day )
+
+mkIntrvl = unsafeInterval 
 
 xor :: Bool -> Bool -> Bool
 xor a b = a /= b
@@ -441,6 +443,18 @@ spec = do
         enderval (0::Int) 10 `shouldBe` unsafeInterval (9::Int) (10::Int)
       it "enderval -2 10 should be Interval (9, 10)" $
         enderval (-2::Int) 10 `shouldBe` unsafeInterval (9::Int) (10::Int)
+
+  describe "IntervalAlgebraic tests" $
+     do
+      it "(startedBy <|> overlappedBy) Interval (0, 9) Interval (-1, 4) is True" $
+        (startedBy <|> overlappedBy) (mkIntrvl (0::Int) (9::Int)) (mkIntrvl (-1::Int) (4::Int))
+         `shouldBe` True
+      it "(startedBy <|> overlappedBy) Interval (0, 9) Interval (0, 4) is True" $
+        (startedBy <|> overlappedBy) (mkIntrvl (0::Int) (9::Int)) (mkIntrvl (0::Int) (4::Int))
+         `shouldBe` True
+      it "(startedBy <|> overlappedBy) Interval (0, 9) Interval (-1, 9) is False" $
+        (startedBy <|> overlappedBy) (mkIntrvl (0::Int) (9::Int)) (mkIntrvl (-1::Int) (9::Int))
+         `shouldBe` False
 
   describe "Interval Algebra Axioms for meets properties" $
     modifyMaxSuccess (*10) $
