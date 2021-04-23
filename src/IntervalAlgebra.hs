@@ -1,4 +1,5 @@
-{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
@@ -48,6 +49,8 @@ This module is under development and the API may change in the future.
 
 
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 module IntervalAlgebra(
 
     -- * Classes
@@ -68,9 +71,10 @@ import Prelude (Eq, Ord, Show, Read
                , Maybe(..), Either(..), String, Integer, Int, Bool(..), Num
                , Foldable (maximum, minimum, foldMap, foldr)
                , otherwise, flip, show, fst, snd, min, max, any, negate, not
-               , (++), (==), (&&), (<), (>), (<=), ($), (+), (-), (.))
+               , (++), (==), (&&), (<), (>), (<=), ($), (+), (-), (.), Ordering (LT))
 import Data.Time as DT ( Day, addDays, diffDays, addGregorianYearsClip, calendarYear )
 import Data.Semigroup ( Semigroup((<>)) )
+import Data.Ord( Ord(..), Ordering(..))
 import GHC.Base (Applicative(pure))
 import Witherable ( Filterable(filter) )
 
@@ -172,7 +176,8 @@ data IntervalRelation =
     | During
     | Contains
     | Equals
-    deriving (Show, Read)
+    deriving (Eq, Show, Read)
+
 
 {-
 Misc
@@ -211,7 +216,7 @@ class (Ord a, Show a) => Intervallic a where
 The @'IntervalAlgebraic'@ typeclass specifies the functions and relational 
 operators for interval-based temporal logic. The typeclass defines the 
 relational operators for intervals, plus other useful utilities such as 
-@'disjoint'@, @'in''@, and @'composeRelations'@.
+@'disjoint'@, @'in''@, and @'unionRelations'@.
 -}
 class (Eq a, Intervallic a) => IntervalAlgebraic a where
 
@@ -255,6 +260,11 @@ class (Eq a, Intervallic a) => IntervalAlgebraic a where
     starts, startedBy      :: ComparativePredicateOf (Interval a)
     starts   x y  = begin x == begin y && (end x < end y)
     startedBy     = flip starts
+    
+    -- | Synonyms for 'starts' and 'startedBy'
+    precedes, precededBy      :: ComparativePredicateOf (Interval a)
+    precedes      = starts
+    precededBy    = startedBy
 
     -- | Does x finish y? Is x finished by y?
     finishes, finishedBy   :: ComparativePredicateOf (Interval a)
@@ -270,19 +280,24 @@ class (Eq a, Intervallic a) => IntervalAlgebraic a where
 
     -- | Compose a list of interval relations with _or_ to create a new
     -- @'ComparativePredicateOf' 'Interval' a@. For example, 
-    -- @composeRelations [before, meets]@ creates a predicate function determining
+    -- @unionRelations [before, meets]@ creates a predicate function determining
     -- if one interval is either before or meets another interval.
-    composeRelations       :: [ComparativePredicateOf (Interval a)] ->
-                               ComparativePredicateOf (Interval a)
-    composeRelations fs x y = any (\ f -> f x y) fs
+    unionRelations       :: [ComparativePredicateOf (Interval a)] ->
+                             ComparativePredicateOf (Interval a)
+    unionRelations fs x y = any (\ f -> f x y) fs
+
+    (<|>) ::  ComparativePredicateOf (Interval a)
+        -> ComparativePredicateOf (Interval a)
+        -> ComparativePredicateOf (Interval a)
+    (<|>) f g = unionRelations [f, g]       
 
     -- | Are x and y disjoint ('before', 'after', 'meets', or 'metBy')?
     disjoint               :: ComparativePredicateOf (Interval a)
-    disjoint = composeRelations [before, after, meets, metBy]
+    disjoint = unionRelations [before, after, meets, metBy]
 
     -- | Are x and y not disjoint; i.e. do they share any support?
     notDisjoint            :: ComparativePredicateOf (Interval a)
-    notDisjoint = composeRelations [ equals
+    notDisjoint = unionRelations [ equals
                                    , starts, startedBy
                                    , finishes, finishedBy
                                    , overlaps, overlappedBy
@@ -291,7 +306,7 @@ class (Eq a, Intervallic a) => IntervalAlgebraic a where
     -- | Is x contained in y in any sense ('during', 'starts', 'finishes' 
     -- or 'equals'?
     in'                    :: ComparativePredicateOf (Interval a)
-    in' = composeRelations [during, starts, finishes, equals]
+    in' = unionRelations [during, starts, finishes, equals]
 
 
 {- |
