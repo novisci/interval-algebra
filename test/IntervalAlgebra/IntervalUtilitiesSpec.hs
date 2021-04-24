@@ -1,8 +1,8 @@
 module IntervalAlgebra.IntervalUtilitiesSpec (spec) where
 
 import IntervalAlgebra ( Interval, Intervallic(unsafeInterval) )
-import IntervalAlgebra.IntervalUtilities ( combineIntervals, gaps, durations )
-import Test.Hspec ( it, shouldBe, describe, Spec )
+import IntervalAlgebra.IntervalUtilities
+import Test.Hspec ( it, shouldBe, describe, Spec, pending )
 
 containmentInt :: Interval Int
 containmentInt = unsafeInterval (0 :: Int) (10 :: Int)
@@ -46,3 +46,12 @@ spec = do
          --    durations [] `shouldBe` []
          it "durations of [containmentInt, anotherInt] is [10, 5]" $
             durations [containmentInt, anotherInt] `shouldBe` [10, 5]
+
+   describe "clip tests" $
+      do 
+         it "clip disjoint should be Nothing" $
+           clip containmentInt gapInt `shouldBe` Nothing
+         it "clip Interval (4, 10) Interval (0, 10) should be Interval (4, 10)" $
+           clip noncontainmentInt containmentInt `shouldBe` 
+             Just (unsafeInterval 4 10)
+         it "clip x y === intersect sort x y " pending 
