@@ -4,6 +4,7 @@
 
 * Renames `composeRelations` to the more accurate `unionRelations`. 
 * Adds `<|>` as operator for "union"ing `ComparativePredicateOf (Interval a)`, as in `starts <|> overlaps === unionRelations [starts, overlaps]`.
+* Adds a `clip x y` function which clips the interval `y` to the extent of `x`, provided `x` and `y` are not disjoint.
 
 ## 0.3.3
 

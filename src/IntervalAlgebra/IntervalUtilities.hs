@@ -13,13 +13,16 @@ module IntervalAlgebra.IntervalUtilities (
       combineIntervals
     , gaps
     , durations
+    , clip
 ) where
 
 import GHC.Base
     ( (++), map, foldr, otherwise, ($), (.), (<*>)
-    , Semigroup((<>)), Functor(fmap))
+    , Semigroup((<>)), Functor(fmap), Maybe(..))
 import Prelude (uncurry, zip, Num)
-import IntervalAlgebra( Interval, IntervalCombinable(..), IntervalSizeable(..) )
+import IntervalAlgebra
+    ( Interval, Intervallic(..), IntervalAlgebraic(..)
+    , IntervalCombinable(..), IntervalSizeable(..) )
 import Data.Maybe (mapMaybe)
 import Data.List ( (++), null, any, head, init, last, tail )
 
@@ -47,3 +50,18 @@ gaps l = mapMaybe (uncurry (><)) ((zip <*> tail) l)
 -- | Returns the 'duration' of each 'Interval' in the 'Functor' @f@.
 durations :: (Functor f, IntervalSizeable a b) => f (Interval a) -> f b
 durations = fmap duration
+
+
+-- | In the case that x y are not disjoint, clips y to the extent of x.
+clip :: (IntervalAlgebraic a, IntervalSizeable a b)=> 
+       Interval a 
+    -> Interval a 
+    -> Maybe (Interval a)
+clip x y 
+   | overlaps x y     = Just $ enderval (diff (end x) (begin y)) (end x)
+   | overlappedBy x y = Just $ beginerval (diff (end y) (begin x)) (begin x)
+   | jx x y           = Just x
+   | jy x y           = Just y
+   | disjoint x y     = Nothing
+   where jy = equals <|> startedBy <|> contains <|> finishedBy
+         jx = starts <|> during <|> finishes
