@@ -27,16 +27,17 @@ import GHC.Base
     ( (++), map, foldr, otherwise, ($), (.), (<*>), seq, not
     , Semigroup((<>)), Functor(fmap), Maybe(..)
     , Int, Bool)
+import GHC.Num ()
+import Data.Tuple ( uncurry )
 import Data.Foldable ( Foldable(null, foldl'), all, any )
 import Data.Monoid ( (<>), Monoid(mempty) )
-import Prelude (uncurry, zip, Num, foldl)
 import IntervalAlgebra
     ( Interval, Intervallic(..), IntervalAlgebraic(..)
     , IntervalCombinable(..), IntervalSizeable(..)
     , IntervalFilterable(..)
     , IntervalRelation(..))
 import Data.Maybe (mapMaybe)
-import Data.List ( (++), head, init, last, tail )
+import Data.List ( (++), head, init, last, tail, zip )
 import Witherable ( Filterable )
 
 intInt :: Int -> Int -> Interval Int
@@ -61,11 +62,6 @@ instance (IntervalCombinable a) => Semigroup (Box (Interval a)) where
 -- [(0, 12),(13, 15)]
 combineIntervals :: (IntervalCombinable a) => [Interval a] -> [Interval a]
 combineIntervals l = unBox $ foldl' (<>) (Box []) (map (\z -> Box [z]) l)
-
--- foldl' :: (t -> a -> t) -> t -> [a] -> t
--- foldl' f z []     = z
--- foldl' f z (x:xs) = let z' = z `f` x
---                      in seq z' $ foldl' f z' xs
 
 -- | Returns a (possibly empty) list of intervals consisting of the gaps between
 --   intervals in the input list. *To work properly, the input list should be sorted*.
