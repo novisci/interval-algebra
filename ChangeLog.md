@@ -2,6 +2,7 @@
 
 ## 0.4.0
 
+* Adds `relations` utility function which returns a list of the `IntervalRelations` between each consecutive pair of intervals in the input list.
 * Renames `in'` predicate to `within`. Also, renames `filterIn'` to `filterWithin`.
 * Adds `predicate` function to `IntervalAlgebraic` class to map an `IntervalRelation` to its corresponding predicate function. Also adds `predicates` to map a set of `IntervalRelation`s to a list of predicate functions.  
 * Adds `intersection`, `union`, `converse`, and `complement` methods to `IntervalAlgebraic` for taking the respective operation on `Set IntervalRelation`.

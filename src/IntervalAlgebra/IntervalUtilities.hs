@@ -14,15 +14,18 @@ module IntervalAlgebra.IntervalUtilities (
     , gaps
     , durations
     , clip
+    , relations
 ) where
 
 import GHC.Base
     ( (++), map, foldr, otherwise, ($), (.), (<*>)
     , Semigroup((<>)), Functor(fmap), Maybe(..))
+import Data.Foldable()
 import Prelude (uncurry, zip, Num)
 import IntervalAlgebra
     ( Interval, Intervallic(..), IntervalAlgebraic(..)
-    , IntervalCombinable(..), IntervalSizeable(..) )
+    , IntervalCombinable(..), IntervalSizeable(..)
+    , IntervalRelation(..))
 import Data.Maybe (mapMaybe)
 import Data.List ( (++), null, any, head, init, last, tail )
 
@@ -53,11 +56,11 @@ durations = fmap duration
 
 
 -- | In the case that x y are not disjoint, clips y to the extent of x.
-clip :: (IntervalAlgebraic a, IntervalSizeable a b)=> 
-       Interval a 
-    -> Interval a 
+clip :: (IntervalAlgebraic a, IntervalSizeable a b)=>
+       Interval a
+    -> Interval a
     -> Maybe (Interval a)
-clip x y 
+clip x y
    | overlaps x y     = Just $ enderval (diff (end x) (begin y)) (end x)
    | overlappedBy x y = Just $ beginerval (diff (end y) (begin x)) (begin x)
    | jx x y           = Just x
@@ -65,3 +68,8 @@ clip x y
    | disjoint x y     = Nothing
    where jy = equals <|> startedBy <|> contains <|> finishedBy
          jx = starts <|> during <|> finishes
+
+-- | Finds the 'IntervalRelation' between each consecutive pair of intervals.
+relations :: (IntervalAlgebraic a)=> [Interval a] -> [IntervalRelation a]
+relations x = map (uncurry relate) ((zip <*> tail) x)
+-- TODO: generalize to collections besides list

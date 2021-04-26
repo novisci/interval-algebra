@@ -1,6 +1,6 @@
 module IntervalAlgebra.IntervalUtilitiesSpec (spec) where
 
-import IntervalAlgebra ( Interval, Intervallic(unsafeInterval) )
+import IntervalAlgebra ( Interval, Intervallic(unsafeInterval), IntervalRelation (FinishedBy, Meets) )
 import IntervalAlgebra.IntervalUtilities
 import Test.Hspec ( it, shouldBe, describe, Spec, pending )
 
@@ -54,4 +54,11 @@ spec = do
          it "clip Interval (4, 10) Interval (0, 10) should be Interval (4, 10)" $
            clip noncontainmentInt containmentInt `shouldBe` 
              Just (unsafeInterval 4 10)
-         it "clip x y === intersect sort x y " pending 
+         it "clip x y === intersect sort x y " pending
+
+   describe "relations tests" $
+      do 
+         it "relations [(0, 10), (4, 10), (10, 15), (15, 20)] == [FinishedBy, Meets, Meets]" $
+            relations [containmentInt, noncontainmentInt, gapInt, anotherInt] `shouldBe`
+               [FinishedBy, Meets, Meets]
+         it "more relations tests" pending
