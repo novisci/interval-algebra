@@ -502,6 +502,15 @@ class (IntervalAlgebraic a) => IntervalCombinable a where
       | x `before` y = pure x <> pure y
       | otherwise    = pure ( extenterval x y )
 
+    -- | Forms a 'Just' new interval from the intersection of two intervals, 
+    --   provided the intervals are not disjoint.
+    intersect :: Interval a -> Interval a -> Maybe (Interval a)
+    intersect x y
+       | disjoint x y = Nothing 
+       | otherwise    = Just $ Interval (b, e)
+           where b = max (begin x) (begin y)
+                 e = min (end x) (end y)
+
 {- | 
 The @'IntervalFilterable'@ class provides functions for filtering 'Filterable's of 
 @'Interval'@s based on @'IntervalAlgebraic'@ relations.
