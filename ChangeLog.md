@@ -2,7 +2,9 @@
 
 ## 0.4.0
 
-* Add `intersect` function to `IntervalCombinable` class that returns the (maybe) intersection of two intervals.
+* Adds `gapsWithin` function to `IntervalUtilities` module that applies `gaps` to all intervals in the input list that are non-disjoint from the interval in the first argument.
+* Fixed bug in `combineIntervals` where intervals could fail to be combined properly because `foldr` was being used instead of `foldl'`.
+* Adds `intersect` function to `IntervalCombinable` class that returns the (maybe) intersection of two intervals.
 * Adds `relations` utility function which returns a list of the `IntervalRelations` between each consecutive pair of intervals in the input list.
 * Renames `in'` predicate to `within`. Also, renames `filterIn'` to `filterWithin`.
 * Adds `predicate` function to `IntervalAlgebraic` class to map an `IntervalRelation` to its corresponding predicate function. Also adds `predicates` to map a set of `IntervalRelation`s to a list of predicate functions.  
