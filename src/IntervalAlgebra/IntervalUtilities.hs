@@ -99,6 +99,7 @@ clip x y
 -- | Finds the 'IntervalRelation' between each consecutive pair of intervals.
 -- 
 -- >>> relations [intInt 0 1, intInt 1 2] 
+-- [Meets]
 relations :: (IntervalAlgebraic a)=> [Interval a] -> [IntervalRelation a]
 -- TODO: generalize to collections besides list
 relations x = map (uncurry relate) ((zip <*> tail) x)
@@ -132,10 +133,12 @@ emptyIf g f x = if g f x then mempty else x
 -- 
 -- For example, the following returns the empty list because none of the intervals
 -- in the input list 'starts' (3, 5).
+--
 -- >>> emptyIfNone (starts (intInt 3 5)) [intInt 3 4, intInt 5 6]
 -- []
 --
 -- In the following, (3, 5) 'starts' (3, 6), so the input is returned.
+--
 -- >>> emptyIfNone (starts (intInt 3 5)) [intInt 3 6, intInt 5 6]
 -- [(3, 6),(5, 6)]
 emptyIfNone :: (Monoid (f (Interval a)), Foldable f, IntervalFilterable f a)=>
