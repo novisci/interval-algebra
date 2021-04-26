@@ -1,4 +1,5 @@
-{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
@@ -48,6 +49,8 @@ This module is under development and the API may change in the future.
 
 
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 module IntervalAlgebra(
 
     -- * Classes
@@ -60,17 +63,19 @@ module IntervalAlgebra(
 
     -- * Types
     , Interval
-    , IntervalRelation
+    , IntervalRelation(..)
     , ComparativePredicateOf
 ) where
 
-import Prelude (Eq, Ord, Show, Read
+import Prelude (Eq, Ord, Show, Read, Enum(..), Bounded(..), Ordering (LT)
                , Maybe(..), Either(..), String, Integer, Int, Bool(..), Num
                , Foldable (maximum, minimum, foldMap, foldr)
-               , otherwise, flip, show, fst, snd, min, max, any, negate, not
+               , map, otherwise, flip, show, fst, snd, min, max, any, negate, not
                , (++), (==), (&&), (<), (>), (<=), ($), (+), (-), (.))
 import Data.Time as DT ( Day, addDays, diffDays, addGregorianYearsClip, calendarYear )
 import Data.Semigroup ( Semigroup((<>)) )
+import Data.Set(Set, fromList, difference, intersection, union, map, toList)
+import Data.Ord( Ord(..), Ordering(..))
 import GHC.Base (Applicative(pure))
 import Witherable ( Filterable(filter) )
 
@@ -158,13 +163,13 @@ y: |-----|
 @
 
 -}
-data IntervalRelation =
+data IntervalRelation a =
       Meets
     | MetBy
     | Before
     | After
     | Overlaps
-    | OverlappedBy
+    | OverlappedBy 
     | Starts
     | StartedBy
     | Finishes
@@ -172,7 +177,53 @@ data IntervalRelation =
     | During
     | Contains
     | Equals
-    deriving (Show, Read)
+    deriving (Eq, Show, Read)
+
+instance Bounded (IntervalRelation a) where
+    minBound = Before
+    maxBound = After
+
+instance Enum (IntervalRelation a) where
+    fromEnum r = case r of
+                    Before       -> 0
+                    Meets        -> 1
+                    Overlaps     -> 2
+                    FinishedBy   -> 3
+                    Contains     -> 4
+                    Starts       -> 5
+                    Equals       -> 6
+                    StartedBy    -> 7
+                    During       -> 8
+                    Finishes     -> 9
+                    OverlappedBy -> 10
+                    MetBy        -> 11
+                    After        -> 12
+
+    toEnum i = case i of
+               0  -> Before
+               1  -> Meets
+               2  -> Overlaps
+               3  -> FinishedBy
+               4  -> Contains
+               5  -> Starts
+               6  -> Equals
+               7  -> StartedBy
+               8  -> During
+               9 -> Finishes
+               10 -> OverlappedBy
+               11 -> MetBy
+               12 -> After
+
+instance Ord (IntervalRelation a) where
+    compare x y = compare (fromEnum x) (fromEnum y)
+
+-- | The 'Set' of all 'IntervalRelation's.
+intervalRelations :: Set (IntervalRelation a)
+intervalRelations = fromList (Prelude.map toEnum [0..12] ::[IntervalRelation a])
+
+-- | Find the converse of a single 'IntervalRelation'
+converseRelation :: IntervalRelation a -> IntervalRelation a
+converseRelation x = toEnum (12 - fromEnum x)
 
 {-
 Misc
@@ -211,12 +262,12 @@ class (Ord a, Show a) => Intervallic a where
 The @'IntervalAlgebraic'@ typeclass specifies the functions and relational 
 operators for interval-based temporal logic. The typeclass defines the 
 relational operators for intervals, plus other useful utilities such as 
-@'disjoint'@, @'in''@, and @'composeRelations'@.
+@'disjoint'@, @'within'@, and @'unionPredicates'@.
 -}
 class (Eq a, Intervallic a) => IntervalAlgebraic a where
 
     -- | Compare two intervals to determine their 'IntervalRelation'.
-    relate :: Interval a -> Interval a -> IntervalRelation
+    relate :: Interval a -> Interval a -> IntervalRelation a
     relate x y
         | x `before` y       = Before
         | x `after`  y       = After
@@ -231,6 +282,62 @@ class (Eq a, Intervallic a) => IntervalAlgebraic a where
         | x `during` y       = During
         | x `contains` y     = Contains
         | otherwise          = Equals
+
+    -- | Maps an 'IntervalRelation' to its corresponding predicate function.
+    predicate' :: IntervalRelation a -> ComparativePredicateOf (Interval a)
+    predicate' r = 
+        case r of
+            Before       -> before
+            Meets        -> meets
+            Overlaps     -> overlaps
+            FinishedBy   -> finishedBy
+            Contains     -> contains
+            Starts       -> starts
+            Equals       -> equals
+            StartedBy    -> startedBy
+            During       -> during
+            Finishes     -> finishes
+            OverlappedBy -> overlappedBy
+            MetBy        -> metBy
+            After        -> after
+
+    -- | Given a set of 'IntervalRelation's return a 'List' of 'predicate' functions 
+    --   corresponding to each relation.
+    predicates :: Set (IntervalRelation a) -> [ComparativePredicateOf (Interval a)]
+    predicates x = Prelude.map predicate' (toList x)
+
+    -- | Forms a predicate function from the union of a set of 'IntervalRelation's.
+    predicate :: Set (IntervalRelation a) -> ComparativePredicateOf (Interval a)
+    predicate = unionPredicates.predicates
+
+    -- ** Algebraic operations on IntervalRelations
+
+    -- | Shortcut to creating a 'Set IntervalRelation' from a 'List'.
+    toSet :: [IntervalRelation a] -> Set (IntervalRelation a)
+    toSet = fromList
+
+    -- | Finds the complement of a 'Set IntervalRelation'.
+    complement :: Set (IntervalRelation a) -> Set (IntervalRelation a)
+    complement = difference intervalRelations
+
+    -- | Find the intersection of two 'Set's of 'IntervalRelation'
+    intersection ::  Set (IntervalRelation a) 
+                  -> Set (IntervalRelation a)
+                  -> Set (IntervalRelation a)
+    intersection = Data.Set.intersection
+
+    -- | Find the union of two 'Set's of 'IntervalRelation'
+    union ::  Set (IntervalRelation a) 
+           -> Set (IntervalRelation a)
+           -> Set (IntervalRelation a)
+    union = Data.Set.union 
+
+    -- | Find the converse of a 'Set IntervalRelation'. 
+    converse ::   Set (IntervalRelation a) 
+                  -> Set (IntervalRelation a)
+    converse = Data.Set.map converseRelation 
+
+    -- ** Interval algebra predicates
 
     -- | Does x equal y?
     equals                 :: ComparativePredicateOf (Interval a)
@@ -255,6 +362,11 @@ class (Eq a, Intervallic a) => IntervalAlgebraic a where
     starts, startedBy      :: ComparativePredicateOf (Interval a)
     starts   x y  = begin x == begin y && (end x < end y)
     startedBy     = flip starts
+    
+    -- | Synonyms for 'starts' and 'startedBy'
+    precedes, precededBy      :: ComparativePredicateOf (Interval a)
+    precedes      = starts
+    precededBy    = startedBy
 
     -- | Does x finish y? Is x finished by y?
     finishes, finishedBy   :: ComparativePredicateOf (Interval a)
@@ -270,28 +382,36 @@ class (Eq a, Intervallic a) => IntervalAlgebraic a where
 
     -- | Compose a list of interval relations with _or_ to create a new
     -- @'ComparativePredicateOf' 'Interval' a@. For example, 
-    -- @composeRelations [before, meets]@ creates a predicate function determining
+    -- @unionPredicates [before, meets]@ creates a predicate function determining
     -- if one interval is either before or meets another interval.
-    composeRelations       :: [ComparativePredicateOf (Interval a)] ->
-                               ComparativePredicateOf (Interval a)
-    composeRelations fs x y = any (\ f -> f x y) fs
+    unionPredicates       :: [ComparativePredicateOf (Interval a)] ->
+                              ComparativePredicateOf (Interval a)
+    unionPredicates fs x y = any (\ f -> f x y) fs
+
+    -- | Operator for composing the union of two predicates
+    (<|>) ::  ComparativePredicateOf (Interval a)
+        -> ComparativePredicateOf (Interval a)
+        -> ComparativePredicateOf (Interval a)
+    (<|>) f g = unionPredicates [f, g]    
+
+    disjointRelations :: Set (IntervalRelation a)
+    disjointRelations = toSet [Before, After, Meets, MetBy]
+
+    withinRelations :: Set (IntervalRelation a)
+    withinRelations = toSet [During, Starts, Finishes, Equals]
 
     -- | Are x and y disjoint ('before', 'after', 'meets', or 'metBy')?
     disjoint               :: ComparativePredicateOf (Interval a)
-    disjoint = composeRelations [before, after, meets, metBy]
+    disjoint = predicate disjointRelations
 
     -- | Are x and y not disjoint; i.e. do they share any support?
     notDisjoint            :: ComparativePredicateOf (Interval a)
-    notDisjoint = composeRelations [ equals
-                                   , starts, startedBy
-                                   , finishes, finishedBy
-                                   , overlaps, overlappedBy
-                                   , during, contains]
+    notDisjoint = predicate (complement disjointRelations)
 
-    -- | Is x contained in y in any sense ('during', 'starts', 'finishes' 
-    -- or 'equals'?
-    in'                    :: ComparativePredicateOf (Interval a)
-    in' = composeRelations [during, starts, finishes, equals]
+    -- | Is x wholly within y (including endpoints) in any sense 'during', 
+    --   'starts', 'finishes', or 'equals'?
+    within                    :: ComparativePredicateOf (Interval a)
+    within = predicate withinRelations
 
 
 {- |
@@ -372,8 +492,8 @@ class (IntervalAlgebraic a) => IntervalCombinable a where
 
     -- | If @x@ is 'before' @y@, return @f x@ appended to @f y@. Otherwise, 
     --   return 'extenterval' of @x@ and @y@ (wrapped in @f@). This is useful for 
-    --   folding over an *ordered* container of @Interval@s and combining intervals 
-    --   when @x@ is *not* 'before' @y@.
+    --   (left) folding over an *ordered* container of @Interval@s and combining 
+    --   intervals when @x@ is *not* 'before' @y@.
     (<+>):: (Semigroup (f (Interval a)), Applicative f) =>
             Interval a ->
             Interval a ->
@@ -381,6 +501,15 @@ class (IntervalAlgebraic a) => IntervalCombinable a where
     (<+>) x y
       | x `before` y = pure x <> pure y
       | otherwise    = pure ( extenterval x y )
+
+    -- | Forms a 'Just' new interval from the intersection of two intervals, 
+    --   provided the intervals are not disjoint.
+    intersect :: Interval a -> Interval a -> Maybe (Interval a)
+    intersect x y
+       | disjoint x y = Nothing 
+       | otherwise    = Just $ Interval (b, e)
+           where b = max (begin x) (begin y)
+                 e = min (end x) (end y)
 
 {- | 
 The @'IntervalFilterable'@ class provides functions for filtering 'Filterable's of 
@@ -444,10 +573,10 @@ class (Filterable f, IntervalAlgebraic a) => IntervalFilterable f a where
     filterNotDisjoint :: Interval a -> f (Interval a) -> f (Interval a)
     filterNotDisjoint = filterMaker notDisjoint
 
-    -- | Filter a 'Witherable.Filterable' of Interval as to those that are 'in''
+    -- | Filter a 'Witherable.Filterable' of Interval as to those that are 'within'
     --   the @Interval a@ in the first argument.
-    filterIn' :: Interval a -> f (Interval a) -> f (Interval a)
-    filterIn' = filterMaker disjoint
+    filterWithin :: Interval a -> f (Interval a) -> f (Interval a)
+    filterWithin = filterMaker disjoint
 {-
 Instances
 -}

@@ -12,7 +12,9 @@ import IntervalAlgebra as IA
 import Data.Maybe
 import Control.Monad ()
 import IntervalAlgebra.Arbitrary ()
-import Data.Time as DT
+import Data.Time as DT ( Day )
+
+mkIntrvl = unsafeInterval
 
 xor :: Bool -> Bool -> Bool
 xor a b = a /= b
@@ -413,8 +415,8 @@ spec :: Spec
 spec = do
   describe "IntervalSizeable tests" $
     do
-      it "expandl doesn't change end"   $ property (prop_expandl_end @Int)  
-      it "expandr doesn't change begin" $ property (prop_expandr_begin @Int)  
+      it "expandl doesn't change end"   $ property (prop_expandl_end @Int)
+      it "expandr doesn't change begin" $ property (prop_expandr_begin @Int)
       it "expand 0 5 Interval (0, 1) should be Interval (0, 6)" $
         expand 0 5 (unsafeInterval (0::Int) (1::Int)) `shouldBe` unsafeInterval (0::Int) (6::Int)
       it "expand 5 0 Interval (0, 1) should be Interval (-5, 1)" $
@@ -441,6 +443,49 @@ spec = do
         enderval (0::Int) 10 `shouldBe` unsafeInterval (9::Int) (10::Int)
       it "enderval -2 10 should be Interval (9, 10)" $
         enderval (-2::Int) 10 `shouldBe` unsafeInterval (9::Int) (10::Int)
+
+  describe "IntervalAlgebraic tests" $
+     do
+      it "(startedBy <|> overlappedBy) Interval (0, 9) Interval (-1, 4) is True" $
+        (startedBy <|> overlappedBy) (mkIntrvl (0::Int) (9::Int)) (mkIntrvl (-1::Int) (4::Int))
+         `shouldBe` True
+      it "(startedBy <|> overlappedBy) Interval (0, 9) Interval (0, 4) is True" $
+        (startedBy <|> overlappedBy) (mkIntrvl (0::Int) (9::Int)) (mkIntrvl (0::Int) (4::Int))
+         `shouldBe` True
+      it "(startedBy <|> overlappedBy) Interval (0, 9) Interval (-1, 9) is False" $
+        (startedBy <|> overlappedBy) (mkIntrvl (0::Int) (9::Int)) (mkIntrvl (-1::Int) (9::Int))
+         `shouldBe` False
+
+      it "disjoint x y same as explicit union of predicates" $
+         disjoint (mkIntrvl (0::Int) (2::Int)) (mkIntrvl (3::Int) (5::Int)) `shouldBe`
+         (before <|> after <|> meets <|> metBy) (mkIntrvl (0::Int) (2::Int)) (mkIntrvl (3::Int) (5::Int))
+
+  describe "IntervalCombinable tests" $
+    do
+      it "intersection of (0, 2) (2, 4) should be Nothing" $
+        intersect (mkIntrvl (0::Int) (2::Int)) (mkIntrvl (2::Int) (4::Int)) 
+          `shouldBe` Nothing
+      it "intersection of (0, 2) (3, 4) should be Nothing" $
+        intersect (mkIntrvl (0::Int) (2::Int)) (mkIntrvl (3::Int) (4::Int)) 
+          `shouldBe` Nothing
+      it "intersection of (2, 4) (0, 2) should be Nothing" $
+        intersect (mkIntrvl (2::Int) (4::Int)) (mkIntrvl (0::Int) (2::Int)) 
+          `shouldBe` Nothing
+      it "intersection of (0, 2) (1, 3) should be Just (1, 2)" $
+        intersect (mkIntrvl (0::Int) (2::Int)) (mkIntrvl (1::Int) (3::Int)) 
+          `shouldBe` Just (mkIntrvl 1 2)
+      it "intersection of (0, 2) (-1, 3) should be Just (0, 2)" $
+        intersect (mkIntrvl (0::Int) (2::Int)) (mkIntrvl (-1::Int) (3::Int)) 
+          `shouldBe` Just (mkIntrvl 0 2)
+      it "intersection of (0, 2) (0, 2) should be Just (0, 2)" $
+        intersect (mkIntrvl (0::Int) (2::Int)) (mkIntrvl (0::Int) (2::Int)) 
+          `shouldBe` Just (mkIntrvl 0 2)
+      it "intersection of (0, 2) (-1, 1) should be Just (0, 1)" $
+        intersect (mkIntrvl (0::Int) (2::Int)) (mkIntrvl (-1::Int) (1::Int)) 
+          `shouldBe` Just (mkIntrvl 0 1)
+      it "intersection of (0, 3) (1, 2) should be Just (1, 2)" $
+        intersect (mkIntrvl (0::Int) (3::Int)) (mkIntrvl (1::Int) (2::Int)) 
+          `shouldBe` Just (mkIntrvl 1 2)
 
   describe "Interval Algebra Axioms for meets properties" $
     modifyMaxSuccess (*10) $
