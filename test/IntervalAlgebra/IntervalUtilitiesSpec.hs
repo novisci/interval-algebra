@@ -7,6 +7,7 @@ import IntervalAlgebra ( Interval, Intervallic(unsafeInterval)
                         , IntervalRelation (..) )
 import IntervalAlgebra.Arbitrary ()
 import IntervalAlgebra.IntervalUtilities
+import Test.Hspec.QuickCheck ( modifyMaxSuccess )
 import Test.Hspec ( it, shouldBe, describe, Spec, pending )
 import Test.QuickCheck
 import Data.List(sort)
@@ -29,21 +30,20 @@ gapInt = unsafeInterval (10 :: Int) (15 :: Int)
 prop_combineIntervals1:: (IntervalAlgebraic a, IntervalCombinable a)=>
      [Interval a] 
    -> Property
-prop_combineIntervals1 x = 
-   (length x > 2) ==> relations ci == replicate (length ci - 1) Before
+prop_combineIntervals1 x = relations ci === replicate (length ci - 1) Before
       where ci = combineIntervals (sort x)
 
 prop_gaps1:: (IntervalAlgebraic a, IntervalCombinable a)=>
      [Interval a] 
    -> Property
-prop_gaps1 x = 
-   (length x > 2) ==> relations gs == replicate (length gs - 1) Before
+prop_gaps1 x = relations gs === replicate (length gs - 1) Before
       where gs = gaps (sort x)
 
 
 spec :: Spec
 spec = do
    describe "combineIntervals unit tests" $
+    modifyMaxSuccess (*10) $
     do
       it "noncontainmentInt combined into containmentInt" $
          combineIntervals [containmentInt, noncontainmentInt] 
@@ -63,6 +63,7 @@ spec = do
 
    
    describe "gaps tests" $
+    modifyMaxSuccess (*10) $
     do 
       it "no gaps in containmentInt and noncontainmentInt" $
          gaps [containmentInt, noncontainmentInt] `shouldBe` []
