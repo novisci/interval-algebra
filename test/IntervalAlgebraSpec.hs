@@ -456,6 +456,10 @@ spec = do
         (startedBy <|> overlappedBy) (mkIntrvl (0::Int) (9::Int)) (mkIntrvl (-1::Int) (9::Int))
          `shouldBe` False
 
+      it "disjoint x y same as explicit union of predicates" $ 
+         disjoint (mkIntrvl (0::Int) (2::Int)) (mkIntrvl (3::Int) (5::Int)) `shouldBe`
+         (before <|> after <|> meets <|> metBy) (mkIntrvl (0::Int) (2::Int)) (mkIntrvl (3::Int) (5::Int))
+
   describe "Interval Algebra Axioms for meets properties" $
     modifyMaxSuccess (*10) $
     do
