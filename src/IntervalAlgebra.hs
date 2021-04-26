@@ -262,7 +262,7 @@ class (Ord a, Show a) => Intervallic a where
 The @'IntervalAlgebraic'@ typeclass specifies the functions and relational 
 operators for interval-based temporal logic. The typeclass defines the 
 relational operators for intervals, plus other useful utilities such as 
-@'disjoint'@, @'in''@, and @'unionPredicates'@.
+@'disjoint'@, @'within'@, and @'unionPredicates'@.
 -}
 class (Eq a, Intervallic a) => IntervalAlgebraic a where
 
@@ -492,8 +492,8 @@ class (IntervalAlgebraic a) => IntervalCombinable a where
 
     -- | If @x@ is 'before' @y@, return @f x@ appended to @f y@. Otherwise, 
     --   return 'extenterval' of @x@ and @y@ (wrapped in @f@). This is useful for 
-    --   folding over an *ordered* container of @Interval@s and combining intervals 
-    --   when @x@ is *not* 'before' @y@.
+    --   (left) folding over an *ordered* container of @Interval@s and combining 
+    --   intervals when @x@ is *not* 'before' @y@.
     (<+>):: (Semigroup (f (Interval a)), Applicative f) =>
             Interval a ->
             Interval a ->
