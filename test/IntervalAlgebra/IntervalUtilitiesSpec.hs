@@ -104,3 +104,13 @@ spec = do
             gapsWithin (intInt 1 10) [intInt 0 5, intInt 7 9, intInt 12 15] 
                `shouldBe` [intInt 5 7, intInt 9 10]
          it "more gapsWithin tests" pending
+
+   describe "emptyIf tests" $
+      do 
+         it "emptyIfNone (starts (3, 5)) [(3,4), (5,6)] should be empty" $
+            emptyIfNone (starts (intInt 3 5)) [intInt 3 4, intInt 5 6] 
+               `shouldBe` []
+         it "emptyIfNone (starts (3, 5)) [(3,6), (5,6)] shoiuld be input" $
+            emptyIfNone (starts (intInt 3 5)) [intInt 3 6, intInt 5 6] 
+               `shouldBe` [ intInt 3 6, intInt 5 6]
+         it "more emptyif tests" pending

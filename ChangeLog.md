@@ -2,6 +2,7 @@
 
 ## 0.4.0
 
+* Adds utilities `emptyIfNone`, `emptyIfAny`, and `emptyIfAll` that apply predicates to a list of inputs. If none, any, or all of the inputs meet the predicate, then the empty list is returned. Otherwise, the input is returned unmodified. These functions are generalized to `Monoid`s, so they work on structures other than lists.
 * Adds `gapsWithin` function to `IntervalUtilities` module that applies `gaps` to all intervals in the input list that are non-disjoint from the interval in the first argument.
 * Fixed bug in `combineIntervals` where intervals could fail to be combined properly because `foldr` was being used instead of `foldl'`.
 * Adds `intersect` function to `IntervalCombinable` class that returns the (maybe) intersection of two intervals.
