@@ -301,7 +301,7 @@ class (Eq a, Intervallic a) => IntervalAlgebraic a where
             MetBy        -> metBy
             After        -> after
 
-    -- | Given a set of 'IntervalRelation's return a 'List' of 'predicate' functions 
+    -- | Given a set of 'IntervalRelation's return a list of 'predicate' functions 
     --   corresponding to each relation.
     predicates :: Set (IntervalRelation a) -> [ComparativePredicateOf (Interval a)]
     predicates x = Prelude.map predicate' (toList x)
@@ -312,7 +312,7 @@ class (Eq a, Intervallic a) => IntervalAlgebraic a where
 
     -- ** Algebraic operations on IntervalRelations
 
-    -- | Shortcut to creating a 'Set IntervalRelation' from a 'List'.
+    -- | Shortcut to creating a 'Set IntervalRelation' from a list.
     toSet :: [IntervalRelation a] -> Set (IntervalRelation a)
     toSet = fromList
 

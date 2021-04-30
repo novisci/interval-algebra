@@ -55,13 +55,14 @@ spec = do
          combineIntervals [containmentInt] `shouldBe` [containmentInt]
       it "idempotency of noncontainmentInt" $
          combineIntervals [noncontainmentInt] `shouldBe` [noncontainmentInt]
+      it "combineIntervals [] should be []" $
+         combineIntervals ([] :: [Interval Int]) `shouldBe` []
       it "combineIntervals [intInt 0 10, intInt 2 7, intInt 10 12, intInt 13 15]" $
          combineIntervals [intInt 0 10, intInt 2 7, intInt 10 12, intInt 13 15] 
             `shouldBe` [intInt 0 12, intInt 13 15]
       it "after combining, only relation should be Before" $ 
          property (prop_combineIntervals1 @Int) 
 
-   
    describe "gaps tests" $
     modifyMaxSuccess (*10) $
     do 
@@ -78,8 +79,8 @@ spec = do
       do 
          it "durations of containmentInt is 10" $
             durations [containmentInt] `shouldBe` [10]
-         -- it "durations of empty list is empty list" $
-         --    durations [] `shouldBe` []
+         it "durations of empty list is empty list" $
+            durations  ([] :: [Interval Int])  `shouldBe` []
          it "durations of [containmentInt, anotherInt] is [10, 5]" $
             durations [containmentInt, anotherInt] `shouldBe` [10, 5]
 
@@ -97,6 +98,10 @@ spec = do
          it "relations [(0, 10), (4, 10), (10, 15), (15, 20)] == [FinishedBy, Meets, Meets]" $
             relations [containmentInt, noncontainmentInt, gapInt, anotherInt] `shouldBe`
                [FinishedBy, Meets, Meets]
+         it "relations of [] shouldBe []" $
+            relations ([] :: [Interval Int]) `shouldBe` []
+         it "relations of singleton shouldBe []" $
+            relations [containmentInt] `shouldBe` []
          it "more relations tests" pending
 
    describe "gapsWithin tests" $
