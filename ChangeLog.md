@@ -1,5 +1,10 @@
 # Changelog for interval-algebra
 
+## 0.5.0
+
+* In the `IntervalAlgebraic` typeclass, adds `concur` as a synonym for `notDisjoint`; `enclosedBy` as a synonym for `within`; and `enclose` as the converse of `enclosedBy`.
+* Generalizes the utilities `combineIntervals`, `gaps`, and `relations` to work with any `Applicative`, `Foldable` `Monoid` (of which `List` is a case).
+
 ## 0.4.0
 
 * Adds utilities `emptyIfNone`, `emptyIfAny`, and `emptyIfAll` that apply predicates to a list of inputs. If none, any, or all of the inputs meet the predicate, then the empty list is returned. Otherwise, the input is returned unmodified. These functions are generalized to `Monoid`s, so they work on structures other than lists.
