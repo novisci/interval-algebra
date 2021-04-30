@@ -398,7 +398,7 @@ class (Eq a, Intervallic a) => IntervalAlgebraic a where
     disjointRelations = toSet [Before, After, Meets, MetBy]
 
     withinRelations :: Set (IntervalRelation a)
-    withinRelations = toSet [During, Starts, Finishes, Equals]
+    withinRelations = toSet [Starts, During, Finishes, Equals]
 
     -- | Are x and y disjoint ('before', 'after', 'meets', or 'metBy')?
     disjoint               :: ComparativePredicateOf (Interval a)
@@ -408,11 +408,22 @@ class (Eq a, Intervallic a) => IntervalAlgebraic a where
     notDisjoint            :: ComparativePredicateOf (Interval a)
     notDisjoint = predicate (complement disjointRelations)
 
-    -- | Is x wholly within y (including endpoints) in any sense 'during', 
+    -- | A synonym for 'notDisjoint'.
+    concur                 :: ComparativePredicateOf (Interval a) 
+    concur = notDisjoint
+
+    -- | Is x entirely *within* the endpoints of y? That is, 'during', 
     --   'starts', 'finishes', or 'equals'?
-    within                    :: ComparativePredicateOf (Interval a)
+    within                 :: ComparativePredicateOf (Interval a)
     within = predicate withinRelations
 
+    -- | Does x enclose y? That is, is y 'within' x?
+    enclose                :: ComparativePredicateOf (Interval a)
+    enclose = flip enclosedBy 
+
+    -- | Synonym for 'within'.
+    enclosedBy             :: ComparativePredicateOf (Interval a)
+    enclosedBy = within
 
 {- |
 The 'Moment' class fixes the smallest duration of an 'Intervallic a'.
