@@ -109,6 +109,8 @@ spec = do
          it "gapsWithin (1, 10) [(0,5), (7,9), (12,15)] should be [(5,7), (9,10)]" $
             gapsWithin (intInt 1 10) [intInt 0 5, intInt 7 9, intInt 12 15] 
                `shouldBe` [intInt 5 7, intInt 9 10]
+         it "gapsWithin (1, 10) [] should be []" $
+             gapsWithin (intInt 1 10) [] `shouldBe` []
          it "more gapsWithin tests" pending
 
    describe "emptyIf tests" $

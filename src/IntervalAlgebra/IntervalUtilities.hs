@@ -43,7 +43,6 @@ import IntervalAlgebra
     , IntervalRelation(..))
 import Data.Maybe (mapMaybe, catMaybes, fromMaybe, Maybe(..))
 import Data.List ( (++), map, head, init, last, tail )
-import Data.Set(Set(..))
 import Witherable ( Filterable )
 
 -------------------------------------------------
@@ -74,7 +73,7 @@ applyAccume f (fs, Just x)  y  = (fs <> pure (f x y), Just y)
 liftListToFoldable :: (Applicative f
                       , Monoid (f a)
                       , Foldable f) =>
-    [a] -> f a 
+    [a] -> f a
 liftListToFoldable = foldl' (\x y -> x <> pure y) mempty
 
 -- Box to avoid overlapping instances
@@ -139,14 +138,14 @@ gaps' :: (IntervalCombinable a
          , Foldable f) =>
       f (Interval a) ->
       [Interval a]
-gaps' x = catMaybes (foldlAccume (><) x) 
+gaps' x = catMaybes (foldlAccume (><) x)
 
 -- | Returns the 'duration' of each 'Interval' in the 'Functor' @f@.
 --
 -- >>> durations [intInt 1 10, intInt 2 12, intInt 5 6]
 -- [9,10,1]
-durations :: (Functor f, IntervalSizeable a b)=> 
-       f (Interval a) 
+durations :: (Functor f, IntervalSizeable a b)=>
+       f (Interval a)
     -> f b
 durations = fmap duration
 
@@ -194,18 +193,30 @@ relations' :: ( IntervalAlgebraic a
 relations' = foldlAccume relate
 
 -- | Applies 'gaps' to all the non-disjoint intervals in @x@ that are *not* disjoint
--- from @i@. Intervals that 'overlaps' or are 'overlappedBy' @i@ are 'clip'ped to @i@.
+-- from @i@. Intervals that 'overlaps' or are 'overlappedBy' @i@ are 'clip'ped 
+-- to @i@, so that all the intervals are 'within' @i@. If the input @x@ is empty,
+-- then 'mempty' is returned. 
 --
 -- >>> gapsWithin (intInt 1 10) [intInt 0 5, intInt 7 9, intInt 12 15]
 -- [(5, 7),(9, 10)]
-gapsWithin :: (IntervalSizeable a b, IntervalCombinable a, IntervalFilterable [] a)=>
-      Interval a  -- ^ i
-  -> [Interval a] -- ^ x
-  -> [Interval a]
--- TODO: generalize to collections besides list
-gapsWithin i x = gaps $ enderval 0 (begin i) :
-                        mapMaybe (clip i) (filterNotDisjoint i x) ++
-                        [beginerval 0 (end i)]
+gapsWithin :: ( Applicative f
+               , Foldable f
+               , Monoid (f (Interval a))
+               , IntervalSizeable a b
+               , IntervalCombinable a
+               , IntervalFilterable f a)=>
+     Interval a     -- ^ i
+  -> f (Interval a) -- ^ x
+  -> f (Interval a)
+gapsWithin i x 
+  | null x = mempty  
+  | otherwise = gaps $ pure s <> ivs <> pure e
+        where s   = enderval   0 (begin i)
+              e   = beginerval 0 (end i)
+              nd  = toList (filterNotDisjoint i x)
+              ivs = liftListToFoldable (mapMaybe (clip i) nd) 
+
+
 
 -- | Given a predicate combinator, a predicate, and list of intervals, returns 
 --   the input unchanged if the predicate combinator is @True@. Otherwise, returns

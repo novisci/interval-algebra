@@ -3,7 +3,7 @@
 ## 0.5.0
 
 * In the `IntervalAlgebraic` typeclass, adds `concur` as a synonym for `notDisjoint`; `enclosedBy` as a synonym for `within`; and `enclose` as the converse of `enclosedBy`.
-* Generalizes the utilities `combineIntervals`, `gaps`, and `relations` to work with any `Applicative`, `Foldable` `Monoid` (of which `List` is a case).
+* Generalizes the utilities `combineIntervals`, `gaps`, `gapsWithin`, and `relations` to work with any `Applicative`, `Foldable` `Monoid` (of which `List` is a case).
 
 ## 0.4.0
 
