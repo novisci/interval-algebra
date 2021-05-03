@@ -6,7 +6,7 @@ A good primer on Allen's algebra can be [found here](https://thomasalspaugh.org/
 
 ## Design
 
-The module is built around five typeclasses designed to separate concerns of constructing, relating, and combining `Interval`s:
+The module is built around four typeclasses designed to separate concerns of constructing, relating, and combining `Interval`s:
 
 1. `Intervallic` provides an interface to the data structure of an `Interval`, defining how an `Interval a` (simply a pair `(a, a)`) is constructed.
 2. `IntervalAlgebraic` provides an interface to the `IntervalRelation`s, the workhorse of Allen's temporal logic.

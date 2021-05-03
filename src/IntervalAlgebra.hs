@@ -20,7 +20,7 @@ A good primer on Allen's algebra can be [found here](https://thomasalspaugh.org/
 
 = Design
 
-The module is built around five typeclasses designed to separate concerns of 
+The module is built around four typeclasses designed to separate concerns of 
 constructing, relating, and combining @'Interval'@s: 
 
 1. @'Intervallic'@ provides an interface to the data structure of an @'Interval'@, 
