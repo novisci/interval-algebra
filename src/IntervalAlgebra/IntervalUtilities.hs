@@ -19,10 +19,10 @@ module IntervalAlgebra.IntervalUtilities (
     , relations
     , relations'
     , gapsWithin
-    , emptyIf
-    , emptyIfNone
-    , emptyIfAny
-    , emptyIfAll
+    , nothingIf
+    , nothingIfNone
+    , nothingIfAny
+    , nothingIfAll
 
     -- * Filtering functions
     , filterBefore
@@ -212,11 +212,12 @@ relations' = foldlAccume relate
 
 -- | Applies 'gaps' to all the non-disjoint intervals in @x@ that are *not* disjoint
 -- from @i@. Intervals that 'overlaps' or are 'overlappedBy' @i@ are 'clip'ped 
--- to @i@, so that all the intervals are 'within' @i@. If the input @x@ is empty,
--- then 'mempty' is returned. 
+-- to @i@, so that all the intervals are 'within' @i@. If there are no gaps, then
+-- 'Nothing' is returned.
 --
 -- >>> gapsWithin (intInt 1 10) [intInt 0 5, intInt 7 9, intInt 12 15]
--- [(5, 7),(9, 10)]
+-- Just [(5, 7),(9, 10)]
+--
 gapsWithin :: ( Applicative f
                , Foldable f
                , Monoid (f (Interval a))
@@ -226,26 +227,24 @@ gapsWithin :: ( Applicative f
                , IntervalAlgebraic a)=>
      Interval a     -- ^ i
   -> f (Interval a) -- ^ x
-  -> f (Interval a)
+  -> Maybe (f (Interval a))
 gapsWithin i x 
-  | null x = mempty  
-  | otherwise = gaps $ pure s <> ivs <> pure e
+  | null ivs  = Nothing  
+  | otherwise = Just $ gaps $ pure s <> ivs <> pure e
         where s   = enderval   0 (begin i)
               e   = beginerval 0 (end i)
               nd  = toList (filterNotDisjoint i x)
               ivs = liftListToFoldable (mapMaybe (clip i) nd) 
 
-
-
 -- | Given a predicate combinator, a predicate, and list of intervals, returns 
 --   the input unchanged if the predicate combinator is @True@. Otherwise, returns
 --   an empty list. See 'emptyIfAny' and 'emptyIfNone' for examples.
-emptyIf :: (Monoid (f (Interval a)), Foldable f, Filterable f, IntervalAlgebraic a)=>
+nothingIf :: (Monoid (f (Interval a)), Filterable f, IntervalAlgebraic a)=>
      ((Interval a -> Bool) -> f (Interval a) -> Bool) -- ^ e.g. 'any' or 'all'
   -> (Interval a -> Bool) -- ^ predicate to apply to each element of input list
   -> f (Interval a)
-  -> f (Interval a)
-emptyIf g f x = if g f x then mempty else x
+  -> Maybe (f (Interval a))
+nothingIf quantifier predicate x = if quantifier predicate x then Nothing else Just x
 
 -- | Returns the empty monoid structure if *none* of the element of input satisfy
 --   the predicate condition.
@@ -253,34 +252,33 @@ emptyIf g f x = if g f x then mempty else x
 -- For example, the following returns the empty list because none of the intervals
 -- in the input list 'starts' (3, 5).
 --
--- >>> emptyIfNone (starts (intInt 3 5)) [intInt 3 4, intInt 5 6]
--- []
+-- >>> nothingIfNone (starts (intInt 3 5)) [intInt 3 4, intInt 5 6]
 --
 -- In the following, (3, 5) 'starts' (3, 6), so the input is returned.
 --
--- >>> emptyIfNone (starts (intInt 3 5)) [intInt 3 6, intInt 5 6]
--- [(3, 6),(5, 6)]
-emptyIfNone :: (Monoid (f (Interval a)), Foldable f, Filterable f, IntervalAlgebraic a)=>
+-- >>> nothingIfNone (starts (intInt 3 5)) [intInt 3 6, intInt 5 6]
+--
+nothingIfNone :: (Monoid (f (Interval a)), Foldable f, Filterable f, IntervalAlgebraic a)=>
     (Interval a -> Bool) -- ^ predicate to apply to each element of input list
   -> f (Interval a)
-  -> f (Interval a)
-emptyIfNone = emptyIf (\f x -> (not.any f) x)
+  -> Maybe (f (Interval a))
+nothingIfNone = nothingIf (\f x -> (not.any f) x)
 
 -- | Returns the empty monoid structure if *any* of the element of input satisfy
 --   the predicate condition
-emptyIfAny :: (Monoid (f (Interval a)), Foldable f, Filterable f, IntervalAlgebraic a)=>
+nothingIfAny :: (Monoid (f (Interval a)), Foldable f, Filterable f, IntervalAlgebraic a)=>
     (Interval a -> Bool) -- ^ predicate to apply to each element of input list
   -> f (Interval a)
-  -> f (Interval a)
-emptyIfAny = emptyIf any
+  -> Maybe (f (Interval a))
+nothingIfAny = nothingIf any
 
 -- | Returns the empty monoid structure if *all* of the element of input satisfy
 --   the predicate condition
-emptyIfAll :: (Monoid (f (Interval a)), Foldable f, Filterable f, IntervalAlgebraic a)=>
+nothingIfAll :: (Monoid (f (Interval a)), Foldable f, Filterable f, IntervalAlgebraic a)=>
     (Interval a -> Bool) -- ^ predicate to apply to each element of input list
   -> f (Interval a)
-  -> f (Interval a)
-emptyIfAll = emptyIf all
+  -> Maybe (f (Interval a))
+nothingIfAll = nothingIf all
 
 
 {- | 
