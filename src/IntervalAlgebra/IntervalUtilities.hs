@@ -238,7 +238,7 @@ gapsWithin i x
 
 -- | Given a predicate combinator, a predicate, and list of intervals, returns 
 --   the input unchanged if the predicate combinator is @True@. Otherwise, returns
---   an empty list. See 'emptyIfAny' and 'emptyIfNone' for examples.
+--   an empty list. See 'nothingIfAny' and 'nothingIfNone' for examples.
 nothingIf :: (Monoid (f (Interval a)), Filterable f, IntervalAlgebraic a)=>
      ((Interval a -> Bool) -> f (Interval a) -> Bool) -- ^ e.g. 'any' or 'all'
   -> (Interval a -> Bool) -- ^ predicate to apply to each element of input list
@@ -253,10 +253,12 @@ nothingIf quantifier predicate x = if quantifier predicate x then Nothing else J
 -- in the input list 'starts' (3, 5).
 --
 -- >>> nothingIfNone (starts (intInt 3 5)) [intInt 3 4, intInt 5 6]
+-- Nothing
 --
 -- In the following, (3, 5) 'starts' (3, 6), so the input is returned.
 --
 -- >>> nothingIfNone (starts (intInt 3 5)) [intInt 3 6, intInt 5 6]
+-- Just [(3, 6),(5, 6)]
 --
 nothingIfNone :: (Monoid (f (Interval a)), Foldable f, Filterable f, IntervalAlgebraic a)=>
     (Interval a -> Bool) -- ^ predicate to apply to each element of input list
