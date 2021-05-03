@@ -13,6 +13,7 @@ import Data.Maybe
 import Control.Monad ()
 import IntervalAlgebra.Arbitrary ()
 import Data.Time as DT ( Day )
+import Data.Set (member)
 
 mkIntrvl = unsafeInterval
 
@@ -411,6 +412,16 @@ prop_expandr_begin ::(IntervalAlgebraic a, IntervalSizeable a b)=>
     -> Property
 prop_expandr_begin d i = begin (expandr d i) === begin i
 
+-- | The relation between x and z should be an element of the set of the
+--   composed relations between x y and between y z.
+prop_compose :: IntervalAlgebraic a =>
+       Interval a
+    -> Interval a
+    -> Interval a
+    -> Property 
+prop_compose x y z = member (relate x z) (compose (relate x y) (relate y z)) === True
+
+
 spec :: Spec
 spec = do
   describe "IntervalSizeable tests" $
@@ -445,6 +456,7 @@ spec = do
         enderval (-2::Int) 10 `shouldBe` unsafeInterval (9::Int) (10::Int)
 
   describe "IntervalAlgebraic tests" $
+     modifyMaxSuccess (*10000) $
      do
       it "(startedBy <|> overlappedBy) Interval (0, 9) Interval (-1, 4) is True" $
         (startedBy <|> overlappedBy) (mkIntrvl (0::Int) (9::Int)) (mkIntrvl (-1::Int) (4::Int))
@@ -455,10 +467,11 @@ spec = do
       it "(startedBy <|> overlappedBy) Interval (0, 9) Interval (-1, 9) is False" $
         (startedBy <|> overlappedBy) (mkIntrvl (0::Int) (9::Int)) (mkIntrvl (-1::Int) (9::Int))
          `shouldBe` False
-
       it "disjoint x y same as explicit union of predicates" $
          disjoint (mkIntrvl (0::Int) (2::Int)) (mkIntrvl (3::Int) (5::Int)) `shouldBe`
          (before <|> after <|> meets <|> metBy) (mkIntrvl (0::Int) (2::Int)) (mkIntrvl (3::Int) (5::Int))
+      it "prop_compose holds" $
+         property (prop_compose @Int)
 
   describe "IntervalCombinable tests" $
     do

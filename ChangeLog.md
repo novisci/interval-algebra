@@ -1,5 +1,14 @@
 # Changelog for interval-algebra
 
+## 0.5.0
+
+* Adds the `compose` function to `IntervalAlgebraic` typeclass, thus now all the algebraic operations are available: complement, composition, converse, intersection, and union.
+* In the `IntervalAlgebraic` typeclass, adds `concur` as a synonym for `notDisjoint`; `enclosedBy` as a synonym for `within`; and `enclose` as the converse of `enclosedBy`.
+* Generalizes the utilities `combineIntervals`, `gaps`, `gapsWithin`, and `relations` to work with any `Applicative`, `Foldable` `Monoid` (of which `List` is a case).
+* Changes the signature of `gapsWithin` to return `Maybe (f (Interval a))`, so that in the case that there are no gaps `Nothing` is returned.
+* Renames the `emptyIf*` function to `nothingIf*`. Like `gapsWithin`, these now return `Maybe (f (Interval a))` so that `Nothing` is returned if the quantified predicated is true.
+* Removes the `IntervalFilterable` typeclass and these functions are now available in the utilities module without needing to specify instances for each container type you want to filter.
+
 ## 0.4.0
 
 * Adds utilities `emptyIfNone`, `emptyIfAny`, and `emptyIfAll` that apply predicates to a list of inputs. If none, any, or all of the inputs meet the predicate, then the empty list is returned. Otherwise, the input is returned unmodified. These functions are generalized to `Monoid`s, so they work on structures other than lists.
