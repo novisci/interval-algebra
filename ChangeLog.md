@@ -2,7 +2,7 @@
 
 ## 0.5.0
 
-* Adds the `compose` function to `IntervalAlgebraic` typeclass, which now completes all the algebraic operations: complement, composition, converse, intersection, and union. 
+* Adds the `compose` function to `IntervalAlgebraic` typeclass, thus now all the algebraic operations are available: complement, composition, converse, intersection, and union. 
 * In the `IntervalAlgebraic` typeclass, adds `concur` as a synonym for `notDisjoint`; `enclosedBy` as a synonym for `within`; and `enclose` as the converse of `enclosedBy`.
 * Generalizes the utilities `combineIntervals`, `gaps`, `gapsWithin`, and `relations` to work with any `Applicative`, `Foldable` `Monoid` (of which `List` is a case).
 

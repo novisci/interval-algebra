@@ -225,7 +225,7 @@ intervalRelations = fromList (Prelude.map toEnum [0..12] ::[IntervalRelation a])
 converseRelation :: IntervalRelation a -> IntervalRelation a
 converseRelation x = toEnum (12 - fromEnum x)
 
--- | 
+-- | The lookup table for the compositions of interval relations.
 composeRelationLookup :: [[[IntervalRelation a]]]
 composeRelationLookup =
       [ [p    , p    , p    , p    , p    , p    , p , p    , pmosd, pmosd, pmosd, pmosd, full ]
