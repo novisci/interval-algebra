@@ -40,7 +40,10 @@ module IntervalAlgebra.IntervalUtilities (
     , filterAfter
     , filterDisjoint
     , filterNotDisjoint
+    , filterConcur
     , filterWithin
+    , filterEnclose
+    , filterEnclosedBy
 
 ) where
 
@@ -280,13 +283,13 @@ nothingIfAll :: (Monoid (f (Interval a)), Foldable f, Filterable f, IntervalAlge
   -> Maybe (f (Interval a))
 nothingIfAll = nothingIf all
 
-
 {- | 
 Filter functions provides means for filtering 'Filterable' containers of 
 @'Interval'@s based on @'IntervalAlgebraic'@ relations.
 -}
 
--- |Creates a function for filtering a 'Witherable.Filterable' of @Interval a@s based on a predicate
+-- |Creates a function for filtering a 'Witherable.Filterable' of @Interval a@s 
+-- based on a predicate.
 filterMaker :: (Filterable f, IntervalAlgebraic a) =>
                  ComparativePredicateOf (Interval a)
                 -> Interval a
@@ -383,8 +386,26 @@ filterNotDisjoint :: (Filterable f, IntervalAlgebraic a) =>
                      Interval a -> f (Interval a) -> f (Interval a)
 filterNotDisjoint = filterMaker notDisjoint
 
+-- | Filter a 'Witherable.Filterable' of Interval as to those that 'concur'
+--   with the @Interval a@ in the first argument (i.e. 'notDisjoint').
+filterConcur :: (Filterable f, IntervalAlgebraic a) => 
+                     Interval a -> f (Interval a) -> f (Interval a)
+filterConcur = filterMaker concur
+
 -- | Filter a 'Witherable.Filterable' of Interval as to those that are 'within'
 --   the @Interval a@ in the first argument.
 filterWithin :: (Filterable f, IntervalAlgebraic a) => 
                 Interval a -> f (Interval a) -> f (Interval a)
-filterWithin = filterMaker disjoint
+filterWithin = filterMaker within
+
+-- | Filter a 'Witherable.Filterable' of Interval as to those that 'enclose'
+--   the @Interval a@ in the first argument.
+filterEnclose :: (Filterable f, IntervalAlgebraic a) => 
+                Interval a -> f (Interval a) -> f (Interval a)
+filterEnclose = filterMaker enclose
+
+-- | Filter a 'Witherable.Filterable' of Interval as to those that are 'enclosedBy'
+--   the @Interval a@ in the first argument.
+filterEnclosedBy :: (Filterable f, IntervalAlgebraic a) => 
+                Interval a -> f (Interval a) -> f (Interval a)
+filterEnclosedBy = filterMaker enclosedBy

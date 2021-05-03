@@ -3,7 +3,6 @@
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
-
 {-|
 Module      : Interval Algebra
 Description : Implementation of Allen's interval algebra
