@@ -144,7 +144,7 @@ That is,
  \] 
 -}
 
-prop_IAaxiomM2 :: (IntervalAlgebraic Interval a) => M2set a -> Property
+prop_IAaxiomM2 :: (Show a, IntervalAlgebraic Interval a) => M2set a -> Property
 prop_IAaxiomM2 x =
   (i `meets` j && k `meets` l) ==>
     (i `meets` l)  `xor`
@@ -295,7 +295,7 @@ m5set x a b = M5set p1 p2
         ps = end (expandr (makePos b) x) -- creating l by shifting and expanding i
 
 
-prop_IAaxiomM5 :: (IntervalAlgebraic Interval a) => M5set a -> Property
+prop_IAaxiomM5 :: (Show a, IntervalAlgebraic Interval a) => M5set a -> Property
 prop_IAaxiomM5 x =
    ((i `meets` j && j `meets` l) &&
     (i `meets` k && k `meets` l))  === (j == k)

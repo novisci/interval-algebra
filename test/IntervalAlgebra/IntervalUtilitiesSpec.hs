@@ -126,3 +126,12 @@ spec = do
             nothingIfNone (starts (intInt 3 5)) [intInt 3 6, intInt 5 6]
                `shouldBe` Just [ intInt 3 6, intInt 5 6]
          it "more emptyif tests" pending
+
+   describe "filtration tests" $
+      do 
+         it "disjoint filter should filter out noncontainment" $
+            filterDisjoint containmentInt [noncontainmentInt, anotherInt] 
+               `shouldBe` [anotherInt]
+         it "notDisjoint filter should keep noncontainment" $
+            filterNotDisjoint containmentInt [noncontainmentInt, anotherInt] 
+               `shouldBe` [noncontainmentInt]

@@ -115,18 +115,19 @@ intervalEnd :: Interval a -> a
 intervalEnd (Interval x) = snd x
 
 {- | 
-The @'Intervallic'@ typeclass specifies how an @'Interval' a@s is constructed.
-It also includes functions for getting the @'begin'@ and @'end'@ of an @'Interval' a@.
+The @'Intervallic'@ typeclass defines how to get and set the 'Interval' content
+of a data structure. It also includes functions for getting the @'begin'@ and 
+@'end'@ this data.
 -}
-class (Ord a, Show a) => Intervallic i a where
+class (Ord a) => Intervallic i a where
 
     -- | Get the interval from an @i a@
     getInterval :: i a -> Interval a
 
     -- | Set the interval in an @i a@
-    setInterval :: Interval a -> i a
+    setInterval :: i a -> Interval a -> i a
 
-    -- | Access the ends of an @'Interval' a@ .
+    -- | Access the ends of an @i a@ .
     begin, end :: i a -> a
     begin = intervalBegin . getInterval
     end   = intervalEnd . getInterval
@@ -523,9 +524,10 @@ class (Show a, Ord a, Num b, Ord b) => IntervalSizeable a b| a -> b where
 --   "right" by @r@. In the case that @l@ or @r@ are less than a 'moment'
 --   the respective endpoints are unchanged. 
 expand :: (IntervalSizeable a b, Intervallic i a) => b -> b -> i a -> i a
-expand l r p = setInterval $ Interval (add s $ begin p, add e $ end p)
+expand l r p = setInterval p i
   where s = if l < moment' p then 0 else negate l
         e = if r < moment' p then 0 else r
+        i = Interval (add s $ begin p, add e $ end p)
 
 -- | Expands an 'Interval a' to left by i.
 expandl :: (IntervalSizeable a b, Intervallic i a) => b -> i a -> i a
@@ -559,7 +561,7 @@ extenterval x y = Interval (s, e)
 The @'IntervalCombinable'@ typeclass provides methods for (possibly) combining
 two @'Interval's@.
 -}
-class (IntervalAlgebraic Interval a) => IntervalCombinable a where
+class (IntervalAlgebraic Interval a, Show a) => IntervalCombinable a where
 
     -- | Maybe form a new @'Interval'@ by the union of two @'Interval'@s that 'meets'.
     (.+.) :: Interval a -> Interval a -> Maybe (Interval a)
@@ -617,7 +619,7 @@ instance (Intervallic Interval a, Show a) => Show (Interval a) where
 
 instance (Ord a, Show a) => Intervallic Interval a where
     getInterval = id
-    setInterval = id
+    setInterval _  x = x
 
 instance IntervalAlgebraic Interval Int
 instance IntervalCombinable Int

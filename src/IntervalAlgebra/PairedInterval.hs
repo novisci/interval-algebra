@@ -1,81 +1,67 @@
 {-|
 Module      : Paired interval 
-Description : Extends the Interval Algebra to an interval paired with some data
+Description : Extends the Interval Algebra to an interval paired with some data.
 Copyright   : (c) NoviSci, Inc 2020
 License     : BSD3
 Maintainer  : bsaul@novisci.com
 Stability   : experimental
 -}
 
-module IntervalAlgebra.PairedInterval () where
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleContexts #-}
+
+module IntervalAlgebra.PairedInterval (
+      PairedInterval
+    , mkPairedInterval
+    , pairData
+    , intervals
+    , makePairPredicate
+) where
 
 import IntervalAlgebra
-    ( Interval, Intervallic(..), IntervalAlgebraic(..)
-    , IntervalCombinable(..), IntervalSizeable(..)
-    , IntervalRelation(..)
-    , ComparativePredicateOf)
+    ( Interval
+    , Intervallic(..)
+    , IntervalAlgebraic(..)
+    , ComparativePredicateOf )
+import IntervalAlgebra.IntervalUtilities(compareIntervals, filterOverlaps)
 import Witherable ( Filterable(filter) )
-newtype PairedInterval a b = PairedInterval (Interval a, b)
 
-interval :: PairedInterval a b -> Interval a
-interval (PairedInterval (x, _)) = x
+-- | An @Interval a@ paired with some other data of type @b@.
+newtype PairedInterval b a = PairedInterval (Interval a, b)
+    deriving (Eq, Show)
 
-begin' :: Intervallic a => PairedInterval a b -> a
-begin' = begin . interval
+instance (Ord a) => Intervallic (PairedInterval b) a where
+    getInterval (PairedInterval x)        = fst x
+    setInterval (PairedInterval (x, y)) i = PairedInterval (i, y)
 
-end' :: Intervallic a => PairedInterval a b -> a
-end' = end . interval
+-- | Defines A total ordering on 'PairedInterval b a' based on the 'Interval a'
+--   part.
+instance (Eq a, Eq b, Ord a, Show a) => Ord (PairedInterval b a) where
+  (<=) x y = getInterval x <= getInterval y
+  (<) x y  = getInterval x <  getInterval y
 
-pairData :: PairedInterval a b -> b
+instance (Eq b) => IntervalAlgebraic (PairedInterval b) Int 
+
+-- | Make a paired interval. 
+mkPairedInterval :: b -> Interval a -> PairedInterval b a
+mkPairedInterval d i = PairedInterval (i, d)
+
+-- | Gets the data (i.e. non-interval) part of a @PairedInterval@.
+pairData :: PairedInterval b a -> b
 pairData (PairedInterval (_, y)) = y
 
-intervals :: [PairedInterval a b] -> [Interval a]
-intervals = map interval
+-- | Gets the intervals from a list of paired intervals.
+intervals :: Ord a => [PairedInterval b a] -> [Interval a]
+intervals = map getInterval
 
-liftIntervalPredicate :: (IntervalAlgebraic a) =>
-       ComparativePredicateOf (Interval a)
-    -> ComparativePredicateOf (PairedInterval a b)
-liftIntervalPredicate f x y = f (interval x) (interval y)
-
-makePairPredicate :: (IntervalAlgebraic a) =>
+-- | Takes a predicate of intervals and a predicate on the data part of a 
+--   paired interval to create a single predicate such that both input
+--   predicates should hold.
+makePairPredicate :: (IntervalAlgebraic (PairedInterval b) a) =>
        ComparativePredicateOf (Interval a)
     -> ComparativePredicateOf b
-    -> ComparativePredicateOf (PairedInterval a b)
+    -> ComparativePredicateOf (PairedInterval b a)
 makePairPredicate intervalPredicate dataPredicate x y =
-         liftIntervalPredicate intervalPredicate x y &&
+         compareIntervals intervalPredicate x y &&
          dataPredicate (pairData x) (pairData y)
-
-compareToInterval :: (IntervalAlgebraic a) =>
-    ComparativePredicateOf (Interval a)
-    -> Interval a
-    -> PairedInterval a b
-    -> Bool
-compareToInterval f x y = f x (interval y)
-
--- |Creates a function for filtering a 'Witherable.Filterable' of @Interval a@s based on a predicate
-filterMaker' :: (Filterable f, IntervalAlgebraic a) =>
-                 ComparativePredicateOf (Interval a)
-                -> Interval a
-                -> (f (PairedInterval a b) -> f (PairedInterval a b))
-filterMaker' f p = Witherable.filter (compareToInterval f p)
-
-
--- filterBefore' :: 
-    -- , filterMeets
-    -- , filterOverlaps
-    -- , filterFinishedBy
-    -- , filterContains
-    -- , filterStarts
-    -- , filterEquals
-    -- , filterStartedBy
-    -- , filterDuring
-    -- , filterFinishes
-    -- , filterOverlappedBy
-    -- , filterMetBy
-    -- , filterAfter
-    -- , filterDisjoint
-    -- , filterNotDisjoint
-    -- , filterConcur
-    -- , filterWithin
-    -- , filterEnclose
-    -- , filterEnclosedBy

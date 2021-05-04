@@ -26,6 +26,7 @@ module IntervalAlgebra.IntervalUtilities (
     , nothingIfAll
 
     -- * Filtering functions
+    , compareIntervals
     , filterBefore
     , filterMeets
     , filterOverlaps
@@ -296,123 +297,174 @@ Filter functions provides means for filtering 'Filterable' containers of
 @'Interval'@s based on @'IntervalAlgebraic'@ relations.
 -}
 
--- |Creates a function for filtering a 'Witherable.Filterable' of @Interval a@s based on a predicate
-filterMaker :: (Filterable f, IntervalAlgebraic i a) =>
-                 ComparativePredicateOf (i a)
-                -> i a
-                -> (f (i a) -> f (i a))
-filterMaker f p = Witherable.filter (`f` p)
+-- | Lifts a predicate to be able to compare two different 'IntervalAlgebraic' 
+--   structure by comparing the intervals contain within each. 
+compareIntervals :: (IntervalAlgebraic i0 a, IntervalAlgebraic i1 a) =>
+   ComparativePredicateOf (Interval a) 
+    -> i0 a
+    -> i1 a
+    -> Bool
+compareIntervals pf x y = pf (getInterval x) (getInterval y)
 
--- | Filter a 'Witherable.Filterable' of @Interval a@s to those that 'overlaps' the @Interval a@
---   in the first argument.
-filterOverlaps :: (Filterable f, IntervalAlgebraic i a) => 
-                  i a -> f (i a) -> f (i a)
+-- | Creates a function for filtering a 'Witherable.Filterable' of @i1 a@s 
+--   by comparing the @Interval a@s that of an @i0 a@. 
+filterMaker :: (Filterable f
+                , IntervalAlgebraic Interval a
+                , IntervalAlgebraic i0 a
+                , IntervalAlgebraic i1 a) =>
+        ComparativePredicateOf (Interval a)
+      -> i0 a
+      -> (f (i1 a) -> f (i1 a))
+filterMaker f p = Witherable.filter (compareIntervals f p)
+
+-- | Filter by 'overlaps'.
+filterOverlaps :: (Filterable f
+                  , IntervalAlgebraic Interval a
+                  , IntervalAlgebraic i0 a
+                  , IntervalAlgebraic i1 a) => 
+                  i0 a -> f (i1 a) -> f (i1 a)
 filterOverlaps = filterMaker overlaps
 
--- | Filter a 'Witherable.Filterable' of @Interval a@s to those 'overlappedBy' the @Interval a@
---   in the first argument.
-filterOverlappedBy :: (Filterable f, IntervalAlgebraic i a) => 
-                  i a -> f (i a) -> f (i a)
+-- | Filter by 'overlappedBy'.
+filterOverlappedBy :: (Filterable f
+                  , IntervalAlgebraic Interval a
+                  , IntervalAlgebraic i0 a
+                  , IntervalAlgebraic i1 a) => 
+                  i0 a -> f (i1 a) -> f (i1 a)
 filterOverlappedBy = filterMaker overlappedBy
 
--- | Filter a 'Witherable.Filterable' of Interval as to those 'before' the @Interval a@
---   in the first argument.
-filterBefore :: (Filterable f, IntervalAlgebraic i a) => 
-                  i a -> f (i a) -> f (i a)
+-- | Filter by 'before'.
+filterBefore :: (Filterable f
+                  , IntervalAlgebraic Interval a
+                  , IntervalAlgebraic i0 a
+                  , IntervalAlgebraic i1 a) => 
+                  i0 a -> f (i1 a) -> f (i1 a)
 filterBefore = filterMaker before
 
--- | Filter a 'Witherable.Filterable' of Interval as to those 'after' the @Interval a@
---   in the first argument.
-filterAfter :: (Filterable f, IntervalAlgebraic i a) => 
-                  i a -> f (i a) -> f (i a) 
+-- | Filter by 'after'.
+filterAfter :: (Filterable f
+                  , IntervalAlgebraic Interval a
+                  , IntervalAlgebraic i0 a
+                  , IntervalAlgebraic i1 a) => 
+                  i0 a -> f (i1 a) -> f (i1 a) 
 filterAfter = filterMaker after
 
--- | Filter a 'Witherable.Filterable' of Interval as to those 'starts' the @Interval a@
---   in the first argument.
-filterStarts :: (Filterable f, IntervalAlgebraic i a) => 
-                  i a -> f (i a) -> f (i a)
+-- | Filter by 'starts'.
+filterStarts :: (Filterable f
+                  , IntervalAlgebraic Interval a
+                  , IntervalAlgebraic i0 a
+                  , IntervalAlgebraic i1 a) => 
+                  i0 a -> f (i1 a) -> f (i1 a)
 filterStarts = filterMaker starts 
 
--- | Filter a 'Witherable.Filterable' of Interval as to those 'startedBy' the @Interval a@
---   in the first argument.
-filterStartedBy :: (Filterable f, IntervalAlgebraic i a) => 
-                  i a -> f (i a) -> f (i a)
+-- | Filter by 'startedBy'.
+filterStartedBy :: (Filterable f
+                  , IntervalAlgebraic Interval a
+                  , IntervalAlgebraic i0 a
+                  , IntervalAlgebraic i1 a) => 
+                  i0 a -> f (i1 a) -> f (i1 a)
 filterStartedBy = filterMaker startedBy 
 
--- | Filter a 'Witherable.Filterable' of Interval as to those 'finishes' the @Interval a@
---   in the first argument.
-filterFinishes :: (Filterable f, IntervalAlgebraic i a) => 
-                  i a -> f (i a) -> f (i a)
+-- | Filter by 'finishes'.
+filterFinishes :: (Filterable f
+                  , IntervalAlgebraic Interval a
+                  , IntervalAlgebraic i0 a
+                  , IntervalAlgebraic i1 a) => 
+                  i0 a -> f (i1 a) -> f (i1 a)
 filterFinishes = filterMaker finishes
 
--- | Filter a 'Witherable.Filterable' of Interval as to those 'finishedBy' the @Interval a@
---   in the first argument.
-filterFinishedBy :: (Filterable f, IntervalAlgebraic i a) => 
-                  i a -> f (i a) -> f (i a)
+-- | Filter by'finishedBy'.
+filterFinishedBy :: (Filterable f
+                  , IntervalAlgebraic Interval a
+                  , IntervalAlgebraic i0 a
+                  , IntervalAlgebraic i1 a) => 
+                  i0 a -> f (i1 a) -> f (i1 a)
 filterFinishedBy = filterMaker finishedBy 
 
--- | Filter a 'Witherable.Filterable' of Interval as to those that 'meets' the @Interval a@
---   in the first argument.
-filterMeets :: (Filterable f, IntervalAlgebraic i a) => 
-                  i a -> f (i a) -> f (i a)
+-- | Filter by 'meets'.
+filterMeets :: (Filterable f
+                  , IntervalAlgebraic Interval a
+                  , IntervalAlgebraic i0 a
+                  , IntervalAlgebraic i1 a) => 
+                  i0 a -> f (i1 a) -> f (i1 a)
 filterMeets = filterMaker meets
 
--- | Filter a 'Witherable.Filterable' of Interval as to those 'metBy' the @Interval a@
---   in the first argument.
-filterMetBy :: (Filterable f, IntervalAlgebraic i a) => 
-                  i a -> f (i a) -> f (i a)
+-- | Filter by 'metBy'.
+filterMetBy :: (Filterable f
+                  , IntervalAlgebraic Interval a
+                  , IntervalAlgebraic i0 a
+                  , IntervalAlgebraic i1 a) => 
+                  i0 a -> f (i1 a) -> f (i1 a)
 filterMetBy = filterMaker metBy
 
--- | Filter a 'Witherable.Filterable' of Interval as to those 'during' the @Interval a@
---   in the first argument.
-filterDuring :: (Filterable f, IntervalAlgebraic i a) => 
-                  i a -> f (i a) -> f (i a)
+-- | Filter by 'during'.
+filterDuring :: (Filterable f
+                  , IntervalAlgebraic Interval a
+                  , IntervalAlgebraic i0 a
+                  , IntervalAlgebraic i1 a) => 
+                  i0 a -> f (i1 a) -> f (i1 a)
 filterDuring = filterMaker during
 
--- | Filter a 'Witherable.Filterable' of Interval as to those that 'contains'
---   the @Interval a@ in the first argument.
-filterContains :: (Filterable f, IntervalAlgebraic i a) => 
-                  i a -> f (i a) -> f (i a)
+-- | Filter by 'contains'.
+filterContains :: (Filterable f
+                  , IntervalAlgebraic Interval a
+                  , IntervalAlgebraic i0 a
+                  , IntervalAlgebraic i1 a) => 
+                  i0 a -> f (i1 a) -> f (i1 a)
 filterContains = filterMaker contains
 
--- | Filter a 'Witherable.Filterable' of Interval as to those that 'equals'
---   the @Interval a@ in the first argument.
-filterEquals :: (Filterable f, IntervalAlgebraic i a) => 
-                  i a -> f (i a) -> f (i a)
+-- | Filter by 'equals'.
+filterEquals :: (Filterable f
+                  , IntervalAlgebraic Interval a
+                  , IntervalAlgebraic i0 a
+                  , IntervalAlgebraic i1 a) => 
+                  i0 a -> f (i1 a) -> f (i1 a)
 filterEquals = filterMaker equals
 
--- | Filter a 'Witherable.Filterable' of Interval as to those that are 'disjoint'
---   from the @Interval a@ in the first argument.
-filterDisjoint :: (Filterable f, IntervalAlgebraic i a) => 
-                  i a -> f (i a) -> f (i a)
+-- | Filter by 'disjoint'.
+filterDisjoint :: (Filterable f
+                  , IntervalAlgebraic Interval a
+                  , IntervalAlgebraic i0 a
+                  , IntervalAlgebraic i1 a) => 
+                  i0 a -> f (i1 a) -> f (i1 a)
 filterDisjoint = filterMaker disjoint
 
--- | Filter a 'Witherable.Filterable' of Interval as to those that are 'notDisjoint'
---   from the @Interval a@ in the first argument.
-filterNotDisjoint :: (Filterable f, IntervalAlgebraic i a) => 
-                  i a -> f (i a) -> f (i a)
+-- | Filter by 'notDisjoint'.
+filterNotDisjoint :: (Filterable f
+                  , IntervalAlgebraic Interval a
+                  , IntervalAlgebraic i0 a
+                  , IntervalAlgebraic i1 a) => 
+                  i0 a -> f (i1 a) -> f (i1 a)
 filterNotDisjoint = filterMaker notDisjoint
 
--- | Filter a 'Witherable.Filterable' of Interval as to those that 'concur'
---   with the @Interval a@ in the first argument (i.e. 'notDisjoint').
-filterConcur :: (Filterable f, IntervalAlgebraic i a) => 
-                     i a -> f (i a) -> f (i a)
+-- | Filter by 'concur'.
+filterConcur ::  (Filterable f
+                  , IntervalAlgebraic Interval a
+                  , IntervalAlgebraic i0 a
+                  , IntervalAlgebraic i1 a) => 
+                  i0 a -> f (i1 a) -> f (i1 a)
 filterConcur = filterMaker concur
 
--- | Filter a 'Witherable.Filterable' of Interval as to those that are 'within'
---   the @Interval a@ in the first argument.
-filterWithin :: (Filterable f, IntervalAlgebraic i a) => 
-                i a -> f (i a) -> f (i a)
+-- | Filter by 'within'.
+filterWithin :: (Filterable f
+                  , IntervalAlgebraic Interval a
+                  , IntervalAlgebraic i0 a
+                  , IntervalAlgebraic i1 a) => 
+                  i0 a -> f (i1 a) -> f (i1 a)
 filterWithin = filterMaker within
 
--- | Filter a 'Witherable.Filterable' of Interval as to those that 'enclose'
---   the @Interval a@ in the first argument.
-filterEnclose :: (Filterable f, IntervalAlgebraic i a) => 
-                i a -> f (i a) -> f (i a)
+-- | Filter by 'enclose'.
+filterEnclose :: (Filterable f
+                  , IntervalAlgebraic Interval a
+                  , IntervalAlgebraic i0 a
+                  , IntervalAlgebraic i1 a) => 
+                  i0 a -> f (i1 a) -> f (i1 a)
 filterEnclose = filterMaker enclose
 
--- | Filter a 'Witherable.Filterable' of Interval as to those that are 'enclosedBy'
---   the @Interval a@ in the first argument.
-filterEnclosedBy :: (Filterable f, IntervalAlgebraic i a) => 
-                i a -> f (i a) -> f (i a)
+-- | Filter by 'enclosedBy'.
+filterEnclosedBy :: (Filterable f
+                  , IntervalAlgebraic Interval a
+                  , IntervalAlgebraic i0 a
+                  , IntervalAlgebraic i1 a) => 
+                  i0 a -> f (i1 a) -> f (i1 a)
 filterEnclosedBy = filterMaker enclosedBy
