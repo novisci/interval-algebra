@@ -1,5 +1,9 @@
 # Changelog for interval-algebra
 
+## 0.6.1
+
+* Removes the deriving `Show` instance for `PairedInterval`s so people can customize their own instances.
+
 ## 0.6.0
 
 * Generalizes the `IntervalAlgebraic` class to work on any data structure that *contains* an interval (not just intervals themselves). This is possible by modification to the `Intervallic` class, which now works in part as lens with `getInterval` and `setInterval` functions. This change allows users to define their own type which contains an interval get all the interval algebraic operation on that new type. The utility of this generalization can be seen in the `PairedInterval` module, which defines a parameterized type for interval *paired* with some other data.

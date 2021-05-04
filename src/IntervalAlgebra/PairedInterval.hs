@@ -29,7 +29,7 @@ import Witherable ( Filterable(filter) )
 
 -- | An @Interval a@ paired with some other data of type @b@.
 newtype PairedInterval b a = PairedInterval (Interval a, b)
-    deriving (Eq, Show)
+    deriving (Eq)
 
 instance (Ord a) => Intervallic (PairedInterval b) a where
     getInterval (PairedInterval x)        = fst x
