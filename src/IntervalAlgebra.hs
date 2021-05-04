@@ -17,15 +17,14 @@ A good primer on Allen's algebra can be [found here](https://thomasalspaugh.org/
 The module is built around four typeclasses designed to separate concerns of 
 constructing, relating, and combining @'Interval'@s: 
 
-1. @'Intervallic'@ provides an interface to the data structure of an @'Interval'@, 
-   defining how an @'Interval' a@ is constructed.
+1. @'Intervallic'@ provides an interface to the data structures which contain an
+   @'Interval'@.
 2. @'IntervalAlgebraic'@ provides an interface to the @'IntervalRelation's@, 
    the workhorse of Allen's temporal logic.
 3. @'IntervalCombinable'@ provides an interface to methods of combining two
    @'Interval's@.
-4. @'IntervalSizeable'@ and the related @'Moment'@ provides methods for 
-   measuring and modifying the size of an interval.
-   collections of intervals.
+4. @'IntervalSizeable'@ provides methods for measuring and modifying the size of
+    an interval.
 
 An advantage of nested typeclass design is that developers can define an 
 @'Interval'@ of type @a@ with just the amount of structure that they need.
@@ -50,14 +49,13 @@ This module is under development and the API may change in the future.
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
-{-# LANGUAGE MonoLocalBinds #-}
+-- {-# LANGUAGE MonoLocalBinds #-}
 module IntervalAlgebra(
 
     -- * Classes
       Intervallic(..)
     , IntervalAlgebraic(..)
     , IntervalCombinable(..)
-    -- , Moment(..)
     , IntervalSizeable(..)
 
     -- * Types
@@ -68,10 +66,10 @@ module IntervalAlgebra(
     , ComparativePredicateOf
 
     -- * Functions for creating new intervals from existing    
-    -- , expand
-    -- , expandl
-    -- , expandr
-    -- , beginerval
+    , expand
+    , expandl
+    , expandr
+    , beginerval
     , enderval
     , extenterval
 ) where
@@ -80,7 +78,7 @@ import Prelude (Eq, Ord, Show, Read, Enum(..), Bounded(..), Ordering (LT)
                , Maybe(..), Either(..), String, Integer, Int, Bool(..), Num
                , Foldable (maximum, minimum, foldMap, foldr)
                , map, otherwise, flip, show, fst, snd, min, max, any, negate, not
-               , replicate, const
+               , replicate, id
                , (++), (==), (&&), (<), (>), (<=), ($), (+), (-), (.), (!!))
 import Data.Time as DT ( Day, addDays, diffDays, addGregorianYearsClip, calendarYear )
 import Data.Semigroup ( Semigroup((<>)) )
@@ -114,7 +112,7 @@ intervalBegin :: Interval a -> a
 intervalBegin (Interval x) = fst x
 
 intervalEnd :: Interval a -> a
-intervalEnd (Interval x) = fst x
+intervalEnd (Interval x) = snd x
 
 {- | 
 The @'Intervallic'@ typeclass specifies how an @'Interval' a@s is constructed.
@@ -123,12 +121,15 @@ It also includes functions for getting the @'begin'@ and @'end'@ of an @'Interva
 class (Ord a, Show a) => Intervallic i a where
 
     -- | Get the interval from an @i a@
-    interval :: i a -> Interval a
+    getInterval :: i a -> Interval a
+
+    -- | Set the interval in an @i a@
+    setInterval :: Interval a -> i a
 
     -- | Access the ends of an @'Interval' a@ .
     begin, end :: i a -> a
-    begin = intervalBegin . interval
-    end   = intervalEnd . interval
+    begin = intervalBegin . getInterval
+    end   = intervalEnd . getInterval
 
 {- | 
 
@@ -495,27 +496,20 @@ class (Eq (i a), Intervallic i a) => IntervalAlgebraic i a where
     enclosedBy             :: ComparativePredicateOf (i a)
     enclosedBy = within
 
-
-{- |
-The 'Moment' class fixes the smallest duration of an 'Intervallic a'.
--}
-class (Intervallic Interval a, Num b, Ord b) => Moment a b| a -> b where
-    moment :: b
-    -- moment = const 1
-
 {- |
 The 'IntervalSizeable' typeclass provides functions to determine the size of
 and to resize an 'Interval a'.
 -}
-class (Intervallic Interval a, Moment a b) => IntervalSizeable a b| a -> b where
+class (Show a, Ord a, Num b, Ord b) => IntervalSizeable a b| a -> b where
 
-    -- moment :: a -> b
+    moment :: b
+    moment = 1
 
-    -- moment' :: Interval a -> b
-    -- moment' = moment.interval
+    moment' :: Intervallic i a => i a -> b
+    moment' x = moment @a
 
     -- | Determine the duration of an 'Interval a'.
-    duration :: Interval a -> b
+    duration :: Intervallic i a => i a-> b
     duration x = diff (end x) (begin x)
 
     -- | Shifts an @a@. Most often, the @b@ will be the same type as @a@. 
@@ -525,48 +519,41 @@ class (Intervallic Interval a, Moment a b) => IntervalSizeable a b| a -> b where
     -- | Takes the difference between two @a@ to return a @b@.
     diff :: a -> a -> b
 
-    -- | Safely creates an 'Interval a' using @x@ as the 'begin' and adding 
-    --   @max moment dur@ to @x@ as the 'end'.
-    beginerval ::  b -> a -> Interval a
-    beginerval dur x = Interval (x, add (max (moment @a) dur) x)
-    
-    -- | Safely creates an 'Interval a' using @x@ as the 'end' and adding
-    --   @negate max moment dur@ to @x@ as the 'begin'.
-    enderval :: (IntervalSizeable  a b) => b -> a -> Interval a
-    enderval dur x = Interval (add (negate $ max (moment @a) dur) x, x)
 -- | Resize an 'Interval a' to by expanding to "left" by @l@ and to the 
 --   "right" by @r@. In the case that @l@ or @r@ are less than a 'moment'
 --   the respective endpoints are unchanged. 
--- expand :: (IntervalSizeable a b) => b -> b -> Interval a -> Interval a
--- expand l r p = Interval (add s $ begin p, add e $ end p)
---   where s = if l < moment' p then 0 else negate l
---         e = if r < moment' p then 0 else r
+expand :: (IntervalSizeable a b, Intervallic i a) => b -> b -> i a -> i a
+expand l r p = setInterval $ Interval (add s $ begin p, add e $ end p)
+  where s = if l < moment' p then 0 else negate l
+        e = if r < moment' p then 0 else r
 
 -- | Expands an 'Interval a' to left by i.
--- expandl :: (IntervalSizeable a b) => b -> Interval a -> Interval a
--- expandl i = expand i 0
+expandl :: (IntervalSizeable a b, Intervallic i a) => b -> i a -> i a
+expandl i = expand i 0
 
--- -- | Expands an 'Interval a' to right by i.
--- expandr :: (IntervalSizeable a b) => b -> Interval a -> Interval a
--- expandr = expand 0
+-- | Expands an 'Interval a' to right by i.
+expandr :: (IntervalSizeable a b, Intervallic i a) => b -> i a -> i a
+expandr = expand 0
 
--- -- | Safely creates an 'Interval a' using @x@ as the 'begin' and adding 
--- --   @max moment dur@ to @x@ as the 'end'.
--- beginerval :: (IntervalSizeable a b) => b -> a -> Interval a
--- beginerval dur x = Interval (x, add amount x)
---     where amount = max (moment x) dur
+-- | Safely creates an 'Interval a' using @x@ as the 'begin' and adding 
+--   @max moment dur@ to @x@ as the 'end'.
+beginerval :: (IntervalSizeable a b) => b -> a -> Interval a
+beginerval dur x = Interval (x, y)
+    where i = Interval (x, x)
+          d = max (moment' i) dur
+          y = add d x
 
--- -- | Safely creates an 'Interval a' using @x@ as the 'end' and adding
--- --   @negate max moment dur@ to @x@ as the 'begin'.
--- enderval :: (IntervalSizeable  a b) => b -> a -> Interval a
--- enderval dur x = Interval (add (negate $ max (moment @a) dur) x, x)
+-- | Safely creates an 'Interval a' using @x@ as the 'end' and adding
+--   @negate max moment dur@ to @x@ as the 'begin'.
+enderval :: (IntervalSizeable a b) => b -> a -> Interval a
+enderval dur x = Interval (add (negate $ max (moment' i) dur) x, x)
+    where i = Interval (x, x)
 
 -- | Creates a new @Interval@ spanning the extent x and y
 extenterval :: IntervalAlgebraic i a => i a -> i a -> Interval a
 extenterval x y = Interval (s, e)
     where s = min (begin x) (begin y)
           e = max (end x) (end y)
-
 
 {- |
 The @'IntervalCombinable'@ typeclass provides methods for (possibly) combining
@@ -630,31 +617,26 @@ instance (Intervallic Interval a, Show a) => Show (Interval a) where
    show x = "(" ++ show (begin x) ++ ", " ++ show (end x) ++ ")"
 
 instance (Ord a, Show a) => Intervallic Interval a where
-    interval x = x
+    getInterval = id
+    setInterval = id
 
 instance IntervalAlgebraic Interval Int
 instance IntervalCombinable Int
-instance Moment Int Int where
-    -- moment = const 1
-    moment = 1
 instance IntervalSizeable Int Int where
-    -- moment x = 1
+    moment = 1
     add = (+)
     diff = (-)
 
--- instance IntervalAlgebraic Interval Integer
--- instance IntervalCombinable Integer
--- instance IntervalSizeable Integer Integer where
---     moment = const 1
---     add = (+)
---     diff = (-)
+instance IntervalAlgebraic Interval Integer
+instance IntervalCombinable Integer
+instance IntervalSizeable Integer Integer where
+    moment = 1
+    add = (+)
+    diff = (-)
 
 instance IntervalAlgebraic Interval DT.Day
 instance IntervalCombinable DT.Day
-instance Moment DT.Day Integer where
-    moment = 1
-    -- moment = const 1
 instance IntervalSizeable DT.Day Integer where
-    -- moment = const 1
+    moment = 1
     add = addDays
     diff = diffDays

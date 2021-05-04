@@ -50,7 +50,8 @@ import GHC.Base
     , Semigroup((<>))
     , Functor(fmap)
     , Applicative(pure)
-    , Int, Bool)
+    , Int, Bool, Ord)
+import GHC.Show ( Show )
 import GHC.Num ()
 import Data.Tuple ( fst )
 import Data.Foldable ( Foldable(null, foldl', toList), all, any )
@@ -167,8 +168,8 @@ gaps' x = catMaybes (foldlAccume (><) x)
 --
 -- >>> durations [intInt 1 10, intInt 2 12, intInt 5 6]
 -- [9,10,1]
-durations :: (Functor f, IntervalSizeable a b)=>
-       f (Interval a)
+durations :: (Functor f, Intervallic i a, IntervalSizeable a b)=>
+       f (i a)
     -> f b
 durations = fmap duration
 
@@ -198,21 +199,21 @@ clip x y
 --
 -- >>> relations [intInt 0 1, intInt 1 2] 
 -- [Meets]
-relations :: (IntervalAlgebraic Interval a, Foldable f)=>
-       f (Interval a)
-    -> [IntervalRelation (Interval a)]
+relations :: (IntervalAlgebraic i a, Foldable f)=>
+       f (i a)
+    -> [IntervalRelation (i a)]
 relations = relations'
 
 -- | A generic form of 'relations' which can output any 'Applicative' and 
 --   'Monoid' structure. 
 -- >>> (relations' [intInt 0 1, intInt 1 2]) :: [IntervalRelation Int]
 -- [Meets]
-relations' :: ( IntervalAlgebraic Interval a
+relations' :: ( IntervalAlgebraic i a
               , Foldable f
               , Applicative m
-              , Monoid (m (IntervalRelation (Interval a))) )=>
-        f (Interval a)
-     -> m (IntervalRelation (Interval a))
+              , Monoid (m (IntervalRelation (i a))) )=>
+        f (i a)
+     -> m (IntervalRelation (i a))
 relations' = foldlAccume relate
 
 -- | Applies 'gaps' to all the non-disjoint intervals in @x@ that are *not* disjoint
@@ -244,11 +245,11 @@ gapsWithin i x
 -- | Given a predicate combinator, a predicate, and list of intervals, returns 
 --   the input unchanged if the predicate combinator is @True@. Otherwise, returns
 --   an empty list. See 'nothingIfAny' and 'nothingIfNone' for examples.
-nothingIf :: (Monoid (f (Interval a)), Filterable f, IntervalAlgebraic Interval a)=>
-     ((Interval a -> Bool) -> f (Interval a) -> Bool) -- ^ e.g. 'any' or 'all'
-  -> (Interval a -> Bool) -- ^ predicate to apply to each element of input list
-  -> f (Interval a)
-  -> Maybe (f (Interval a))
+nothingIf :: (Monoid (f (i a)), Filterable f, IntervalAlgebraic i a)=>
+     ((i a -> Bool) -> f (i a) -> Bool) -- ^ e.g. 'any' or 'all'
+  -> (i a -> Bool) -- ^ predicate to apply to each element of input list
+  -> f (i a)
+  -> Maybe (f (i a))
 nothingIf quantifier predicate x = if quantifier predicate x then Nothing else Just x
 
 -- | Returns the empty monoid structure if *none* of the element of input satisfy
@@ -265,28 +266,27 @@ nothingIf quantifier predicate x = if quantifier predicate x then Nothing else J
 -- >>> nothingIfNone (starts (intInt 3 5)) [intInt 3 6, intInt 5 6]
 -- Just [(3, 6),(5, 6)]
 --
-nothingIfNone :: (Monoid (f (Interval a)), Foldable f, Filterable f, IntervalAlgebraic Interval a)=>
-    (Interval a -> Bool) -- ^ predicate to apply to each element of input list
-  -> f (Interval a)
-  -> Maybe (f (Interval a))
+nothingIfNone :: (Monoid (f (i a)), Foldable f, Filterable f, IntervalAlgebraic i a)=>
+    (i a -> Bool) -- ^ predicate to apply to each element of input list
+  -> f (i a)
+  -> Maybe (f (i a))
 nothingIfNone = nothingIf (\f x -> (not.any f) x)
 
 -- | Returns the empty monoid structure if *any* of the element of input satisfy
 --   the predicate condition
-nothingIfAny :: (Monoid (f (Interval a)), Foldable f, Filterable f, IntervalAlgebraic Interval a)=>
-    (Interval a -> Bool) -- ^ predicate to apply to each element of input list
-  -> f (Interval a)
-  -> Maybe (f (Interval a))
+nothingIfAny :: (Monoid (f (i a)), Foldable f, Filterable f, IntervalAlgebraic i a)=>
+    (i a -> Bool) -- ^ predicate to apply to each element of input list
+  -> f (i a)
+  -> Maybe (f (i a))
 nothingIfAny = nothingIf any
 
 -- | Returns the empty monoid structure if *all* of the element of input satisfy
 --   the predicate condition
-nothingIfAll :: (Monoid (f (Interval a)), Foldable f, Filterable f, IntervalAlgebraic Interval a)=>
-    (Interval a -> Bool) -- ^ predicate to apply to each element of input list
-  -> f (Interval a)
-  -> Maybe (f (Interval a))
+nothingIfAll :: (Monoid (f (i a)), Foldable f, Filterable f, IntervalAlgebraic i a)=>
+    (i a -> Bool) -- ^ predicate to apply to each element of input list
+  -> f (i a)
+  -> Maybe (f (i a))
 nothingIfAll = nothingIf all
-
 
 {- | 
 Filter functions provides means for filtering 'Filterable' containers of 
@@ -294,104 +294,104 @@ Filter functions provides means for filtering 'Filterable' containers of
 -}
 
 -- |Creates a function for filtering a 'Witherable.Filterable' of @Interval a@s based on a predicate
-filterMaker :: (Filterable f, IntervalAlgebraic Interval a) =>
-                 ComparativePredicateOf (Interval a)
-                -> Interval a
-                -> (f (Interval a) -> f (Interval a))
+filterMaker :: (Filterable f, IntervalAlgebraic i a) =>
+                 ComparativePredicateOf (i a)
+                -> i a
+                -> (f (i a) -> f (i a))
 filterMaker f p = Witherable.filter (`f` p)
 
 -- | Filter a 'Witherable.Filterable' of @Interval a@s to those that 'overlaps' the @Interval a@
 --   in the first argument.
-filterOverlaps :: (Filterable f, IntervalAlgebraic Interval a) => 
-                  Interval a -> f (Interval a) -> f (Interval a)
+filterOverlaps :: (Filterable f, IntervalAlgebraic i a) => 
+                  i a -> f (i a) -> f (i a)
 filterOverlaps = filterMaker overlaps
 
 -- | Filter a 'Witherable.Filterable' of @Interval a@s to those 'overlappedBy' the @Interval a@
 --   in the first argument.
-filterOverlappedBy :: (Filterable f, IntervalAlgebraic Interval a) => 
-                      Interval a -> f (Interval a) -> f (Interval a)
+filterOverlappedBy :: (Filterable f, IntervalAlgebraic i a) => 
+                  i a -> f (i a) -> f (i a)
 filterOverlappedBy = filterMaker overlappedBy
 
 -- | Filter a 'Witherable.Filterable' of Interval as to those 'before' the @Interval a@
 --   in the first argument.
-filterBefore :: (Filterable f, IntervalAlgebraic Interval a) => 
-                Interval a -> f (Interval a) -> f (Interval a)
+filterBefore :: (Filterable f, IntervalAlgebraic i a) => 
+                  i a -> f (i a) -> f (i a)
 filterBefore = filterMaker before
 
 -- | Filter a 'Witherable.Filterable' of Interval as to those 'after' the @Interval a@
 --   in the first argument.
-filterAfter :: (Filterable f, IntervalAlgebraic Interval a) => 
-               Interval a -> f (Interval a) -> f (Interval a)
+filterAfter :: (Filterable f, IntervalAlgebraic i a) => 
+                  i a -> f (i a) -> f (i a) 
 filterAfter = filterMaker after
 
 -- | Filter a 'Witherable.Filterable' of Interval as to those 'starts' the @Interval a@
 --   in the first argument.
-filterStarts :: (Filterable f, IntervalAlgebraic Interval a) => 
-               Interval a -> f (Interval a) -> f (Interval a)
+filterStarts :: (Filterable f, IntervalAlgebraic i a) => 
+                  i a -> f (i a) -> f (i a)
 filterStarts = filterMaker starts 
 
 -- | Filter a 'Witherable.Filterable' of Interval as to those 'startedBy' the @Interval a@
 --   in the first argument.
-filterStartedBy :: (Filterable f, IntervalAlgebraic Interval a) => 
-               Interval a -> f (Interval a) -> f (Interval a)
+filterStartedBy :: (Filterable f, IntervalAlgebraic i a) => 
+                  i a -> f (i a) -> f (i a)
 filterStartedBy = filterMaker startedBy 
 
 -- | Filter a 'Witherable.Filterable' of Interval as to those 'finishes' the @Interval a@
 --   in the first argument.
-filterFinishes :: (Filterable f, IntervalAlgebraic Interval a) => 
-               Interval a -> f (Interval a) -> f (Interval a)
+filterFinishes :: (Filterable f, IntervalAlgebraic i a) => 
+                  i a -> f (i a) -> f (i a)
 filterFinishes = filterMaker finishes
 
 -- | Filter a 'Witherable.Filterable' of Interval as to those 'finishedBy' the @Interval a@
 --   in the first argument.
-filterFinishedBy :: (Filterable f, IntervalAlgebraic Interval a) => 
-               Interval a -> f (Interval a) -> f (Interval a)
+filterFinishedBy :: (Filterable f, IntervalAlgebraic i a) => 
+                  i a -> f (i a) -> f (i a)
 filterFinishedBy = filterMaker finishedBy 
 
 -- | Filter a 'Witherable.Filterable' of Interval as to those that 'meets' the @Interval a@
 --   in the first argument.
-filterMeets :: (Filterable f, IntervalAlgebraic Interval a) => 
-               Interval a -> f (Interval a) -> f (Interval a)
+filterMeets :: (Filterable f, IntervalAlgebraic i a) => 
+                  i a -> f (i a) -> f (i a)
 filterMeets = filterMaker meets
 
 -- | Filter a 'Witherable.Filterable' of Interval as to those 'metBy' the @Interval a@
 --   in the first argument.
-filterMetBy :: (Filterable f, IntervalAlgebraic Interval a) => 
-               Interval a -> f (Interval a) -> f (Interval a)
+filterMetBy :: (Filterable f, IntervalAlgebraic i a) => 
+                  i a -> f (i a) -> f (i a)
 filterMetBy = filterMaker metBy
 
 -- | Filter a 'Witherable.Filterable' of Interval as to those 'during' the @Interval a@
 --   in the first argument.
-filterDuring :: (Filterable f, IntervalAlgebraic Interval a) => 
-                Interval a -> f (Interval a) -> f (Interval a)
+filterDuring :: (Filterable f, IntervalAlgebraic i a) => 
+                  i a -> f (i a) -> f (i a)
 filterDuring = filterMaker during
 
 -- | Filter a 'Witherable.Filterable' of Interval as to those that 'contains'
 --   the @Interval a@ in the first argument.
-filterContains :: (Filterable f, IntervalAlgebraic Interval a) => 
-                  Interval a -> f (Interval a) -> f (Interval a)
+filterContains :: (Filterable f, IntervalAlgebraic i a) => 
+                  i a -> f (i a) -> f (i a)
 filterContains = filterMaker contains
 
 -- | Filter a 'Witherable.Filterable' of Interval as to those that 'equals'
 --   the @Interval a@ in the first argument.
-filterEquals :: (Filterable f, IntervalAlgebraic Interval a) => 
-                  Interval a -> f (Interval a) -> f (Interval a)
+filterEquals :: (Filterable f, IntervalAlgebraic i a) => 
+                  i a -> f (i a) -> f (i a)
 filterEquals = filterMaker equals
 
 -- | Filter a 'Witherable.Filterable' of Interval as to those that are 'disjoint'
 --   from the @Interval a@ in the first argument.
-filterDisjoint :: (Filterable f, IntervalAlgebraic Interval a) => 
-                  Interval a -> f (Interval a) -> f (Interval a)
+filterDisjoint :: (Filterable f, IntervalAlgebraic i a) => 
+                  i a -> f (i a) -> f (i a)
 filterDisjoint = filterMaker disjoint
 
 -- | Filter a 'Witherable.Filterable' of Interval as to those that are 'notDisjoint'
 --   from the @Interval a@ in the first argument.
-filterNotDisjoint :: (Filterable f, IntervalAlgebraic Interval a) => 
-                     Interval a -> f (Interval a) -> f (Interval a)
+filterNotDisjoint :: (Filterable f, IntervalAlgebraic i a) => 
+                  i a -> f (i a) -> f (i a)
 filterNotDisjoint = filterMaker notDisjoint
 
 -- | Filter a 'Witherable.Filterable' of Interval as to those that are 'within'
 --   the @Interval a@ in the first argument.
-filterWithin :: (Filterable f, IntervalAlgebraic Interval a) => 
-                Interval a -> f (Interval a) -> f (Interval a)
+filterWithin :: (Filterable f, IntervalAlgebraic i a) => 
+                  i a -> f (i a) -> f (i a)
 filterWithin = filterMaker disjoint

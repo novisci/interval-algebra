@@ -439,7 +439,7 @@ spec = do
       it "expand 5 -5 Interval (0, 1) should be Interval (-5, 1)" $
         expand 5 (-5) (unsafeInterval (0::Int) (1::Int)) `shouldBe` unsafeInterval (-5::Int) (1::Int)
       it "expand moment 0 Interval (0, 1) should be Interval (-1, 1)" $
-        expand (moment @Int 0::Int) 0 (unsafeInterval (0::Int) (1::Int)) `shouldBe`
+        expand (moment @Int) 0 (unsafeInterval (0::Int) (1::Int)) `shouldBe`
          unsafeInterval (-1::Int) (1::Int)
 
       it "beginerval 2 10 should be Interval (10, 12)" $
