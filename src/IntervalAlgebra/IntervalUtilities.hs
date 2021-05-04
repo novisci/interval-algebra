@@ -168,7 +168,7 @@ gaps' :: (IntervalCombinable a
       [Interval a]
 gaps' x = catMaybes (foldlAccume (><) x)
 
--- | Returns the 'duration' of each 'Interval' in the 'Functor' @f@.
+-- | Returns the 'duration' of each 'Intervallic i a' in the 'Functor' @f@.
 --
 -- >>> durations [intInt 1 10, intInt 2 12, intInt 5 6]
 -- [9,10,1]
@@ -256,16 +256,16 @@ nothingIf :: (Monoid (f (i a)), Filterable f, IntervalAlgebraic i a)=>
   -> Maybe (f (i a))
 nothingIf quantifier predicate x = if quantifier predicate x then Nothing else Just x
 
--- | Returns the empty monoid structure if *none* of the element of input satisfy
+-- | Returns the 'Nothing' if *none* of the element of input satisfy
 --   the predicate condition.
 -- 
--- For example, the following returns the empty list because none of the intervals
+-- For example, the following returns 'Nothing' because none of the intervals
 -- in the input list 'starts' (3, 5).
 --
 -- >>> nothingIfNone (starts (intInt 3 5)) [intInt 3 4, intInt 5 6]
 -- Nothing
 --
--- In the following, (3, 5) 'starts' (3, 6), so the input is returned.
+-- In the following, (3, 5) 'starts' (3, 6), so 'Just' the input is returned.
 --
 -- >>> nothingIfNone (starts (intInt 3 5)) [intInt 3 6, intInt 5 6]
 -- Just [(3, 6),(5, 6)]
@@ -276,16 +276,14 @@ nothingIfNone :: (Monoid (f (i a)), Foldable f, Filterable f, IntervalAlgebraic 
   -> Maybe (f (i a))
 nothingIfNone = nothingIf (\f x -> (not.any f) x)
 
--- | Returns the empty monoid structure if *any* of the element of input satisfy
---   the predicate condition
+-- | Returns 'Nothing' if *any* of the element of input satisfy the predicate condition.
 nothingIfAny :: (Monoid (f (i a)), Foldable f, Filterable f, IntervalAlgebraic i a)=>
     (i a -> Bool) -- ^ predicate to apply to each element of input list
   -> f (i a)
   -> Maybe (f (i a))
 nothingIfAny = nothingIf any
 
--- | Returns the empty monoid structure if *all* of the element of input satisfy
---   the predicate condition
+-- | Returns 'Nothing' if *all* of the element of input satisfy the predicate condition
 nothingIfAll :: (Monoid (f (i a)), Foldable f, Filterable f, IntervalAlgebraic i a)=>
     (i a -> Bool) -- ^ predicate to apply to each element of input list
   -> f (i a)
@@ -294,7 +292,7 @@ nothingIfAll = nothingIf all
 
 {- | 
 Filter functions provides means for filtering 'Filterable' containers of 
-@'Interval'@s based on @'IntervalAlgebraic'@ relations.
+@'Intervallic i a'@s based on @'IntervalAlgebraic'@ relations.
 -}
 
 -- | Lifts a predicate to be able to compare two different 'IntervalAlgebraic' 

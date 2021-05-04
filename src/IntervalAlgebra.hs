@@ -326,12 +326,12 @@ type ComparativePredicateOf a = (a -> a -> Bool)
 {- |
 The @'IntervalAlgebraic'@ typeclass specifies the functions and relational 
 operators for interval-based temporal logic. The typeclass defines the 
-relational operators for intervals, plus other useful utilities such as 
-@'disjoint'@, @'within'@, and @'unionPredicates'@.
+relational operators for types that contain an @'Interval a'@, plus other useful
+ utilities such as @'disjoint'@, @'within'@, and @'unionPredicates'@.
 -}
 class (Eq (i a), Intervallic i a) => IntervalAlgebraic i a where
 
-    -- | Compare two intervals to determine their 'IntervalRelation'.
+    -- | Compare two @i a@ to determine their 'IntervalRelation'.
     relate :: i a -> i a -> IntervalRelation (i a)
     relate x y
         | x `before` y       = Before
@@ -392,13 +392,13 @@ class (Eq (i a), Intervallic i a) => IntervalAlgebraic i a where
     complement :: Set (IntervalRelation (i a)) -> Set (IntervalRelation (i a))
     complement = difference intervalRelations
 
-    -- | Find the intersection of two 'Set's of 'IntervalRelation'
+    -- | Find the intersection of two 'Set's of 'IntervalRelation's.
     intersection ::  Set (IntervalRelation (i a))
                   -> Set (IntervalRelation (i a))
                   -> Set (IntervalRelation (i a))
     intersection = Data.Set.intersection
 
-    -- | Find the union of two 'Set's of 'IntervalRelation'
+    -- | Find the union of two 'Set's of 'IntervalRelation's.
     union ::  Set (IntervalRelation (i a))
            -> Set (IntervalRelation (i a))
            -> Set (IntervalRelation (i a))
@@ -453,7 +453,7 @@ class (Eq (i a), Intervallic i a) => IntervalAlgebraic i a where
     -- ** Interval Algebra utilities
 
     -- | Compose a list of interval relations with _or_ to create a new
-    -- @'ComparativePredicateOf' 'Interval' a@. For example, 
+    -- @'ComparativePredicateOf' i a@. For example, 
     -- @unionPredicates [before, meets]@ creates a predicate function determining
     -- if one interval is either before or meets another interval.
     unionPredicates       :: [ComparativePredicateOf (i a)] ->
@@ -498,18 +498,20 @@ class (Eq (i a), Intervallic i a) => IntervalAlgebraic i a where
     enclosedBy = within
 
 {- |
-The 'IntervalSizeable' typeclass provides functions to determine the size of
-and to resize an 'Interval a'.
+The 'IntervalSizeable' typeclass provides functions to determine the size of an
+'Intervallic' type and to resize an 'Interval a'.
 -}
 class (Show a, Ord a, Num b, Ord b) => IntervalSizeable a b| a -> b where
 
+    -- | The smallest duration for an 'Interval a'.
     moment :: b
     moment = 1
 
+    -- | Gives back a 'moment' based on the input's type.
     moment' :: Intervallic i a => i a -> b
     moment' x = moment @a
 
-    -- | Determine the duration of an 'Interval a'.
+    -- | Determine the duration of an @'i a'@.
     duration :: Intervallic i a => i a-> b
     duration x = diff (end x) (begin x)
 
@@ -520,7 +522,7 @@ class (Show a, Ord a, Num b, Ord b) => IntervalSizeable a b| a -> b where
     -- | Takes the difference between two @a@ to return a @b@.
     diff :: a -> a -> b
 
--- | Resize an 'Interval a' to by expanding to "left" by @l@ and to the 
+-- | Resize an 'i a' to by expanding to "left" by @l@ and to the 
 --   "right" by @r@. In the case that @l@ or @r@ are less than a 'moment'
 --   the respective endpoints are unchanged. 
 expand :: (IntervalSizeable a b, Intervallic i a) => b -> b -> i a -> i a
@@ -529,11 +531,11 @@ expand l r p = setInterval p i
         e = if r < moment' p then 0 else r
         i = Interval (add s $ begin p, add e $ end p)
 
--- | Expands an 'Interval a' to left by i.
+-- | Expands an 'i a' to left by i.
 expandl :: (IntervalSizeable a b, Intervallic i a) => b -> i a -> i a
 expandl i = expand i 0
 
--- | Expands an 'Interval a' to right by i.
+-- | Expands an 'i a' to right by i.
 expandr :: (IntervalSizeable a b, Intervallic i a) => b -> i a -> i a
 expandr = expand 0
 
@@ -551,7 +553,7 @@ enderval :: (IntervalSizeable a b) => b -> a -> Interval a
 enderval dur x = Interval (add (negate $ max (moment' i) dur) x, x)
     where i = Interval (x, x)
 
--- | Creates a new @Interval@ spanning the extent x and y
+-- | Creates a new @Interval@ spanning the extent x and y.
 extenterval :: IntervalAlgebraic i a => i a -> i a -> Interval a
 extenterval x y = Interval (s, e)
     where s = min (begin x) (begin y)
@@ -619,7 +621,7 @@ instance (Intervallic Interval a, Show a) => Show (Interval a) where
 
 instance (Ord a, Show a) => Intervallic Interval a where
     getInterval = id
-    setInterval _  x = x
+    setInterval _ x = x
 
 instance IntervalAlgebraic Interval Int
 instance IntervalCombinable Int
