@@ -15,7 +15,7 @@ A good primer on Allen's algebra can be [found here](https://thomasalspaugh.org/
 = Design
 
 The module is built around four typeclasses designed to separate concerns of 
-constructing, relating, and combining @'Interval'@s: 
+constructing, relating, and combining types that contain @'Interval'@s: 
 
 1. @'Intervallic'@ provides an interface to the data structures which contain an
    @'Interval'@.
