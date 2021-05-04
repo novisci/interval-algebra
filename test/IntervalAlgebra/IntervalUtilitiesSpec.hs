@@ -1,10 +1,14 @@
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleContexts #-}
 module IntervalAlgebra.IntervalUtilitiesSpec (spec) where
 
-import IntervalAlgebra ( Interval, Intervallic(unsafeInterval)
-                        , IntervalCombinable(..)
-                        , IntervalAlgebraic(..)
-                        , IntervalRelation (..) )
+import IntervalAlgebra ( 
+    Interval
+   , Intervallic(..)
+   , unsafeInterval
+   , IntervalCombinable(..)
+   , IntervalAlgebraic(..)
+   , IntervalRelation (..) )
 import IntervalAlgebra.Arbitrary ()
 import IntervalAlgebra.IntervalUtilities
 import Test.Hspec.QuickCheck ( modifyMaxSuccess )
@@ -27,13 +31,13 @@ anotherInt = unsafeInterval (15 :: Int) (20 :: Int)
 gapInt :: Interval Int
 gapInt = unsafeInterval (10 :: Int) (15 :: Int)
 
-prop_combineIntervals1:: (IntervalAlgebraic a, IntervalCombinable a)=>
+prop_combineIntervals1:: (IntervalAlgebraic Interval a, IntervalCombinable a)=>
      [Interval a]
    -> Property
 prop_combineIntervals1 x = relations ci === replicate (length ci - 1) Before
       where ci = combineIntervals (sort x)
 
-prop_gaps1:: (IntervalAlgebraic a, IntervalCombinable a)=>
+prop_gaps1:: (IntervalAlgebraic Interval a, IntervalCombinable a)=>
      [Interval a]
    -> Property
 prop_gaps1 x = relations gs === replicate (length gs - 1) Before
@@ -122,3 +126,12 @@ spec = do
             nothingIfNone (starts (intInt 3 5)) [intInt 3 6, intInt 5 6]
                `shouldBe` Just [ intInt 3 6, intInt 5 6]
          it "more emptyif tests" pending
+
+   describe "filtration tests" $
+      do 
+         it "disjoint filter should filter out noncontainment" $
+            filterDisjoint containmentInt [noncontainmentInt, anotherInt] 
+               `shouldBe` [anotherInt]
+         it "notDisjoint filter should keep noncontainment" $
+            filterNotDisjoint containmentInt [noncontainmentInt, anotherInt] 
+               `shouldBe` [noncontainmentInt]

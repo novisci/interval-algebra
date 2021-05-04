@@ -1,5 +1,12 @@
 # Changelog for interval-algebra
 
+## 0.6.0
+
+* Generalizes the `IntervalAlgebraic` class to work on any data structure that *contains* an interval (not just intervals themselves). This is possible by modification to the `Intervallic` class, which now works in part as lens with `getInterval` and `setInterval` functions. This change allows users to define their own type which contains an interval get all the interval algebraic operation on that new type. The utility of this generalization can be seen in the `PairedInterval` module, which defines a parameterized type for interval *paired* with some other data.
+* Eliminates the `Moment` class and combined it with the `IntervalSizeable` class. Like the `IntervalAlgebraic` class, the `IntervalSizeable` class no longer depends on the `Interval` type, but its functions like `duration` now work on any `Intervallic i a` type.
+* Removes the `expand`, `expandl`, and `expandr` functions from the `IntervalSizeable` class are now just general functions. These function now work to modify the interval within any `Intervallic i a` type.  Similarly `beginerval`, `enderval`, and `extenterval` were removed from the class; however, these functions only *return* the `Interval` type.
+* Generalizes the `filter*` functions in the utilities module to operate on potentially different interval algebraic types. For example, in `filterOverlaps x [ys]`, `x` could be an `Interval a` and the `ys` could be a list of `PairedInterval b a`, so you can filter a container of one interval algebraic type with another interval algebraic type.
+
 ## 0.5.0
 
 * Adds the `compose` function to `IntervalAlgebraic` typeclass, thus now all the algebraic operations are available: complement, composition, converse, intersection, and union.

@@ -1,6 +1,6 @@
 cabal-version:  2.2
 name:           interval-algebra
-version:        0.5.0
+version:        0.6.0
 synopsis:       An implementation of Allen's interval algebra for temporal logic
 description:    Please see the README on GitHub at <https://github.com/novisci/interval-algebra>
 category:       Algebra,Time
@@ -25,6 +25,7 @@ library
       IntervalAlgebra
       IntervalAlgebra.IntervalUtilities
       IntervalAlgebra.Arbitrary
+      IntervalAlgebra.PairedInterval
   other-modules:
       Paths_interval_algebra
   autogen-modules: 
@@ -45,6 +46,7 @@ test-suite interval-algebra-test
   other-modules:
       IntervalAlgebraSpec
       IntervalAlgebra.IntervalUtilitiesSpec
+      IntervalAlgebra.PairedIntervalSpec
       Paths_interval_algebra
   autogen-modules: 
       Paths_interval_algebra
