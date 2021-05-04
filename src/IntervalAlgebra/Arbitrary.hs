@@ -14,7 +14,7 @@ import Test.QuickCheck ( Arbitrary(arbitrary, shrink) )
 import GHC.Base(Int, (.), liftM2 )
 import Control.Applicative((<$>))
 import GHC.Num ( Num((+), negate) )
-import IntervalAlgebra (Interval, IntervalSizeable(beginerval))
+import IntervalAlgebra (Interval, beginerval)
 import Data.Time as DT ( Day(ModifiedJulianDay), toModifiedJulianDay)
 
 instance Arbitrary (Interval Int) where
