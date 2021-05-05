@@ -1,5 +1,9 @@
 # Changelog for interval-algebra
 
+## 0.6.2
+
+* Fixes bug in `equals` which was checking for equality of the interval container, not just the interval.
+
 ## 0.6.1
 
 * Removes the deriving `Show` instance for `PairedInterval`s so people can customize their own instances.
