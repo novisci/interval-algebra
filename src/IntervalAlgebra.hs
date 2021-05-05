@@ -413,7 +413,7 @@ class (Eq (i a), Intervallic i a) => IntervalAlgebraic i a where
 
     -- | Does x equal y?
     equals                 :: ComparativePredicateOf (i a)
-    equals   x y  = x == y
+    equals   x y  = begin x == begin y && end x == end y
 
     -- | Does x meet y? Is y metBy x?
     meets, metBy           :: ComparativePredicateOf (i a)
@@ -512,7 +512,7 @@ class (Show a, Ord a, Num b, Ord b) => IntervalSizeable a b| a -> b where
     moment' x = moment @a
 
     -- | Determine the duration of an @'i a'@.
-    duration :: Intervallic i a => i a-> b
+    duration :: Intervallic i a => i a -> b
     duration x = diff (end x) (begin x)
 
     -- | Shifts an @a@. Most often, the @b@ will be the same type as @a@. 
