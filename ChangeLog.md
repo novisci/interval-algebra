@@ -1,5 +1,7 @@
 # Changelog for interval-algebra
 
+## 0.7.0
+
 ## 0.6.3
 
 * Extends the `IntervalCombinable` class to operate on general `Interval` containers.
