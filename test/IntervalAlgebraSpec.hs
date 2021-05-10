@@ -321,7 +321,7 @@ Ordered unions:
 \] 
 -}
 
-prop_IAaxiomM4_1 :: (IntervalSizeable a b, IntervalCombinable a)=>
+prop_IAaxiomM4_1 :: (IntervalSizeable a b, IntervalCombinable Interval a)=>
                     b -> M2set a -> Property
 prop_IAaxiomM4_1 b x =
    ((m `meets` i && i `meets` j && j `meets` n) &&
@@ -342,7 +342,7 @@ prop_IAaxiomM4_1_Day = prop_IAaxiomM4_1 1
 * Interval Relation property testing 
 -}
 
-class (IntervalAlgebraic Interval a, IntervalCombinable a)=> IntervalRelationProperties a where
+class (IntervalAlgebraic Interval a, IntervalCombinable Interval a)=> IntervalRelationProperties a where
 
     prop_IAbefore :: Interval a -> Interval a -> Property
     prop_IAbefore i j =

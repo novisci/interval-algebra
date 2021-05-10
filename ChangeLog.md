@@ -2,6 +2,7 @@
 
 ## 0.6.3
 
+* Extends the `IntervalCombinable` class to operate on general `Interval` containers.
 * Modifies internals of the `combineIntervals` function to use safe (exception-free) functions rather than footguns like `head` and `tail`.
 
 ## 0.6.2

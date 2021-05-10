@@ -119,7 +119,7 @@ The @'Intervallic'@ typeclass defines how to get and set the 'Interval' content
 of a data structure. It also includes functions for getting the @'begin'@ and 
 @'end'@ this data.
 -}
-class (Ord a) => Intervallic i a where
+class (Ord a, Show a) => Intervallic i a where
 
     -- | Get the interval from an @i a@
     getInterval :: i a -> Interval a
@@ -561,12 +561,12 @@ extenterval x y = Interval (s, e)
 
 {- |
 The @'IntervalCombinable'@ typeclass provides methods for (possibly) combining
-two @'Interval's@.
+two @i a@s to form an @'Interval'@.
 -}
-class (IntervalAlgebraic Interval a, Show a) => IntervalCombinable a where
+class (IntervalAlgebraic i a) => IntervalCombinable i a where
 
     -- | Maybe form a new @'Interval'@ by the union of two @'Interval'@s that 'meets'.
-    (.+.) :: Interval a -> Interval a -> Maybe (Interval a)
+    (.+.) :: i a -> i a -> Maybe (Interval a)
     (.+.) x y
       | x `meets` y = Just $ Interval (begin x, end y)
       | otherwise   = Nothing
@@ -574,7 +574,7 @@ class (IntervalAlgebraic Interval a, Show a) => IntervalCombinable a where
     -- | If @x@ is 'before' @y@, then form a new @Just Interval a@ from the 
     --   interval in the "gap" between @x@ and @y@ from the 'end' of @x@ to the
     --   'begin' of @y@. Otherwise, 'Nothing'.
-    (><) ::  Interval a -> Interval a -> Maybe (Interval a)
+    (><) ::  i a -> i a -> Maybe (Interval a)
     (><) x y
         | x `before` y = Just $ Interval ( end x, begin y )
         | otherwise    = Nothing
@@ -583,17 +583,17 @@ class (IntervalAlgebraic Interval a, Show a) => IntervalCombinable a where
     --   return 'extenterval' of @x@ and @y@ (wrapped in @f@). This is useful for 
     --   (left) folding over an *ordered* container of @Interval@s and combining 
     --   intervals when @x@ is *not* 'before' @y@.
-    (<+>):: (Semigroup (f (Interval a)), Applicative f) =>
-            Interval a ->
-            Interval a ->
+    (<+>):: (Semigroup (f (i a)), Semigroup (f (Interval a)), Applicative f) =>
+            i a ->
+            i a ->
             f (Interval a)
     (<+>) x y
-      | x `before` y = pure x <> pure y
+      | x `before` y = pure (getInterval x) <> pure (getInterval y)
       | otherwise    = pure ( extenterval x y )
 
     -- | Forms a 'Just' new interval from the intersection of two intervals, 
     --   provided the intervals are not disjoint.
-    intersect :: Interval a -> Interval a -> Maybe (Interval a)
+    intersect :: i a -> i a -> Maybe (Interval a)
     intersect x y
        | disjoint x y = Nothing
        | otherwise    = Just $ Interval (b, e)
@@ -616,7 +616,7 @@ instance (Eq (Interval a), Intervallic Interval a) => Ord (Interval a) where
       | begin x == begin y = end x < end y
       | otherwise = False
 
-instance (Intervallic Interval a, Show a) => Show (Interval a) where
+instance (Intervallic Interval a) => Show (Interval a) where
    show x = "(" ++ show (begin x) ++ ", " ++ show (end x) ++ ")"
 
 instance (Ord a, Show a) => Intervallic Interval a where
@@ -624,21 +624,21 @@ instance (Ord a, Show a) => Intervallic Interval a where
     setInterval _ x = x
 
 instance IntervalAlgebraic Interval Int
-instance IntervalCombinable Int
+instance IntervalCombinable Interval Int
 instance IntervalSizeable Int Int where
     moment = 1
     add = (+)
     diff = (-)
 
 instance IntervalAlgebraic Interval Integer
-instance IntervalCombinable Integer
+instance IntervalCombinable Interval Integer
 instance IntervalSizeable Integer Integer where
     moment = 1
     add = (+)
     diff = (-)
 
 instance IntervalAlgebraic Interval DT.Day
-instance IntervalCombinable DT.Day
+instance IntervalCombinable Interval DT.Day
 instance IntervalSizeable DT.Day Integer where
     moment = 1
     add = addDays

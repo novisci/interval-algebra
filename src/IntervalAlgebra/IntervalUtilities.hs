@@ -55,14 +55,16 @@ import GHC.Base
     , Functor(fmap)
     , Applicative(pure)
     , Int, Bool, Ord)
-import GHC.Show ( Show )
 import GHC.Num ()
 import Data.Tuple ( fst )
 import Data.Foldable ( Foldable(null, foldl', toList), all, any )
 import Data.Monoid ( (<>), Monoid(mempty) )
 import IntervalAlgebra
-    ( Interval, Intervallic(..), IntervalAlgebraic(..)
-    , IntervalCombinable(..), IntervalSizeable(..)
+    ( Interval
+    , Intervallic(..)
+    , IntervalAlgebraic(..)
+    , IntervalCombinable(..)
+    , IntervalSizeable(..)
     , IntervalRelation(..)
     , ComparativePredicateOf
     , unsafeInterval
@@ -109,10 +111,10 @@ newtype Box a = Box { unBox :: [a] }
 
 -- Defines how a Box of Intervals are combined. Specifically, the last element of
 -- x and first element of y are combined by '<+>'.
-instance (IntervalCombinable a) => Semigroup (Box (Interval a)) where
+instance (IntervalCombinable Interval a) => Semigroup (Box (Interval a)) where
     Box x <> Box y = Box $ initSafe x ++ lastMay x <++> headMay y ++ tailSafe y
 
-(<++>) :: (IntervalCombinable a) => 
+(<++>) :: (IntervalCombinable Interval a) => 
        Maybe (Interval a)
     -> Maybe (Interval a) 
     -> [Interval a]
@@ -129,7 +131,7 @@ instance (IntervalCombinable a) => Semigroup (Box (Interval a)) where
 --
 -- >>> combineIntervals [intInt 0 10, intInt 2 7, intInt 10 12, intInt 13 15]
 -- [(0, 12),(13, 15)]
-combineIntervals :: (IntervalCombinable a
+combineIntervals :: (IntervalCombinable Interval a
          , Applicative f
          , Monoid (f (Interval a))
          , Foldable f) =>
@@ -143,7 +145,7 @@ combineIntervals x = liftListToFoldable (combineIntervals' $ toList x)
 --
 -- >>> combineIntervals' [intInt 0 10, intInt 2 7, intInt 10 12, intInt 13 15]
 -- [(0, 12),(13, 15)]
-combineIntervals' :: (IntervalCombinable a) => [Interval a] -> [Interval a]
+combineIntervals' :: (IntervalCombinable Interval a) => [Interval a] -> [Interval a]
 combineIntervals' l = unBox $ foldl' (<>) (Box []) (map (\z -> Box [z]) l)
 
 -- | Returns a (possibly empty) container of intervals consisting of the gaps 
@@ -152,7 +154,7 @@ combineIntervals' l = unBox $ foldl' (<>) (Box []) (map (\z -> Box [z]) l)
 --
 -- >>> gaps [intInt 1 5, intInt 8 12, intInt 11 14]
 -- [(5, 8)]
-gaps :: (IntervalCombinable a
+gaps :: (IntervalCombinable Interval a
          , Applicative f
          , Monoid (f (Interval a))
          , Foldable f) =>
@@ -164,7 +166,7 @@ gaps x = liftListToFoldable (gaps' x)
 --   intervals in the input container. *To work properly, the input should be 
 --   sorted*. This version outputs a list. See 'gaps' for a version that lifts
 --   the result to same input structure @f@.
-gaps' :: (IntervalCombinable a
+gaps' :: (IntervalCombinable Interval a
          , Applicative f
          , Monoid (f (Interval a))
          , Foldable f) =>
@@ -236,7 +238,7 @@ gapsWithin :: ( Applicative f
                , Foldable f
                , Monoid (f (Interval a))
                , IntervalSizeable a b
-               , IntervalCombinable a
+               , IntervalCombinable Interval a
                , Filterable f
                , IntervalAlgebraic Interval a)=>
      Interval a     -- ^ i
