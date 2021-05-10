@@ -2,42 +2,51 @@
 {-# LANGUAGE FlexibleContexts #-}
 module IntervalAlgebra.IntervalUtilitiesSpec (spec) where
 
-import IntervalAlgebra ( 
-    Interval
-   , Intervallic(..)
-   , unsafeInterval
-   , IntervalCombinable(..)
-   , IntervalAlgebraic(..)
-   , IntervalRelation (..) )
-import IntervalAlgebra.Arbitrary ()
-import IntervalAlgebra.IntervalUtilities
-import Test.Hspec.QuickCheck ( modifyMaxSuccess )
-import Test.Hspec ( it, shouldBe, describe, Spec, pending )
-import Test.QuickCheck
-import Data.List(sort)
+import Test.Hspec.QuickCheck              ( modifyMaxSuccess )
+import Test.Hspec                         ( Spec
+                                          , it, shouldBe, describe, pending )
+import Test.QuickCheck                    ( Property, Testable(property)
+                                          , (===))
+import Data.List                          (sort)
+import IntervalAlgebra.Arbitrary          ()
+import IntervalAlgebra                    ( Interval
+                                          , Intervallic(..)
+                                          , IntervalCombinable(..)
+                                          , IntervalAlgebraic(..)
+                                          , IntervalRelation (..)
+                                          , beginerval)
+import IntervalAlgebra.IntervalUtilities  ( combineIntervals
+                                          , gaps
+                                          , durations
+                                          , clip
+                                          , relations
+                                          , gapsWithin
+                                          , nothingIfNone
+                                          , filterDisjoint
+                                          , filterNotDisjoint )
 
 intInt :: Int -> Int -> Interval Int
-intInt = unsafeInterval
+intInt = beginerval
 
 containmentInt :: Interval Int
-containmentInt = unsafeInterval (0 :: Int) (10 :: Int)
+containmentInt = intInt (10 :: Int) (0 :: Int)
 
 noncontainmentInt :: Interval Int
-noncontainmentInt = unsafeInterval (4 :: Int) (10 :: Int)
+noncontainmentInt = intInt  6 4
 
 anotherInt :: Interval Int
-anotherInt = unsafeInterval (15 :: Int) (20 :: Int)
+anotherInt = intInt 5 (15 :: Int)
 
 gapInt :: Interval Int
-gapInt = unsafeInterval (10 :: Int) (15 :: Int)
+gapInt = intInt 5 (10 :: Int)
 
-prop_combineIntervals1:: (IntervalAlgebraic Interval a, IntervalCombinable a)=>
+prop_combineIntervals1:: (IntervalAlgebraic Interval a, IntervalCombinable Interval a)=>
      [Interval a]
    -> Property
 prop_combineIntervals1 x = relations ci === replicate (length ci - 1) Before
       where ci = combineIntervals (sort x)
 
-prop_gaps1:: (IntervalAlgebraic Interval a, IntervalCombinable a)=>
+prop_gaps1:: (IntervalAlgebraic Interval a, IntervalCombinable Interval a)=>
      [Interval a]
    -> Property
 prop_gaps1 x = relations gs === replicate (length gs - 1) Before
@@ -61,9 +70,9 @@ spec = do
          combineIntervals [noncontainmentInt] `shouldBe` [noncontainmentInt]
       it "combineIntervals [] should be []" $
          combineIntervals ([] :: [Interval Int]) `shouldBe` []
-      it "combineIntervals [intInt 0 10, intInt 2 7, intInt 10 12, intInt 13 15]" $
-         combineIntervals [intInt 0 10, intInt 2 7, intInt 10 12, intInt 13 15]
-            `shouldBe` [intInt 0 12, intInt 13 15]
+      it "combineIntervals [(0, 10), (2, 7), (10, 12), (13, 15)]" $
+         combineIntervals [intInt 10 0, intInt 5 2, intInt 2 10, intInt 2 13]
+            `shouldBe` [intInt 12 0, intInt 2 13]
       it "after combining, only relation should be Before" $
          property (prop_combineIntervals1 @Int)
 
@@ -94,7 +103,7 @@ spec = do
            clip containmentInt gapInt `shouldBe` Nothing
          it "clip Interval (4, 10) Interval (0, 10) should be Interval (4, 10)" $
            clip noncontainmentInt containmentInt `shouldBe`
-             Just (unsafeInterval 4 10)
+             Just (intInt 6 4)
          it "clip x y === intersect sort x y " pending
 
    describe "relations tests" $
@@ -111,20 +120,20 @@ spec = do
    describe "gapsWithin tests" $
       do
          it "gapsWithin (1, 10) [(0,5), (7,9), (12,15)] should be [(5,7), (9,10)]" $
-            gapsWithin (intInt 1 10) [intInt 0 5, intInt 7 9, intInt 12 15]
-               `shouldBe` Just [intInt 5 7, intInt 9 10]
+            gapsWithin (intInt 9 1) [intInt 5 0, intInt 2 7, intInt 3 12]
+               `shouldBe` Just [intInt 2 5, intInt 1 9]
          it "gapsWithin (1, 10) [] should be []" $
-             gapsWithin (intInt 1 10) [] `shouldBe` Nothing
+             gapsWithin (intInt 9 1) [] `shouldBe` Nothing
          it "more gapsWithin tests" pending
 
    describe "emptyIf tests" $
       do
          it "emptyIfNone (starts (3, 5)) [(3,4), (5,6)] should be empty" $
-            nothingIfNone (starts (intInt 3 5)) [intInt 3 4, intInt 5 6]
+            nothingIfNone (starts (intInt 2 3)) [intInt 1 3, intInt 1 5]
                `shouldBe` Nothing
          it "emptyIfNone (starts (3, 5)) [(3,6), (5,6)] shoiuld be input" $
-            nothingIfNone (starts (intInt 3 5)) [intInt 3 6, intInt 5 6]
-               `shouldBe` Just [ intInt 3 6, intInt 5 6]
+            nothingIfNone (starts (intInt 2 3)) [intInt 3 3, intInt 1 5]
+               `shouldBe` Just [ intInt 3 3, intInt 1 5]
          it "more emptyif tests" pending
 
    describe "filtration tests" $
