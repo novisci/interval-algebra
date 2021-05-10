@@ -67,10 +67,10 @@ import IntervalAlgebra
     , ComparativePredicateOf
     , unsafeInterval
     , beginerval
-    , enderval
-    )
+    , enderval)
 import Data.Maybe (mapMaybe, catMaybes, fromMaybe, Maybe(..))
-import Data.List ( (++), map, head, init, last, tail )
+import Data.List ( (++), map )
+import Safe (headMay, lastMay, initSafe, tailSafe)
 import Witherable ( Filterable(filter) )
 
 -------------------------------------------------
@@ -110,12 +110,16 @@ newtype Box a = Box { unBox :: [a] }
 -- Defines how a Box of Intervals are combined. Specifically, the last element of
 -- x and first element of y are combined by '<+>'.
 instance (IntervalCombinable a) => Semigroup (Box (Interval a)) where
-    Box x <> Box y
-       | null x         = Box y
-       | null y         = Box x
-       | otherwise      = Box $ init x ++ (lx <+> fy) ++ tail y
-       where lx = last x
-             fy = head y
+    Box x <> Box y = Box $ initSafe x ++ lastMay x <++> headMay y ++ tailSafe y
+
+(<++>) :: (IntervalCombinable a) => 
+       Maybe (Interval a)
+    -> Maybe (Interval a) 
+    -> [Interval a]
+(<++>) Nothing Nothing   = []
+(<++>) Nothing (Just y)  = [y]
+(<++>) (Just x) Nothing  = [x]
+(<++>) (Just x) (Just y) = x <+> y
 
 -------------------------------------------------
 
@@ -238,13 +242,13 @@ gapsWithin :: ( Applicative f
      Interval a     -- ^ i
   -> f (Interval a) -- ^ x
   -> Maybe (f (Interval a))
-gapsWithin i x 
-  | null ivs  = Nothing  
+gapsWithin i x
+  | null ivs  = Nothing
   | otherwise = Just $ gaps $ pure s <> ivs <> pure e
         where s   = enderval   0 (begin i)
               e   = beginerval 0 (end i)
               nd  = toList (filterNotDisjoint i x)
-              ivs = liftListToFoldable (mapMaybe (clip i) nd) 
+              ivs = liftListToFoldable (mapMaybe (clip i) nd)
 
 -- | Given a predicate combinator, a predicate, and list of intervals, returns 
 --   the input unchanged if the predicate combinator is @True@. Otherwise, returns
@@ -298,7 +302,7 @@ Filter functions provides means for filtering 'Filterable' containers of
 -- | Lifts a predicate to be able to compare two different 'IntervalAlgebraic' 
 --   structure by comparing the intervals contain within each. 
 compareIntervals :: (IntervalAlgebraic i0 a, IntervalAlgebraic i1 a) =>
-   ComparativePredicateOf (Interval a) 
+   ComparativePredicateOf (Interval a)
     -> i0 a
     -> i1 a
     -> Bool
@@ -319,7 +323,7 @@ filterMaker f p = Witherable.filter (compareIntervals f p)
 filterOverlaps :: (Filterable f
                   , IntervalAlgebraic Interval a
                   , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) => 
+                  , IntervalAlgebraic i1 a) =>
                   i0 a -> f (i1 a) -> f (i1 a)
 filterOverlaps = filterMaker overlaps
 
@@ -327,7 +331,7 @@ filterOverlaps = filterMaker overlaps
 filterOverlappedBy :: (Filterable f
                   , IntervalAlgebraic Interval a
                   , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) => 
+                  , IntervalAlgebraic i1 a) =>
                   i0 a -> f (i1 a) -> f (i1 a)
 filterOverlappedBy = filterMaker overlappedBy
 
@@ -335,7 +339,7 @@ filterOverlappedBy = filterMaker overlappedBy
 filterBefore :: (Filterable f
                   , IntervalAlgebraic Interval a
                   , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) => 
+                  , IntervalAlgebraic i1 a) =>
                   i0 a -> f (i1 a) -> f (i1 a)
 filterBefore = filterMaker before
 
@@ -343,31 +347,31 @@ filterBefore = filterMaker before
 filterAfter :: (Filterable f
                   , IntervalAlgebraic Interval a
                   , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) => 
-                  i0 a -> f (i1 a) -> f (i1 a) 
+                  , IntervalAlgebraic i1 a) =>
+                  i0 a -> f (i1 a) -> f (i1 a)
 filterAfter = filterMaker after
 
 -- | Filter by 'starts'.
 filterStarts :: (Filterable f
                   , IntervalAlgebraic Interval a
                   , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) => 
+                  , IntervalAlgebraic i1 a) =>
                   i0 a -> f (i1 a) -> f (i1 a)
-filterStarts = filterMaker starts 
+filterStarts = filterMaker starts
 
 -- | Filter by 'startedBy'.
 filterStartedBy :: (Filterable f
                   , IntervalAlgebraic Interval a
                   , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) => 
+                  , IntervalAlgebraic i1 a) =>
                   i0 a -> f (i1 a) -> f (i1 a)
-filterStartedBy = filterMaker startedBy 
+filterStartedBy = filterMaker startedBy
 
 -- | Filter by 'finishes'.
 filterFinishes :: (Filterable f
                   , IntervalAlgebraic Interval a
                   , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) => 
+                  , IntervalAlgebraic i1 a) =>
                   i0 a -> f (i1 a) -> f (i1 a)
 filterFinishes = filterMaker finishes
 
@@ -375,15 +379,15 @@ filterFinishes = filterMaker finishes
 filterFinishedBy :: (Filterable f
                   , IntervalAlgebraic Interval a
                   , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) => 
+                  , IntervalAlgebraic i1 a) =>
                   i0 a -> f (i1 a) -> f (i1 a)
-filterFinishedBy = filterMaker finishedBy 
+filterFinishedBy = filterMaker finishedBy
 
 -- | Filter by 'meets'.
 filterMeets :: (Filterable f
                   , IntervalAlgebraic Interval a
                   , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) => 
+                  , IntervalAlgebraic i1 a) =>
                   i0 a -> f (i1 a) -> f (i1 a)
 filterMeets = filterMaker meets
 
@@ -391,7 +395,7 @@ filterMeets = filterMaker meets
 filterMetBy :: (Filterable f
                   , IntervalAlgebraic Interval a
                   , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) => 
+                  , IntervalAlgebraic i1 a) =>
                   i0 a -> f (i1 a) -> f (i1 a)
 filterMetBy = filterMaker metBy
 
@@ -399,7 +403,7 @@ filterMetBy = filterMaker metBy
 filterDuring :: (Filterable f
                   , IntervalAlgebraic Interval a
                   , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) => 
+                  , IntervalAlgebraic i1 a) =>
                   i0 a -> f (i1 a) -> f (i1 a)
 filterDuring = filterMaker during
 
@@ -407,7 +411,7 @@ filterDuring = filterMaker during
 filterContains :: (Filterable f
                   , IntervalAlgebraic Interval a
                   , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) => 
+                  , IntervalAlgebraic i1 a) =>
                   i0 a -> f (i1 a) -> f (i1 a)
 filterContains = filterMaker contains
 
@@ -415,7 +419,7 @@ filterContains = filterMaker contains
 filterEquals :: (Filterable f
                   , IntervalAlgebraic Interval a
                   , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) => 
+                  , IntervalAlgebraic i1 a) =>
                   i0 a -> f (i1 a) -> f (i1 a)
 filterEquals = filterMaker equals
 
@@ -423,7 +427,7 @@ filterEquals = filterMaker equals
 filterDisjoint :: (Filterable f
                   , IntervalAlgebraic Interval a
                   , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) => 
+                  , IntervalAlgebraic i1 a) =>
                   i0 a -> f (i1 a) -> f (i1 a)
 filterDisjoint = filterMaker disjoint
 
@@ -431,7 +435,7 @@ filterDisjoint = filterMaker disjoint
 filterNotDisjoint :: (Filterable f
                   , IntervalAlgebraic Interval a
                   , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) => 
+                  , IntervalAlgebraic i1 a) =>
                   i0 a -> f (i1 a) -> f (i1 a)
 filterNotDisjoint = filterMaker notDisjoint
 
@@ -439,7 +443,7 @@ filterNotDisjoint = filterMaker notDisjoint
 filterConcur ::  (Filterable f
                   , IntervalAlgebraic Interval a
                   , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) => 
+                  , IntervalAlgebraic i1 a) =>
                   i0 a -> f (i1 a) -> f (i1 a)
 filterConcur = filterMaker concur
 
@@ -447,7 +451,7 @@ filterConcur = filterMaker concur
 filterWithin :: (Filterable f
                   , IntervalAlgebraic Interval a
                   , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) => 
+                  , IntervalAlgebraic i1 a) =>
                   i0 a -> f (i1 a) -> f (i1 a)
 filterWithin = filterMaker within
 
@@ -455,7 +459,7 @@ filterWithin = filterMaker within
 filterEnclose :: (Filterable f
                   , IntervalAlgebraic Interval a
                   , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) => 
+                  , IntervalAlgebraic i1 a) =>
                   i0 a -> f (i1 a) -> f (i1 a)
 filterEnclose = filterMaker enclose
 
@@ -463,6 +467,6 @@ filterEnclose = filterMaker enclose
 filterEnclosedBy :: (Filterable f
                   , IntervalAlgebraic Interval a
                   , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) => 
+                  , IntervalAlgebraic i1 a) =>
                   i0 a -> f (i1 a) -> f (i1 a)
 filterEnclosedBy = filterMaker enclosedBy
