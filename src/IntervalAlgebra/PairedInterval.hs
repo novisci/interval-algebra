@@ -31,7 +31,7 @@ import Witherable ( Filterable(filter) )
 newtype PairedInterval b a = PairedInterval (Interval a, b)
     deriving (Eq)
 
-instance (Ord a) => Intervallic (PairedInterval b) a where
+instance (Ord a, Show a) => Intervallic (PairedInterval b) a where
     getInterval (PairedInterval x)        = fst x
     setInterval (PairedInterval (x, y)) i = PairedInterval (i, y)
 
@@ -52,7 +52,7 @@ pairData :: PairedInterval b a -> b
 pairData (PairedInterval (_, y)) = y
 
 -- | Gets the intervals from a list of paired intervals.
-intervals :: Ord a => [PairedInterval b a] -> [Interval a]
+intervals :: (Ord a, Show a) => [PairedInterval b a] -> [Interval a]
 intervals = map getInterval
 
 -- | Takes a predicate of intervals and a predicate on the data part of a 
