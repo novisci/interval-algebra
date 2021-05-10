@@ -1,21 +1,43 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeApplications #-}
--- {-# LANGUAGE AllowAmbiguousTypes #-}
--- {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module IntervalAlgebraSpec (spec) where
 
-import Test.Hspec ( hspec, describe, it, Spec, shouldBe )
-import Test.Hspec.QuickCheck ( modifyMaxSuccess, modifyMaxDiscardRatio )
-import Test.QuickCheck
-import IntervalAlgebra as IA
-import Data.Maybe
-import Control.Monad ()
-import IntervalAlgebra.Arbitrary ()
-import Data.Time as DT ( Day )
-import Data.Set (member)
+import Test.Hspec                 ( hspec, describe, it, Spec, shouldBe )
+import Test.Hspec.QuickCheck      ( modifyMaxSuccess, modifyMaxDiscardRatio )
+import Test.QuickCheck            ( (===)
+                                  , (==>)
+                                  , Arbitrary(arbitrary)
+                                  , Property
+                                  ,  Testable(property) )
+import Data.Maybe                 ( fromJust )
+import Data.Either                ( isRight )
+import IntervalAlgebra.Arbitrary  ()
+import Data.Time as DT            ( Day )
+import Data.Set                   ( member )
+import IntervalAlgebra as IA      ( enderval
+                                  , beginerval
+                                  , expandr
+                                  , expandl
+                                  , expand
+                                  , parseInterval
+                                  , IntervalCombinable(intersect, (.+.))
+                                  , IntervalSizeable(moment, diff)
+                                  , IntervalAlgebraic(  equals, starts
+                                                      , finishes, finishedBy
+                                                      , overlaps, during
+                                                      , contains, compose
+                                                      , relate, startedBy
+                                                      , overlappedBy, disjoint
+                                                      , before, after, meets
+                                                      , metBy, (<|>))
+                                  , ComparativePredicateOf
+                                  , Intervallic(begin, end)
+                                  , Interval )
 
-mkIntrvl = unsafeInterval
+mkIntrvl :: Int -> Int -> Interval Int
+mkIntrvl = beginerval
 
 xor :: Bool -> Bool -> Bool
 xor a b = a /= b
@@ -26,16 +48,6 @@ makePos x
   | x == 0    = x + 1
   | x <  0    = negate x
   | otherwise = x
-
--- | A function for creating intervals when you think you know what you're doing.
-safeInterval :: Ord a => a -> a -> Interval a
-safeInterval x y = unsafeInterval (min x y) (max x y)
-
--- | Create a 'Maybe Interval a' from two @a@s.
-safeInterval'' :: Ord a => a -> a -> Maybe (Interval a)
-safeInterval'' x y
-    | y <= x    = Nothing
-    | otherwise = Just $ safeInterval x y
 
 -- | A set used for testing M1 defined so that the M1 condition is true.
 data M1set a = M1set {
@@ -66,7 +78,7 @@ m1set x a b c = M1set p1 p2 p3 p4
   where p1 = x                          -- interval i in prop_IAaxiomM1
         p2 = beginerval a (end x)       -- interval j in prop_IAaxiomM1
         p3 = beginerval b (end x)       -- interval k in prop_IAaxiomM1
-        p4 = safeInterval  (begin (expandl (makePos c) p2)) (begin p2)
+        p4 = enderval (makePos c) (begin p2)
 
 {-
 
@@ -144,18 +156,18 @@ That is,
  \] 
 -}
 
-prop_IAaxiomM2 :: (Show a, IntervalAlgebraic Interval a) => M2set a -> Property
+prop_IAaxiomM2 :: (IntervalAlgebraic Interval a, IntervalSizeable a b) => M2set a -> Property
 prop_IAaxiomM2 x =
   (i `meets` j && k `meets` l) ==>
     (i `meets` l)  `xor`
-    isJust m `xor`
-    isJust n
+    isRight m `xor`
+    isRight n
     where i = m21 x
           j = m22 x
           k = m23 x
           l = m24 x
-          m = safeInterval'' (end i) (begin l)
-          n = safeInterval'' (end k) (begin j)
+          m = parseInterval (end i) (begin l)
+          n = parseInterval (end k) (begin j)
 
 prop_IAaxiomM2_Int :: M2set Int -> Property
 prop_IAaxiomM2_Int = prop_IAaxiomM2
@@ -221,8 +233,8 @@ prop_IAaxiomM3 :: (IntervalAlgebraic Interval a, IntervalSizeable a b)=>
       b -> Interval a -> Property
 prop_IAaxiomM3 b i =
    (j `meets` i && i `meets` k) === True
-   where j = safeInterval (begin (expandl b i)) (begin i)
-         k = safeInterval (end i) (end (expandr b i))
+   where j = enderval   b (begin i) 
+         k = beginerval b (end i)
 
 prop_IAaxiomM3_Int :: Interval Int -> Property
 prop_IAaxiomM3_Int = prop_IAaxiomM3 1
@@ -243,15 +255,16 @@ If two meets are separated by intervals, then this sequence is a longer interval
 
 prop_IAaxiomM4 :: (IntervalAlgebraic Interval a, IntervalSizeable a b)=>
      b -> M2set a -> Property
-prop_IAaxiomM4 moment x =
+prop_IAaxiomM4 b x =
    ((m `meets` i && i `meets` j && j `meets` n) &&
     (m `meets` k && k `meets` n)) === True
    where i = m21 x
          j = m22 x
-         m = safeInterval (begin (expandl moment i)) (begin i)
-         n = safeInterval (end j) (end (expandr moment j))
-         k = safeInterval (end m) (begin n)
-
+         m = enderval   b (begin i)
+         n = beginerval b (end j)
+         k = beginerval g (end m)
+         g = diff (begin n) (end m)
+ 
 prop_IAaxiomM4_Int :: M2set Int -> Property
 prop_IAaxiomM4_Int = prop_IAaxiomM4 1
 
@@ -295,13 +308,15 @@ m5set x a b = M5set p1 p2
         ps = end (expandr (makePos b) x) -- creating l by shifting and expanding i
 
 
-prop_IAaxiomM5 :: (Show a, IntervalAlgebraic Interval a) => M5set a -> Property
+prop_IAaxiomM5 :: (IntervalAlgebraic Interval a, IntervalSizeable a b) => 
+    M5set a -> Property
 prop_IAaxiomM5 x =
    ((i `meets` j && j `meets` l) &&
     (i `meets` k && k `meets` l))  === (j == k)
    where i = m51 x
-         j = safeInterval (end i) (begin l)
-         k = safeInterval (end i) (begin l)
+         j = beginerval g (end i)
+         k = beginerval g (end i)
+         g = diff (begin l) (end i)
          l = m52 x
 
 prop_IAaxiomM5_Int :: M5set Int -> Property
@@ -328,8 +343,8 @@ prop_IAaxiomM4_1 b x =
     (m `meets` ij && ij `meets` n)) === True
    where i = m21 x
          j = m22 x
-         m = safeInterval (begin (expandl b i)) (begin i)
-         n = safeInterval (end j) (end (expandr b j))
+         m = enderval   b (begin i)
+         n = beginerval b (end j)
          ij = fromJust $ i .+. j
 
 prop_IAaxiomM4_1_Int :: M2set Int -> Property
@@ -342,47 +357,50 @@ prop_IAaxiomM4_1_Day = prop_IAaxiomM4_1 1
 * Interval Relation property testing 
 -}
 
-class (IntervalAlgebraic Interval a, IntervalCombinable Interval a)=> IntervalRelationProperties a where
+class ( IntervalAlgebraic Interval a
+      , IntervalCombinable Interval a
+      , IntervalSizeable a b
+      ) => IntervalRelationProperties a b where
 
     prop_IAbefore :: Interval a -> Interval a -> Property
     prop_IAbefore i j =
       IA.before i j ==> (i `meets` k) && (k `meets` j)
-        where k = safeInterval (end i) (begin j)
+        where k = beginerval (diff (begin j) (end i)) (end i)
 
     prop_IAstarts:: Interval a -> Interval a -> Property
     prop_IAstarts i j
       | IA.starts i j = (j == fromJust (i .+. k)) === True
       | otherwise     = IA.starts i j === False
-        where k  = safeInterval (end i) (end j)
+        where k = beginerval (diff (end j) (end i)) (end i)
 
     prop_IAfinishes:: Interval a -> Interval a -> Property
     prop_IAfinishes i j
       | IA.finishes i j = (j == fromJust ( k .+. i)) === True
       | otherwise       = IA.finishes i j === False
-        where k = safeInterval (begin j) (begin i)
+        where k = beginerval (diff (begin i) (begin j)) (begin j)
 
     prop_IAoverlaps:: Interval a -> Interval a -> Property
     prop_IAoverlaps i j
       | IA.overlaps i j = ((i == fromJust ( k .+. l )) &&
                           (j == fromJust ( l .+. m ))) === True
       | otherwise       = IA.overlaps i j === False
-        where k = safeInterval (begin i) (begin j)
-              l = safeInterval (begin j) (end i)
-              m = safeInterval (end i)   (end j)
+        where k = beginerval (diff (begin j) (begin i)) (begin i)
+              l = beginerval (diff (end i)   (begin j)) (begin j)
+              m = beginerval (diff (end j)   (end i))   (end i)
 
     prop_IAduring:: Interval a -> Interval a-> Property
     prop_IAduring i j
       | IA.during i j = (j == fromJust ( fromJust (k .+. i) .+. l)) === True
       | otherwise     = IA.during i j === False
-        where k = safeInterval (begin j) (begin i)
-              l = safeInterval (end i) (end j)
+        where k = beginerval (diff (begin i) (begin j)) (begin j)
+              l = beginerval (diff (end j)   (end i))   (end i)
 
     -- | For any two pair of intervals exactly one 'IntervalRelation' should hold
     prop_exclusiveRelations::  Interval a -> Interval a -> Property
     prop_exclusiveRelations x y =
       (  1 == length (filter id $ map (\r -> r x y) allIArelations)) === True
 
-instance IntervalRelationProperties Int
+instance IntervalRelationProperties Int Int
 
 allIArelations:: IntervalAlgebraic Interval a => [ComparativePredicateOf (Interval a)]
 allIArelations =   [  IA.equals
@@ -429,76 +447,68 @@ spec = do
       it "expandl doesn't change end"   $ property (prop_expandl_end @Int)
       it "expandr doesn't change begin" $ property (prop_expandr_begin @Int)
       it "expand 0 5 Interval (0, 1) should be Interval (0, 6)" $
-        expand 0 5 (unsafeInterval (0::Int) (1::Int)) `shouldBe` unsafeInterval (0::Int) (6::Int)
+        expand 0 5 (beginerval (1::Int) (0::Int)) `shouldBe` beginerval (6::Int) (0::Int)
       it "expand 5 0 Interval (0, 1) should be Interval (-5, 1)" $
-        expand 5 0 (unsafeInterval (0::Int) (1::Int)) `shouldBe` unsafeInterval (-5::Int) (1::Int)
+        expand 5 0 (beginerval (1::Int) (0::Int)) `shouldBe` beginerval (6::Int) (-5::Int)
       it "expand 5 5 Interval (0, 1) should be Interval (-5, 6)" $
-        expand 5 5 (unsafeInterval (0::Int) (1::Int)) `shouldBe` unsafeInterval (-5::Int) (6::Int)
+        expand 5 5 (beginerval (1::Int) (0::Int)) `shouldBe` beginerval (11::Int) (-5::Int)
       it "expand -1 5 Interval (0, 1) should be Interval (-5, 6)" $
-        expand (-1) 5 (unsafeInterval (0::Int) (1::Int)) `shouldBe` unsafeInterval (0::Int) (6::Int)
+        expand (-1) 5 (beginerval (1::Int) (0::Int)) `shouldBe` beginerval (6::Int) (0::Int) 
       it "expand 5 -5 Interval (0, 1) should be Interval (-5, 1)" $
-        expand 5 (-5) (unsafeInterval (0::Int) (1::Int)) `shouldBe` unsafeInterval (-5::Int) (1::Int)
+        expand 5 (-5) (beginerval (1::Int) (0::Int)) `shouldBe` beginerval (6::Int) (-5::Int)
       it "expand moment 0 Interval (0, 1) should be Interval (-1, 1)" $
-        expand (moment @Int) 0 (unsafeInterval (0::Int) (1::Int)) `shouldBe`
-         unsafeInterval (-1::Int) (1::Int)
+        expand (moment @Int) 0 (beginerval (1::Int) (0::Int)) `shouldBe`
+         beginerval (2::Int) (-1::Int) 
 
       it "beginerval 2 10 should be Interval (10, 12)" $
-        beginerval (2::Int) 10 `shouldBe` unsafeInterval (10::Int) (12::Int)
+        Right (beginerval (2::Int) 10) `shouldBe` parseInterval (10::Int) (12::Int)
       it "beginerval 0 10 should be Interval (10, 11)" $
-        beginerval (0::Int) 10 `shouldBe` unsafeInterval (10::Int) (11::Int)
+        Right (beginerval (0::Int) 10) `shouldBe` parseInterval (10::Int) (11::Int)
       it "beginerval -2 10 should be Interval (10, 11)" $
-        beginerval (-2::Int) 10 `shouldBe` unsafeInterval (10::Int) (11::Int)
+        Right (beginerval (-2::Int) 10) `shouldBe` parseInterval (10::Int) (11::Int)
       it "enderval 2 10 should be Interval (8, 10)" $
-        enderval (2::Int) 10 `shouldBe` unsafeInterval (8::Int) (10::Int)
+        Right (enderval (2::Int) 10) `shouldBe` parseInterval (8::Int) (10::Int)
       it "enderval 0 10 should be Interval (9, 10)" $
-        enderval (0::Int) 10 `shouldBe` unsafeInterval (9::Int) (10::Int)
+        Right (enderval (0::Int) 10) `shouldBe` parseInterval (9::Int) (10::Int)
       it "enderval -2 10 should be Interval (9, 10)" $
-        enderval (-2::Int) 10 `shouldBe` unsafeInterval (9::Int) (10::Int)
+        Right (enderval (-2::Int) 10) `shouldBe` parseInterval (9::Int) (10::Int)
 
   describe "IntervalAlgebraic tests" $
      modifyMaxSuccess (*10000) $
      do
       it "(startedBy <|> overlappedBy) Interval (0, 9) Interval (-1, 4) is True" $
-        (startedBy <|> overlappedBy) (mkIntrvl (0::Int) (9::Int)) (mkIntrvl (-1::Int) (4::Int))
+        (startedBy <|> overlappedBy) (mkIntrvl 9 0) (mkIntrvl 5 (-1))
          `shouldBe` True
       it "(startedBy <|> overlappedBy) Interval (0, 9) Interval (0, 4) is True" $
-        (startedBy <|> overlappedBy) (mkIntrvl (0::Int) (9::Int)) (mkIntrvl (0::Int) (4::Int))
+        (startedBy <|> overlappedBy) (mkIntrvl 9 0) (mkIntrvl 4 0)
          `shouldBe` True
       it "(startedBy <|> overlappedBy) Interval (0, 9) Interval (-1, 9) is False" $
-        (startedBy <|> overlappedBy) (mkIntrvl (0::Int) (9::Int)) (mkIntrvl (-1::Int) (9::Int))
+        (startedBy <|> overlappedBy) (mkIntrvl 9 0) (mkIntrvl 10 (-1))
          `shouldBe` False
       it "disjoint x y same as explicit union of predicates" $
-         disjoint (mkIntrvl (0::Int) (2::Int)) (mkIntrvl (3::Int) (5::Int)) `shouldBe`
-         (before <|> after <|> meets <|> metBy) (mkIntrvl (0::Int) (2::Int)) (mkIntrvl (3::Int) (5::Int))
+         disjoint (mkIntrvl 2 0) (mkIntrvl 2 3) `shouldBe`
+         (before <|> after <|> meets <|> metBy) (mkIntrvl 2 0) (mkIntrvl 2 3)
       it "prop_compose holds" $
          property (prop_compose @Int)
 
   describe "IntervalCombinable tests" $
     do
       it "intersection of (0, 2) (2, 4) should be Nothing" $
-        intersect (mkIntrvl (0::Int) (2::Int)) (mkIntrvl (2::Int) (4::Int)) 
-          `shouldBe` Nothing
+        intersect (mkIntrvl 2 0) (mkIntrvl 2 2)    `shouldBe` Nothing
       it "intersection of (0, 2) (3, 4) should be Nothing" $
-        intersect (mkIntrvl (0::Int) (2::Int)) (mkIntrvl (3::Int) (4::Int)) 
-          `shouldBe` Nothing
+        intersect (mkIntrvl 2 0) (mkIntrvl 1 3)    `shouldBe` Nothing
       it "intersection of (2, 4) (0, 2) should be Nothing" $
-        intersect (mkIntrvl (2::Int) (4::Int)) (mkIntrvl (0::Int) (2::Int)) 
-          `shouldBe` Nothing
+        intersect (mkIntrvl 2 2) (mkIntrvl 2 0)    `shouldBe` Nothing
       it "intersection of (0, 2) (1, 3) should be Just (1, 2)" $
-        intersect (mkIntrvl (0::Int) (2::Int)) (mkIntrvl (1::Int) (3::Int)) 
-          `shouldBe` Just (mkIntrvl 1 2)
+        intersect (mkIntrvl 2 0) (mkIntrvl 2 1)    `shouldBe` Just (mkIntrvl 1 1)
       it "intersection of (0, 2) (-1, 3) should be Just (0, 2)" $
-        intersect (mkIntrvl (0::Int) (2::Int)) (mkIntrvl (-1::Int) (3::Int)) 
-          `shouldBe` Just (mkIntrvl 0 2)
+        intersect (mkIntrvl 2 0) (mkIntrvl 4 (-1)) `shouldBe` Just (mkIntrvl 2 0)
       it "intersection of (0, 2) (0, 2) should be Just (0, 2)" $
-        intersect (mkIntrvl (0::Int) (2::Int)) (mkIntrvl (0::Int) (2::Int)) 
-          `shouldBe` Just (mkIntrvl 0 2)
+        intersect (mkIntrvl 2 0) (mkIntrvl 2 0)    `shouldBe` Just (mkIntrvl 2 0)
       it "intersection of (0, 2) (-1, 1) should be Just (0, 1)" $
-        intersect (mkIntrvl (0::Int) (2::Int)) (mkIntrvl (-1::Int) (1::Int)) 
-          `shouldBe` Just (mkIntrvl 0 1)
+        intersect (mkIntrvl 2 0) (mkIntrvl 2 (-1)) `shouldBe` Just (mkIntrvl 1 0)
       it "intersection of (0, 3) (1, 2) should be Just (1, 2)" $
-        intersect (mkIntrvl (0::Int) (3::Int)) (mkIntrvl (1::Int) (2::Int)) 
-          `shouldBe` Just (mkIntrvl 1 2)
+        intersect (mkIntrvl 3 0) (mkIntrvl 1 1)    `shouldBe` Just (mkIntrvl 1 1)
 
   describe "Interval Algebra Axioms for meets properties" $
     modifyMaxSuccess (*10) $

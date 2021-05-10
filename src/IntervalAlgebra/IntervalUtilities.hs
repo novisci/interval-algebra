@@ -8,6 +8,8 @@ Copyright   : (c) NoviSci, Inc 2020
 License     : BSD3
 Maintainer  : bsaul@novisci.com
 Stability   : experimental
+
+In the examples below, @iv@ is a synonym for 'beginerval' used to save space.
 -}
 
 module IntervalAlgebra.IntervalUtilities (
@@ -49,38 +51,35 @@ module IntervalAlgebra.IntervalUtilities (
 
 ) where
 
-import GHC.Base
-    ( otherwise, ($), (.), (<*>), seq, not
-    , Semigroup((<>))
-    , Functor(fmap)
-    , Applicative(pure)
-    , Int, Bool, Ord)
-import GHC.Num ()
-import Data.Tuple ( fst )
-import Data.Foldable ( Foldable(null, foldl', toList), all, any )
-import Data.Monoid ( (<>), Monoid(mempty) )
-import IntervalAlgebra
-    ( Interval
-    , Intervallic(..)
-    , IntervalAlgebraic(..)
-    , IntervalCombinable(..)
-    , IntervalSizeable(..)
-    , IntervalRelation(..)
-    , ComparativePredicateOf
-    , unsafeInterval
-    , beginerval
-    , enderval)
-import Data.Maybe (mapMaybe, catMaybes, fromMaybe, Maybe(..))
-import Data.List ( (++), map )
-import Safe (headMay, lastMay, initSafe, tailSafe)
-import Witherable ( Filterable(filter) )
+import GHC.Base         ( otherwise, ($), (.), (<*>), seq, not
+                        , Semigroup((<>))
+                        , Functor(fmap)
+                        , Applicative(pure)
+                        , Int, Bool, Ord)
+import GHC.Num          ()
+import Data.Tuple       ( fst )
+import Data.Foldable    ( Foldable(null, foldl', toList), all, any )
+import Data.Monoid      ( (<>), Monoid(mempty) )
+import Data.Maybe       (mapMaybe, catMaybes, fromMaybe, Maybe(..))
+import Data.List        ( (++), map )
+import IntervalAlgebra  ( Interval
+                        , Intervallic(..)
+                        , IntervalAlgebraic(..)
+                        , IntervalCombinable(..)
+                        , IntervalSizeable(..)
+                        , IntervalRelation(..)
+                        , ComparativePredicateOf
+                        , beginerval
+                        , enderval)
+import Safe             ( headMay, lastMay, initSafe, tailSafe)
+import Witherable       ( Filterable(filter) )
 
 -------------------------------------------------
 -- Unexported utilties used in functions below --
 -------------------------------------------------
 
-intInt :: Int -> Int -> Interval Int
-intInt = unsafeInterval
+iv :: Int -> Int -> Interval Int
+iv = beginerval
 
 -- Fold over consecutive pairs of foldable structure and collect the results in 
 -- a monoidal structure.
@@ -129,7 +128,7 @@ instance (IntervalCombinable Interval a) => Semigroup (Box (Interval a)) where
 --   are combined into one interval. *To work properly, the input should 
 --   be sorted*. See 'combineIntervals'' for a version that works only on lists.
 --
--- >>> combineIntervals [intInt 0 10, intInt 2 7, intInt 10 12, intInt 13 15]
+-- >>> combineIntervals [iv 10 0, iv 5 2, iv 2 10, iv 2 13]
 -- [(0, 12),(13, 15)]
 combineIntervals :: (IntervalCombinable Interval a
          , Applicative f
@@ -143,7 +142,7 @@ combineIntervals x = liftListToFoldable (combineIntervals' $ toList x)
 --   are combined into one interval. *To work properly, the input list should 
 --   be sorted*. 
 --
--- >>> combineIntervals' [intInt 0 10, intInt 2 7, intInt 10 12, intInt 13 15]
+-- >>> combineIntervals' [iv 10 0, iv 5 2, iv 2 10, iv 2 13]
 -- [(0, 12),(13, 15)]
 combineIntervals' :: (IntervalCombinable Interval a) => [Interval a] -> [Interval a]
 combineIntervals' l = unBox $ foldl' (<>) (Box []) (map (\z -> Box [z]) l)
@@ -152,7 +151,7 @@ combineIntervals' l = unBox $ foldl' (<>) (Box []) (map (\z -> Box [z]) l)
 --   between intervals in the input. *To work properly, the input should be
 --   sorted*. See 'gaps'' for a version that returns a list.
 --
--- >>> gaps [intInt 1 5, intInt 8 12, intInt 11 14]
+-- >>> gaps [iv 4 1, iv 4 8, iv 3 11]
 -- [(5, 8)]
 gaps :: (IntervalCombinable Interval a
          , Applicative f
@@ -176,7 +175,7 @@ gaps' x = catMaybes (foldlAccume (><) x)
 
 -- | Returns the 'duration' of each 'Intervallic i a' in the 'Functor' @f@.
 --
--- >>> durations [intInt 1 10, intInt 2 12, intInt 5 6]
+-- >>> durations [iv 9 1, iv 10 2, iv 1 5]
 -- [9,10,1]
 durations :: (Functor f, Intervallic i a, IntervalSizeable a b)=>
        f (i a)
@@ -185,10 +184,10 @@ durations = fmap duration
 
 -- | In the case that x y are not disjoint, clips y to the extent of x.
 -- 
--- >>> clip (intInt 0 5) (intInt 3 6)
+-- >>> clip (iv 5 0) (iv 3 3)
 -- Just (3, 5)
 --
--- >>> clip (intInt 0 3) (intInt 4 6)
+-- >>> clip (iv 3 0) (iv 2 4)
 -- Nothing
 clip :: (IntervalAlgebraic Interval a, IntervalSizeable a b)=>
        Interval a
@@ -207,7 +206,7 @@ clip x y
 --   of intervals. This the specialized form of 'relations'' which can return
 --   any 'Applicative', 'Monoid' structure.
 --
--- >>> relations [intInt 0 1, intInt 1 2] 
+-- >>> relations [iv 1 0, iv 1 1] 
 -- [Meets]
 relations :: (IntervalAlgebraic i a, Foldable f)=>
        f (i a)
@@ -216,8 +215,9 @@ relations = relations'
 
 -- | A generic form of 'relations' which can output any 'Applicative' and 
 --   'Monoid' structure. 
--- >>> (relations' [intInt 0 1, intInt 1 2]) :: [IntervalRelation Int]
+-- >>> (relations' [iv 1 0, iv 1 1]) :: [IntervalRelation (Interval Int)]
 -- [Meets]
+--
 relations' :: ( IntervalAlgebraic i a
               , Foldable f
               , Applicative m
@@ -231,7 +231,7 @@ relations' = foldlAccume relate
 -- to @i@, so that all the intervals are 'within' @i@. If there are no gaps, then
 -- 'Nothing' is returned.
 --
--- >>> gapsWithin (intInt 1 10) [intInt 0 5, intInt 7 9, intInt 12 15]
+-- >>> gapsWithin (iv 9 1) [iv 5 0, iv 2 7, iv 3 12]
 -- Just [(5, 7),(9, 10)]
 --
 gapsWithin :: ( Applicative f
@@ -268,12 +268,12 @@ nothingIf quantifier predicate x = if quantifier predicate x then Nothing else J
 -- For example, the following returns 'Nothing' because none of the intervals
 -- in the input list 'starts' (3, 5).
 --
--- >>> nothingIfNone (starts (intInt 3 5)) [intInt 3 4, intInt 5 6]
+-- >>> nothingIfNone (starts (iv 2 3)) [iv 1 3, iv 1 5]
 -- Nothing
 --
 -- In the following, (3, 5) 'starts' (3, 6), so 'Just' the input is returned.
 --
--- >>> nothingIfNone (starts (intInt 3 5)) [intInt 3 6, intInt 5 6]
+-- >>> nothingIfNone (starts (iv 2 3)) [iv 3 3, iv 1 5]
 -- Just [(3, 6),(5, 6)]
 --
 nothingIfNone :: (Monoid (f (i a)), Foldable f, Filterable f, IntervalAlgebraic i a)=>

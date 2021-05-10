@@ -1,20 +1,22 @@
 module IntervalAlgebra.PairedIntervalSpec (spec) where
 
-import Test.Hspec ( it, describe, Spec, shouldBe )
-import IntervalAlgebra.PairedInterval
-import IntervalAlgebra
+import Test.Hspec                       ( it, describe, Spec, shouldBe )
+import IntervalAlgebra.PairedInterval   ( PairedInterval, mkPairedInterval )
+import IntervalAlgebra                  ( beginerval
+                                        , IntervalSizeable(duration)
+                                        , IntervalAlgebraic(equals, before) )
 
 type TestPair = PairedInterval String Int
 
 mkTestPr :: String -> Int -> Int -> TestPair
-mkTestPr x i j = mkPairedInterval x (unsafeInterval i j)
+mkTestPr x i j = mkPairedInterval x (beginerval i j)
 
 t1 :: TestPair
-t1 = mkTestPr "hi" 0 5
+t1 = mkTestPr "hi" 5 0
 t2 :: TestPair
-t2 = mkTestPr "bye" 6 10
+t2 = mkTestPr "bye" 4 6
 t3 :: TestPair
-t3 = mkTestPr "hello" 0 5
+t3 = mkTestPr "hello" 5 0
 
 spec :: Spec
 spec = do
