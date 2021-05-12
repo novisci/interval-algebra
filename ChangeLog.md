@@ -1,5 +1,9 @@
 # Changelog for interval-algebra
 
+## 0.7.1
+
+* Adds `Safe` language extension to all library modules.
+
 ## 0.7.0
 
 * Adds a `Bifunctor` instance for `PairedInterval`s.

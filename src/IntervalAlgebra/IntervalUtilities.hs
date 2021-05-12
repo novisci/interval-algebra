@@ -9,6 +9,7 @@ Stability   : experimental
 In the examples below, @iv@ is a synonym for 'beginerval' used to save space.
 -}
 
+{-# LANGUAGE Safe #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -58,7 +59,7 @@ module IntervalAlgebra.IntervalUtilities (
 
 ) where
 
-import GHC.Base         ( (<*>), seq)
+import Prelude          ( (<*>), seq)
 import GHC.Show         ( Show )
 import GHC.Num          ( )
 import GHC.Int          ( Int ) 
