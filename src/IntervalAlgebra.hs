@@ -61,7 +61,6 @@ module IntervalAlgebra(
     -- * Types
     , Interval
     , parseInterval
-    , unsafeInterval
     , IntervalRelation(..)
     , ComparativePredicateOf
 
@@ -89,9 +88,8 @@ import Data.Ord( Ord(..), Ordering(..))
 import GHC.Base (Applicative(pure))
 
 {- | An @'Interval' a@ is a pair of @a@s \( (x, y) \text{ where } x < y\). The
-@'Intervallic'@ class provides a safe @'parseInterval'@ function that returns a 
-@'Left'@ error if \(y < x\) and 'unsafeInterval' as constructor for creating an
-interval that may not be valid. 
+@'parseInterval'@ function that returns @'Left'@ error if \(y < x\) and
+@'Right' 'Interval'@ otherwise. 
 -}
 newtype Interval a = Interval (a, a) deriving (Eq)
     
@@ -101,14 +99,6 @@ parseInterval x y
     -- TODO: create more general framework for error handling
     |  y < x    = Left  $ show y ++ "<" ++ show x
     | otherwise = Right $ Interval (x, y)
-
-{- | Create a new @'Interval' a@. This function is __not__ safe as it does 
-    not enforce that \(x < y\). Use with caution. It is meant to be helper 
-    function in early prototyping of this package. This function may be 
-    deprecated in future releases.
--}
-unsafeInterval :: a -> a -> Interval a
-unsafeInterval x y = Interval (x, y)
 
 intervalBegin :: Interval a -> a
 intervalBegin (Interval x) = fst x
