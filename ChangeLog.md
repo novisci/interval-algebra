@@ -2,6 +2,13 @@
 
 ## 0.7.0
 
+* Adds the two new functions to `IntervalUtilites`:
+  * `foldMeetingSafe`: Folds over a list of Paired Intervals and in the case that the 'getPairData' is equal between two sequential meeting intervals, these two intervals are combined into one. This function is "safe" in the sense that if the input is invalid and contains any sequential pairs of intervals with an `IntervalRelation`, other than `Meets`, then the function returns an empty list.
+  * `formMeetingSequence`: Converts an ordered sequence of `PairedInterval b a` that may have any interval relation
+('before', 'starts', etc) into a sequence of sequentially meeting `PairedInterval b a`.  That is, a sequence where one the end of one interval meets the beginning of the subsequent interval. The `getPairData` of the input `PairedInterval`s are
+combined using the Monoid `<>` function, hence the pair data must be a `Monoid` instance.
+* Renames `pairData` accessor function to `getPairData` in PairedInterval module.
+
 ## 0.6.3
 
 * Extends the `IntervalCombinable` class to operate on general `Interval` containers.
