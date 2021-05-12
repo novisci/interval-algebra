@@ -8,6 +8,7 @@
 ('before', 'starts', etc) into a sequence of sequentially meeting `PairedInterval b a`.  That is, a sequence where one the end of one interval meets the beginning of the subsequent interval. The `getPairData` of the input `PairedInterval`s are
 combined using the Monoid `<>` function, hence the pair data must be a `Monoid` instance.
 * Renames `pairData` accessor function to `getPairData` in PairedInterval module.
+* Removes the `unsafeInterval` function.
 
 ## 0.6.3
 
