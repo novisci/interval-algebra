@@ -7,6 +7,7 @@ Maintainer  : bsaul@novisci.com
 Stability   : experimental
 -}
 {-# OPTIONS_HADDOCK prune #-}
+{-# LANGUAGE Safe #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}

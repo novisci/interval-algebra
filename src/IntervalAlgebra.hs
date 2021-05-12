@@ -40,6 +40,7 @@ then the 'end's.
 This module is under development and the API may change in the future.
 -}
 
+{-# LANGUAGE Safe #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
@@ -85,7 +86,7 @@ import Data.Time as DT ( Day, addDays, diffDays, addGregorianYearsClip, calendar
 import Data.Semigroup ( Semigroup((<>)) )
 import Data.Set(Set, fromList, difference, intersection, union, map, toList)
 import Data.Ord( Ord(..), Ordering(..))
-import GHC.Base (Applicative(pure))
+import Control.Applicative (Applicative(pure))
 
 {- | An @'Interval' a@ is a pair of @a@s \( (x, y) \text{ where } x < y\). The
 @'parseInterval'@ function that returns @'Left'@ error if \(y < x\) and

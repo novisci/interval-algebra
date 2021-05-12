@@ -1,5 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-|
 Module      : Generate arbitrary Intervals
 Description : Functions for generating arbitrary intervals
@@ -8,14 +6,20 @@ License     : BSD3
 Maintainer  : bsaul@novisci.com
 Stability   : experimental
 -}
+{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE Safe #-}
+
 module IntervalAlgebra.Arbitrary() where
 
-import Test.QuickCheck ( Arbitrary(arbitrary, shrink) )
-import GHC.Base(Int, (.), liftM2 )
-import Control.Applicative((<$>))
-import GHC.Num ( Num((+), negate) )
-import IntervalAlgebra (Interval, beginerval)
-import Data.Time as DT ( Day(ModifiedJulianDay), toModifiedJulianDay)
+import Test.QuickCheck      ( Arbitrary(arbitrary, shrink) )
+import GHC.Int              ( Int )
+import GHC.Num              ( Num((+), negate) )
+import Control.Applicative  ( (<$>) )
+import Control.Monad        ( liftM2 )
+import IntervalAlgebra      (Interval, beginerval)
+import Data.Function        ( (.) )
+import Data.Time as DT      ( Day(ModifiedJulianDay), toModifiedJulianDay)
 
 instance Arbitrary (Interval Int) where
   arbitrary = liftM2 beginerval arbitrary arbitrary
