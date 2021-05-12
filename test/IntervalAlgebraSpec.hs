@@ -2,9 +2,10 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MonoLocalBinds #-}
 module IntervalAlgebraSpec (spec) where
 
-import Test.Hspec                 ( hspec, describe, it, Spec, shouldBe )
+import Test.Hspec                 ( hspec, describe, it, Spec, shouldBe, pending )
 import Test.Hspec.QuickCheck      ( modifyMaxSuccess, modifyMaxDiscardRatio )
 import Test.QuickCheck            ( (===)
                                   , (==>)
@@ -22,7 +23,7 @@ import IntervalAlgebra as IA      ( enderval
                                   , expandl
                                   , expand
                                   , parseInterval
-                                  , IntervalCombinable(intersect, (.+.))
+                                  , IntervalCombinable((.+.))
                                   , IntervalSizeable(moment, diff)
                                   , IntervalAlgebraic(  equals, starts
                                                       , finishes, finishedBy
@@ -492,23 +493,8 @@ spec = do
          property (prop_compose @Int)
 
   describe "IntervalCombinable tests" $
-    do
-      it "intersection of (0, 2) (2, 4) should be Nothing" $
-        intersect (mkIntrvl 2 0) (mkIntrvl 2 2)    `shouldBe` Nothing
-      it "intersection of (0, 2) (3, 4) should be Nothing" $
-        intersect (mkIntrvl 2 0) (mkIntrvl 1 3)    `shouldBe` Nothing
-      it "intersection of (2, 4) (0, 2) should be Nothing" $
-        intersect (mkIntrvl 2 2) (mkIntrvl 2 0)    `shouldBe` Nothing
-      it "intersection of (0, 2) (1, 3) should be Just (1, 2)" $
-        intersect (mkIntrvl 2 0) (mkIntrvl 2 1)    `shouldBe` Just (mkIntrvl 1 1)
-      it "intersection of (0, 2) (-1, 3) should be Just (0, 2)" $
-        intersect (mkIntrvl 2 0) (mkIntrvl 4 (-1)) `shouldBe` Just (mkIntrvl 2 0)
-      it "intersection of (0, 2) (0, 2) should be Just (0, 2)" $
-        intersect (mkIntrvl 2 0) (mkIntrvl 2 0)    `shouldBe` Just (mkIntrvl 2 0)
-      it "intersection of (0, 2) (-1, 1) should be Just (0, 1)" $
-        intersect (mkIntrvl 2 0) (mkIntrvl 2 (-1)) `shouldBe` Just (mkIntrvl 1 0)
-      it "intersection of (0, 3) (1, 2) should be Just (1, 2)" $
-        intersect (mkIntrvl 3 0) (mkIntrvl 1 1)    `shouldBe` Just (mkIntrvl 1 1)
+      do
+        it "" pending
 
   describe "Interval Algebra Axioms for meets properties" $
     modifyMaxSuccess (*10) $
@@ -550,4 +536,3 @@ spec = do
       modifyMaxSuccess (*100) $
     do
       it "exactly one relation must be true" $ property (prop_exclusiveRelations @Int)
-
