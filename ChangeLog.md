@@ -2,6 +2,7 @@
 
 ## 0.7.0
 
+* Adds a `Bifunctor` instance for `PairedInterval`s.
 * Adds the two new functions to `IntervalUtilites`:
   * `foldMeetingSafe`: Folds over a list of Paired Intervals and in the case that the 'getPairData' is equal between two sequential meeting intervals, these two intervals are combined into one. This function is "safe" in the sense that if the input is invalid and contains any sequential pairs of intervals with an `IntervalRelation`, other than `Meets`, then the function returns an empty list.
   * `formMeetingSequence`: Converts an ordered sequence of `PairedInterval b a` that may have any interval relation

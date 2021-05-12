@@ -22,15 +22,14 @@ module IntervalAlgebra.PairedInterval (
     -- , makePairPredicate
 ) where
 
-import IntervalAlgebra
-    ( Interval
-    , Intervallic(..)
-    , IntervalAlgebraic(..)
-    , IntervalCombinable(..)
-    , ComparativePredicateOf
-    , extenterval )
--- import IntervalAlgebra.IntervalUtilities(compareIntervals, filterOverlaps)
-import Witherable ( Filterable(filter) )
+import IntervalAlgebra  ( Interval
+                        , Intervallic(..)
+                        , IntervalAlgebraic(..)
+                        , IntervalCombinable(..)
+                        , ComparativePredicateOf
+                        , extenterval )
+import Witherable       ( Filterable(filter) )
+import Data.Bifunctor   ( Bifunctor(bimap) )
 
 -- | An @Interval a@ paired with some other data of type @b@.
 newtype PairedInterval b a = PairedInterval (Interval a, b)
@@ -39,6 +38,9 @@ newtype PairedInterval b a = PairedInterval (Interval a, b)
 instance (Ord a, Show a) => Intervallic (PairedInterval b) a where
     getInterval (PairedInterval x)        = fst x
     setInterval (PairedInterval (x, y)) i = PairedInterval (i, y)
+
+instance Bifunctor PairedInterval where
+    bimap f g (PairedInterval (x, y)) = PairedInterval (fmap g x, f y)
 
 -- | Defines A total ordering on 'PairedInterval b a' based on the 'Interval a'
 --   part.
@@ -69,6 +71,7 @@ mkPairedInterval d i = PairedInterval (i, d)
 getPairData :: PairedInterval b a -> b
 getPairData (PairedInterval (_, y)) = y
 
+-- | Tests for equality of the data in a @PairedInterval@.
 equalPairData :: (Eq b) => ComparativePredicateOf (PairedInterval b a)
 equalPairData x y = getPairData x == getPairData y
 
@@ -76,9 +79,7 @@ equalPairData x y = getPairData x == getPairData y
 intervals :: (Ord a, Show a) => [PairedInterval b a] -> [Interval a]
 intervals = map getInterval
 
-{-| 
--}
-
+-- Empty is used to trivially lift an @Interval a@ into a @PairedInterval@
 data Empty = Empty deriving (Eq, Ord, Show)
 instance Semigroup Empty where 
     x <> y = Empty
@@ -86,9 +87,13 @@ instance Monoid Empty where
     mempty = Empty
     mappend x y = x <> y
 
+-- | Lifts an @Interval a@ into a @PairedInterval Empty a@, where @Empty@ is a
+--   trivial type that contains no data.
 toTrivialPair :: Interval a -> PairedInterval Empty a
 toTrivialPair = mkPairedInterval Empty
 
+-- | Lifts a @Functor@ containing @Interval a@(s) into a @Functor@ containing
+--   @PairedInterval Empty a@(s).
 trivialize :: Functor f => f (Interval a) -> f (PairedInterval Empty a)
 trivialize = fmap toTrivialPair
 
