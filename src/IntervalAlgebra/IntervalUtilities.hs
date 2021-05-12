@@ -523,7 +523,8 @@ filterEnclosedBy = filterMaker enclosedBy
 --   invalid and contains any sequential pairs of intervals with an @IntervalRelation@,
 --   other than 'Meets', then the function returns an empty list. 
 foldMeetingSafe :: ( IntervalAlgebraic (PairedInterval b) a, Eq b) =>
-           [ PairedInterval b a ] -- ^ Be sure this only contains intervals that sequentially 'meet'.
+           [ PairedInterval b a ] -- ^ Be sure this only contains intervals 
+                                  --   that sequentially 'meets'.
         -> [ PairedInterval b a ]
 foldMeetingSafe l = maybe [] (getMeeting . foldMeeting) (parseMeeting l)
 

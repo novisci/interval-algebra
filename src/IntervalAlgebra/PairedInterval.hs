@@ -6,13 +6,14 @@ License     : BSD3
 Maintainer  : bsaul@novisci.com
 Stability   : experimental
 -}
-
+{-# OPTIONS_HADDOCK prune #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 module IntervalAlgebra.PairedInterval (
       PairedInterval
+    , Empty
     , mkPairedInterval
     , getPairData
     , intervals
@@ -79,7 +80,7 @@ equalPairData x y = getPairData x == getPairData y
 intervals :: (Ord a, Show a) => [PairedInterval b a] -> [Interval a]
 intervals = map getInterval
 
--- Empty is used to trivially lift an @Interval a@ into a @PairedInterval@
+-- | Empty is used to trivially lift an @Interval a@ into a @PairedInterval@.
 data Empty = Empty deriving (Eq, Ord, Show)
 instance Semigroup Empty where 
     x <> y = Empty
