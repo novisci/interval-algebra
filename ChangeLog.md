@@ -1,5 +1,11 @@
 # Changelog for interval-algebra
 
+## 0.8.0
+
+* Removes the `IntervalAlgebraic` typeclass. The functions that were in this class are now regular functions exported in the main module.
+* Generalizes all interval predicate functions to work on (potentially) two different `Intervallic` containers.
+* Cleans up and reorganizes documentation.
+
 ## 0.7.1
 
 * Adds `Safe` language extension to all library modules.

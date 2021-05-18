@@ -23,17 +23,27 @@ import IntervalAlgebra as IA      ( enderval
                                   , expandl
                                   , expand
                                   , parseInterval
+                                  , before
+                                  , meets
+                                  , overlaps
+                                  , finishedBy
+                                  , contains
+                                  , starts
+                                  , equals
+                                  , startedBy
+                                  , during
+                                  , finishes
+                                  , overlappedBy
+                                  , metBy
+                                  , after
+                                  , relate
+                                  , compose
+                                  , disjoint
+                                  , (<|>)
                                   , IntervalCombinable((.+.))
                                   , IntervalSizeable(moment, diff)
-                                  , IntervalAlgebraic(  equals, starts
-                                                      , finishes, finishedBy
-                                                      , overlaps, during
-                                                      , contains, compose
-                                                      , relate, startedBy
-                                                      , overlappedBy, disjoint
-                                                      , before, after, meets
-                                                      , metBy, (<|>))
-                                  , ComparativePredicateOf
+                                  , ComparativePredicateOf1
+                                  , ComparativePredicateOf2
                                   , Intervallic(begin, end)
                                   , Interval )
 
@@ -93,7 +103,7 @@ m1set x a b c = M1set p1 p2 p3 p4
    \forall i,j,k,l s.t. (i:j & i:k & l:j) \implies l:k
  \] 
 -}
-prop_IAaxiomM1 :: (IntervalAlgebraic Interval a) => M1set a -> Property
+prop_IAaxiomM1 :: (Intervallic Interval a) => M1set a -> Property
 prop_IAaxiomM1 x =
   (i `meets` j && i `meets` k && l `meets` j) ==> (l `meets` k)
   where i = m11 x
@@ -157,7 +167,7 @@ That is,
  \] 
 -}
 
-prop_IAaxiomM2 :: (IntervalAlgebraic Interval a, IntervalSizeable a b) => M2set a -> Property
+prop_IAaxiomM2 :: (Intervallic Interval a, IntervalSizeable a b) => M2set a -> Property
 prop_IAaxiomM2 x =
   (i `meets` j && k `meets` l) ==>
     (i `meets` l)  `xor`
@@ -187,7 +197,7 @@ prop_IAaxiomM2_Day = prop_IAaxiomM2
  \] 
 -}
 
-prop_IAaxiomML1 :: (IntervalAlgebraic Interval a) => Interval a -> Property
+prop_IAaxiomML1 :: (Intervallic Interval a) => Interval a -> Property
 prop_IAaxiomML1 x = not (x `meets` x) === True
 
 prop_IAaxiomML1_Int :: Interval Int -> Property
@@ -207,7 +217,7 @@ If i meets j then j does not meet i.
 \] 
 -}
 
-prop_IAaxiomML2 :: (IntervalAlgebraic Interval a)=> M2set a -> Property
+prop_IAaxiomML2 :: (Intervallic Interval a)=> M2set a -> Property
 prop_IAaxiomML2 x =
   (i `meets` j) ==> not (j `meets` i)
   where i = m21 x
@@ -230,7 +240,7 @@ Time does not start or stop:
 \] 
 -}
 
-prop_IAaxiomM3 :: (IntervalAlgebraic Interval a, IntervalSizeable a b)=>
+prop_IAaxiomM3 :: (Intervallic Interval a, IntervalSizeable a b)=>
       b -> Interval a -> Property
 prop_IAaxiomM3 b i =
    (j `meets` i && i `meets` k) === True
@@ -254,7 +264,7 @@ If two meets are separated by intervals, then this sequence is a longer interval
 \] 
 -}
 
-prop_IAaxiomM4 :: (IntervalAlgebraic Interval a, IntervalSizeable a b)=>
+prop_IAaxiomM4 :: (Intervallic Interval a, IntervalSizeable a b)=>
      b -> M2set a -> Property
 prop_IAaxiomM4 b x =
    ((m `meets` i && i `meets` j && j `meets` n) &&
@@ -309,7 +319,7 @@ m5set x a b = M5set p1 p2
         ps = end (expandr (makePos b) x) -- creating l by shifting and expanding i
 
 
-prop_IAaxiomM5 :: (IntervalAlgebraic Interval a, IntervalSizeable a b) => 
+prop_IAaxiomM5 :: (Intervallic Interval a, IntervalSizeable a b) => 
     M5set a -> Property
 prop_IAaxiomM5 x =
    ((i `meets` j && j `meets` l) &&
@@ -358,7 +368,7 @@ prop_IAaxiomM4_1_Day = prop_IAaxiomM4_1 1
 * Interval Relation property testing 
 -}
 
-class ( IntervalAlgebraic Interval a
+class ( Intervallic Interval a
       , IntervalCombinable Interval a
       , IntervalSizeable a b
       ) => IntervalRelationProperties a b where
@@ -403,7 +413,7 @@ class ( IntervalAlgebraic Interval a
 
 instance IntervalRelationProperties Int Int
 
-allIArelations:: IntervalAlgebraic Interval a => [ComparativePredicateOf (Interval a)]
+allIArelations:: Intervallic Interval a => [ComparativePredicateOf1 (Interval a)]
 allIArelations =   [  IA.equals
                     , IA.meets
                     , IA.metBy
@@ -418,14 +428,14 @@ allIArelations =   [  IA.equals
                     , IA.during
                     , IA.contains ]
 
-prop_expandl_end ::(IntervalAlgebraic Interval a, IntervalSizeable a b)=>
+prop_expandl_end ::(Intervallic Interval a, IntervalSizeable a b)=>
        b
     -> Interval a
     -> Property
 prop_expandl_end d i = end (expandl d i) === end i
 
 
-prop_expandr_begin ::(IntervalAlgebraic Interval a, IntervalSizeable a b)=>
+prop_expandr_begin ::(Intervallic Interval a, IntervalSizeable a b)=>
        b
     -> Interval a
     -> Property
@@ -433,7 +443,7 @@ prop_expandr_begin d i = begin (expandr d i) === begin i
 
 -- | The relation between x and z should be an element of the set of the
 --   composed relations between x y and between y z.
-prop_compose :: IntervalAlgebraic Interval a =>
+prop_compose :: Intervallic Interval a =>
        Interval a
     -> Interval a
     -> Interval a
@@ -474,7 +484,7 @@ spec = do
       it "enderval -2 10 should be Interval (9, 10)" $
         Right (enderval (-2::Int) 10) `shouldBe` parseInterval (9::Int) (10::Int)
 
-  describe "IntervalAlgebraic tests" $
+  describe "Intervallic tests" $
      modifyMaxSuccess (*10000) $
      do
       it "(startedBy <|> overlappedBy) Interval (0, 9) Interval (-1, 4) is True" $

@@ -15,20 +15,19 @@ Stability   : experimental
 module IntervalAlgebra.PairedInterval (
       PairedInterval
     , Empty
-    , mkPairedInterval
+    , makePairedInterval
     , getPairData
     , intervals
     , equalPairData
     , toTrivialPair
     , trivialize
-    -- , makePairPredicate
 ) where
 
 import IntervalAlgebra  ( Interval
                         , Intervallic(..)
-                        , IntervalAlgebraic(..)
+                        , before
                         , IntervalCombinable(..)
-                        , ComparativePredicateOf
+                        , ComparativePredicateOf1
                         , extenterval )
 import Witherable       ( Filterable(filter) )
 import Data.Bifunctor   ( Bifunctor(bimap) )
@@ -50,31 +49,29 @@ instance (Eq a, Eq b, Ord a, Show a) => Ord (PairedInterval b a) where
   (<=) x y = getInterval x <= getInterval y
   (<) x y  = getInterval x <  getInterval y
 
-instance (Eq b, Show a, Ord a) => IntervalAlgebraic (PairedInterval b) a 
-
 instance (Show b, Show a, Ord a) => Show (PairedInterval b a) where
     show x = "{" ++ show (getInterval x) ++ ", " ++ show (getPairData x) ++ "}"
 
 instance (Ord a, Show a, Eq b, Monoid b) => 
           IntervalCombinable (PairedInterval b) a where
-    (><) x y = fmap (mkPairedInterval mempty) (getInterval x >< getInterval y)
+    (><) x y = fmap (makePairedInterval mempty) (getInterval x >< getInterval y)
 
     (<+>) x y
         | x `before` y = pure x <> pure y
-        | otherwise    = pure $ mkPairedInterval (getPairData x <> getPairData y)
+        | otherwise    = pure $ makePairedInterval (getPairData x <> getPairData y)
                                                  (extenterval x y) 
 
 
 -- | Make a paired interval. 
-mkPairedInterval :: b -> Interval a -> PairedInterval b a
-mkPairedInterval d i = PairedInterval (i, d)
+makePairedInterval :: b -> Interval a -> PairedInterval b a
+makePairedInterval d i = PairedInterval (i, d)
 
 -- | Gets the data (i.e. non-interval) part of a @PairedInterval@.
 getPairData :: PairedInterval b a -> b
 getPairData (PairedInterval (_, y)) = y
 
 -- | Tests for equality of the data in a @PairedInterval@.
-equalPairData :: (Eq b) => ComparativePredicateOf (PairedInterval b a)
+equalPairData :: (Eq b) => ComparativePredicateOf1 (PairedInterval b a)
 equalPairData x y = getPairData x == getPairData y
 
 -- | Gets the intervals from a list of paired intervals.
@@ -92,20 +89,9 @@ instance Monoid Empty where
 -- | Lifts an @Interval a@ into a @PairedInterval Empty a@, where @Empty@ is a
 --   trivial type that contains no data.
 toTrivialPair :: Interval a -> PairedInterval Empty a
-toTrivialPair = mkPairedInterval Empty
+toTrivialPair = makePairedInterval Empty
 
 -- | Lifts a @Functor@ containing @Interval a@(s) into a @Functor@ containing
 --   @PairedInterval Empty a@(s).
 trivialize :: Functor f => f (Interval a) -> f (PairedInterval Empty a)
 trivialize = fmap toTrivialPair
-
--- | Takes a predicate of intervals and a predicate on the data part of a 
---   paired interval to create a single predicate such that both input
---   predicates should hold.
--- makePairPredicate :: (IntervalAlgebraic (PairedInterval b) a) =>
---        ComparativePredicateOf (Interval a)
---     -> ComparativePredicateOf b
---     -> ComparativePredicateOf (PairedInterval b a)
--- makePairPredicate intervalPredicate dataPredicate x y =
---          compareIntervals intervalPredicate x y &&
---          dataPredicate (getPairData x) (getPairData y)

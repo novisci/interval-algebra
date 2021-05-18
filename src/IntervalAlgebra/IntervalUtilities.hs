@@ -16,27 +16,27 @@ In the examples below, @iv@ is a synonym for 'beginerval' used to save space.
 {-# LANGUAGE MonoLocalBinds #-}
 
 module IntervalAlgebra.IntervalUtilities (
-      relations
-    , relations'
-    , intersect
-    , combineIntervals
+
+    -- * Fold over sequential intervals
+      combineIntervals
     , combineIntervals'
     , gaps
     , gaps'
-    , durations
-    , clip
     , gapsWithin
+
+    -- * Operations on Meeting sequences of paired intervals
+    , foldMeetingSafe
+    , formMeetingSequence
+
+    -- * Withering functions
+
+    -- ** Clear containers based on predicate
     , nothingIf
     , nothingIfNone
     , nothingIfAny
     , nothingIfAll
 
-    -- * Operations on Meeting sequences of intervals
-    , foldMeetingSafe
-    , formMeetingSequence
-
-    -- * Filtering functions
-    , compareIntervals
+    -- ** Filter containers based on predicate
     , filterBefore
     , filterMeets
     , filterOverlaps
@@ -57,6 +57,12 @@ module IntervalAlgebra.IntervalUtilities (
     , filterEnclose
     , filterEnclosedBy
 
+    -- * Misc utilities
+    , relations
+    , relations'
+    , intersect
+    , clip
+    , durations
 ) where
 
 import Prelude          ( (<*>), seq)
@@ -78,21 +84,43 @@ import Data.Semigroup   ( Semigroup((<>)) )
 import Data.Tuple       ( fst )
 import Safe             ( headMay, lastMay, initSafe, tailSafe)
 import Witherable       ( Filterable(filter) )
-import IntervalAlgebra  ( Interval
-                        , Intervallic(..)
-                        , IntervalAlgebraic(..)
-                        , IntervalCombinable(..)
-                        , IntervalSizeable(..)
-                        , IntervalRelation(..)
-                        , ComparativePredicateOf
-                        , beginerval
-                        , enderval
-                        , extenterval )
+import IntervalAlgebra  ( (<|>),
+                          after,
+                          before,
+                          beginerval,
+                          concur,
+                          contains,
+                          disjoint,
+                          during,
+                          enclose,
+                          enclosedBy,
+                          enderval,
+                          equals,
+                          extenterval,
+                          finishedBy,
+                          finishes,
+                          meets,
+                          metBy,
+                          notDisjoint,
+                          overlappedBy,
+                          overlaps,
+                          relate,
+                          startedBy,
+                          starts,
+                          within,
+                          ComparativePredicateOf1,
+                          ComparativePredicateOf2,
+                          Interval,
+                          IntervalCombinable((<+>), (><)),
+                          IntervalRelation(Meets),
+                          IntervalSizeable(diff, duration),
+                          Intervallic(..) )
 import IntervalAlgebra.PairedInterval
                         ( PairedInterval
-                        , mkPairedInterval
+                        , makePairedInterval
                         , getPairData
                         , equalPairData )
+
 -------------------------------------------------
 -- Unexported utilties used in functions below --
 -------------------------------------------------
@@ -101,6 +129,7 @@ import IntervalAlgebra.PairedInterval
 iv :: Int -> Int -> Interval Int
 iv = beginerval
 
+-- TODO: does this function and applyAccume reinvent an existing foldable function?
 -- Fold over consecutive pairs of foldable structure and collect the results in 
 -- a monoidal structure.
 foldlAccume :: (Foldable f, Applicative m, Monoid (m a))=>
@@ -141,9 +170,9 @@ listCombiner f x y = initSafe x ++ f (lastMay x) (headMay y) ++ tailSafe y
 --
 -- >>> relations [iv 1 0, iv 1 1] 
 -- [Meets]
-relations :: (IntervalAlgebraic i a, Foldable f)=>
+relations :: (Foldable f, Intervallic i a )=>
        f (i a)
-    -> [IntervalRelation (i a)]
+    -> [IntervalRelation]
 relations = relations'
 
 -- | A generic form of 'relations' which can output any 'Applicative' and 
@@ -151,17 +180,20 @@ relations = relations'
 -- >>> (relations' [iv 1 0, iv 1 1]) :: [IntervalRelation (Interval Int)]
 -- [Meets]
 --
-relations' :: ( IntervalAlgebraic i a
-              , Foldable f
+relations' :: ( Foldable f
               , Applicative m
-              , Monoid (m (IntervalRelation (i a))) )=>
+              , Intervallic i a
+              , Monoid (m IntervalRelation ))=>
         f (i a)
-     -> m (IntervalRelation (i a))
+     -> m IntervalRelation
 relations' = foldlAccume relate
 
 -- | Forms a 'Just' new interval from the intersection of two intervals, 
 --   provided the intervals are not disjoint.
-intersect :: (IntervalSizeable a b, IntervalAlgebraic i a) => 
+-- 
+-- >>> intersect (iv 5 0) (iv 2 3)
+-- Just (3, 5)
+intersect :: (Intervallic i a, IntervalSizeable a b) => 
     i a -> i a -> Maybe (Interval a)
 intersect x y
     | disjoint x y = Nothing
@@ -211,7 +243,7 @@ durations = fmap duration
 --
 -- >>> clip (iv 3 0) (iv 2 4)
 -- Nothing
-clip :: (IntervalAlgebraic Interval a, IntervalSizeable a b)=>
+clip :: (IntervalSizeable a b)=>
        Interval a
     -> Interval a
     -> Maybe (Interval a)
@@ -231,14 +263,12 @@ clip x y
 --
 -- >>> gapsWithin (iv 9 1) [iv 5 0, iv 2 7, iv 3 12]
 -- Just [(5, 7),(9, 10)]
---
 gapsWithin :: ( Applicative f
                , Foldable f
                , Monoid (f (Interval a))
                , IntervalSizeable a b
                , IntervalCombinable Interval a
-               , Filterable f
-               , IntervalAlgebraic Interval a)=>
+               , Filterable f)=>
      Interval a     -- ^ i
   -> f (Interval a) -- ^ x
   -> Maybe (f (Interval a))
@@ -266,8 +296,8 @@ instance (Ord a, Show a, IntervalCombinable i a) => Semigroup (Box (i a)) where
 --
 -- >>> combineIntervals [iv 10 0, iv 5 2, iv 2 10, iv 2 13]
 -- [(0, 12),(13, 15)]
-combineIntervals :: ( IntervalAlgebraic Interval a
-                    , Applicative f
+combineIntervals :: ( Applicative f
+                    , Intervallic Interval a
                     , Monoid (f (Interval a))
                     , Foldable f ) =>
       f (Interval a) ->
@@ -280,8 +310,7 @@ combineIntervals x = liftListToFoldable (combineIntervals' $ toList x)
 --
 -- >>> combineIntervals' [iv 10 0, iv 5 2, iv 2 10, iv 2 13]
 -- [(0, 12),(13, 15)]
-combineIntervals' :: (IntervalAlgebraic Interval a) => 
-        [Interval a] -> [Interval a]
+combineIntervals' :: (Intervallic Interval a)=> [Interval a] -> [Interval a]
 combineIntervals' l = unBox $ foldl' (<>) (Box []) (packBoxes l)
 
 -- Internal function for combining maybe intervals in the 'combineIntervals'' 
@@ -295,12 +324,10 @@ combineIntervals' l = unBox $ foldl' (<>) (Box []) (packBoxes l)
 (<->) (Just x) Nothing  = [x]
 (<->) (Just x) (Just y) = (<+>) x y
 
-
-
 -- | Given a predicate combinator, a predicate, and list of intervals, returns 
 --   the input unchanged if the predicate combinator is @True@. Otherwise, returns
 --   an empty list. See 'nothingIfAny' and 'nothingIfNone' for examples.
-nothingIf :: (Monoid (f (i a)), Filterable f, IntervalAlgebraic i a)=>
+nothingIf :: (Monoid (f (i a)), Filterable f)=>
      ((i a -> Bool) -> f (i a) -> Bool) -- ^ e.g. 'any' or 'all'
   -> (i a -> Bool) -- ^ predicate to apply to each element of input list
   -> f (i a)
@@ -321,209 +348,82 @@ nothingIf quantifier predicate x = if quantifier predicate x then Nothing else J
 -- >>> nothingIfNone (starts (iv 2 3)) [iv 3 3, iv 1 5]
 -- Just [(3, 6),(5, 6)]
 --
-nothingIfNone :: (Monoid (f (i a)), Foldable f, Filterable f, IntervalAlgebraic i a)=>
+nothingIfNone :: (Monoid (f (i a)), Foldable f, Filterable f)=>
     (i a -> Bool) -- ^ predicate to apply to each element of input list
   -> f (i a)
   -> Maybe (f (i a))
 nothingIfNone = nothingIf (\f x -> (not.any f) x)
 
 -- | Returns 'Nothing' if *any* of the element of input satisfy the predicate condition.
-nothingIfAny :: (Monoid (f (i a)), Foldable f, Filterable f, IntervalAlgebraic i a)=>
+--
+-- >>> nothingIfAny (starts (iv 2 3)) [iv 3 3, iv 1 5]
+-- Just [(3, 6),(5, 6)]
+--
+-- >>> nothingIfAny (starts (iv 2 3)) [iv 3 3, iv 1 5]
+-- Nothing
+nothingIfAny :: (Monoid (f (i a)), Foldable f, Filterable f)=>
     (i a -> Bool) -- ^ predicate to apply to each element of input list
   -> f (i a)
   -> Maybe (f (i a))
 nothingIfAny = nothingIf any
 
--- | Returns 'Nothing' if *all* of the element of input satisfy the predicate condition
-nothingIfAll :: (Monoid (f (i a)), Foldable f, Filterable f, IntervalAlgebraic i a)=>
+-- | Returns 'Nothing' if *all* of the element of input satisfy the predicate condition.
+-- >>> nothingIfAll (starts (iv 2 3)) [iv 3 3, iv 4 3]
+-- Nothing
+nothingIfAll :: (Monoid (f (i a)), Foldable f, Filterable f)=>
     (i a -> Bool) -- ^ predicate to apply to each element of input list
   -> f (i a)
   -> Maybe (f (i a))
 nothingIfAll = nothingIf all
 
-{- | 
-Filter functions provides means for filtering 'Filterable' containers of 
-@'Intervallic i a'@s based on @'IntervalAlgebraic'@ relations.
--}
-
--- | Lifts a predicate to be able to compare two different 'IntervalAlgebraic' 
---   structure by comparing the intervals contain within each. 
-compareIntervals :: (IntervalAlgebraic i0 a, IntervalAlgebraic i1 a) =>
-   ComparativePredicateOf (Interval a)
-    -> i0 a
-    -> i1 a
-    -> Bool
-compareIntervals pf x y = pf (getInterval x) (getInterval y)
-
 -- | Creates a function for filtering a 'Witherable.Filterable' of @i1 a@s 
 --   by comparing the @Interval a@s that of an @i0 a@. 
-filterMaker :: (Filterable f
-                , IntervalAlgebraic Interval a
-                , IntervalAlgebraic i0 a
-                , IntervalAlgebraic i1 a) =>
-        ComparativePredicateOf (Interval a)
+makeFilter :: ( Filterable f
+               , Intervallic i0 a
+               , Intervallic i1 a) =>
+        ComparativePredicateOf2 (i0 a) (i1 a)
       -> i0 a
       -> (f (i1 a) -> f (i1 a))
-filterMaker f p = Witherable.filter (compareIntervals f p)
+makeFilter f p = Witherable.filter (f p)
 
--- | Filter by 'overlaps'.
-filterOverlaps :: (Filterable f
-                  , IntervalAlgebraic Interval a
-                  , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) =>
-                  i0 a -> f (i1 a) -> f (i1 a)
-filterOverlaps = filterMaker overlaps
-
--- | Filter by 'overlappedBy'.
-filterOverlappedBy :: (Filterable f
-                  , IntervalAlgebraic Interval a
-                  , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) =>
-                  i0 a -> f (i1 a) -> f (i1 a)
-filterOverlappedBy = filterMaker overlappedBy
-
--- | Filter by 'before'.
-filterBefore :: (Filterable f
-                  , IntervalAlgebraic Interval a
-                  , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) =>
-                  i0 a -> f (i1 a) -> f (i1 a)
-filterBefore = filterMaker before
-
--- | Filter by 'after'.
-filterAfter :: (Filterable f
-                  , IntervalAlgebraic Interval a
-                  , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) =>
-                  i0 a -> f (i1 a) -> f (i1 a)
-filterAfter = filterMaker after
-
--- | Filter by 'starts'.
-filterStarts :: (Filterable f
-                  , IntervalAlgebraic Interval a
-                  , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) =>
-                  i0 a -> f (i1 a) -> f (i1 a)
-filterStarts = filterMaker starts
-
--- | Filter by 'startedBy'.
-filterStartedBy :: (Filterable f
-                  , IntervalAlgebraic Interval a
-                  , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) =>
-                  i0 a -> f (i1 a) -> f (i1 a)
-filterStartedBy = filterMaker startedBy
-
--- | Filter by 'finishes'.
-filterFinishes :: (Filterable f
-                  , IntervalAlgebraic Interval a
-                  , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) =>
-                  i0 a -> f (i1 a) -> f (i1 a)
-filterFinishes = filterMaker finishes
-
--- | Filter by'finishedBy'.
-filterFinishedBy :: (Filterable f
-                  , IntervalAlgebraic Interval a
-                  , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) =>
-                  i0 a -> f (i1 a) -> f (i1 a)
-filterFinishedBy = filterMaker finishedBy
-
--- | Filter by 'meets'.
-filterMeets :: (Filterable f
-                  , IntervalAlgebraic Interval a
-                  , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) =>
-                  i0 a -> f (i1 a) -> f (i1 a)
-filterMeets = filterMaker meets
-
--- | Filter by 'metBy'.
-filterMetBy :: (Filterable f
-                  , IntervalAlgebraic Interval a
-                  , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) =>
-                  i0 a -> f (i1 a) -> f (i1 a)
-filterMetBy = filterMaker metBy
-
--- | Filter by 'during'.
-filterDuring :: (Filterable f
-                  , IntervalAlgebraic Interval a
-                  , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) =>
-                  i0 a -> f (i1 a) -> f (i1 a)
-filterDuring = filterMaker during
-
--- | Filter by 'contains'.
-filterContains :: (Filterable f
-                  , IntervalAlgebraic Interval a
-                  , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) =>
-                  i0 a -> f (i1 a) -> f (i1 a)
-filterContains = filterMaker contains
-
--- | Filter by 'equals'.
-filterEquals :: (Filterable f
-                  , IntervalAlgebraic Interval a
-                  , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) =>
-                  i0 a -> f (i1 a) -> f (i1 a)
-filterEquals = filterMaker equals
-
--- | Filter by 'disjoint'.
-filterDisjoint :: (Filterable f
-                  , IntervalAlgebraic Interval a
-                  , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) =>
-                  i0 a -> f (i1 a) -> f (i1 a)
-filterDisjoint = filterMaker disjoint
-
--- | Filter by 'notDisjoint'.
-filterNotDisjoint :: (Filterable f
-                  , IntervalAlgebraic Interval a
-                  , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) =>
-                  i0 a -> f (i1 a) -> f (i1 a)
-filterNotDisjoint = filterMaker notDisjoint
-
--- | Filter by 'concur'.
-filterConcur ::  (Filterable f
-                  , IntervalAlgebraic Interval a
-                  , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) =>
-                  i0 a -> f (i1 a) -> f (i1 a)
-filterConcur = filterMaker concur
-
--- | Filter by 'within'.
-filterWithin :: (Filterable f
-                  , IntervalAlgebraic Interval a
-                  , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) =>
-                  i0 a -> f (i1 a) -> f (i1 a)
-filterWithin = filterMaker within
-
--- | Filter by 'enclose'.
-filterEnclose :: (Filterable f
-                  , IntervalAlgebraic Interval a
-                  , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) =>
-                  i0 a -> f (i1 a) -> f (i1 a)
-filterEnclose = filterMaker enclose
-
--- | Filter by 'enclosedBy'.
-filterEnclosedBy :: (Filterable f
-                  , IntervalAlgebraic Interval a
-                  , IntervalAlgebraic i0 a
-                  , IntervalAlgebraic i1 a) =>
-                  i0 a -> f (i1 a) -> f (i1 a)
-filterEnclosedBy = filterMaker enclosedBy
+{- | 
+Filter 'Filterable' containers of one @'Intervallic'@ type based by comparing to 
+a (potentially different) 'Intervallic' type using the corresponding interval
+predicate function.
+-}
+filterOverlaps, filterOverlappedBy, filterBefore, filterAfter, 
+  filterStarts, filterStartedBy, filterFinishes, filterFinishedBy, 
+  filterMeets, filterMetBy, filterDuring, filterContains, filterEquals,
+  filterDisjoint, filterNotDisjoint, filterConcur, filterWithin,
+  filterEnclose, filterEnclosedBy :: 
+    ( Filterable f , Intervallic i0 a, Intervallic i1 a) =>
+    i0 a -> f (i1 a) -> f (i1 a)
+filterOverlaps          = makeFilter overlaps
+filterOverlappedBy      = makeFilter overlappedBy
+filterBefore            = makeFilter before
+filterAfter             = makeFilter after
+filterStarts            = makeFilter starts
+filterStartedBy         = makeFilter startedBy
+filterFinishes          = makeFilter finishes
+filterFinishedBy        = makeFilter finishedBy
+filterMeets             = makeFilter meets
+filterMetBy             = makeFilter metBy
+filterDuring            = makeFilter during
+filterContains          = makeFilter contains
+filterEquals            = makeFilter equals
+filterDisjoint          = makeFilter disjoint
+filterNotDisjoint       = makeFilter notDisjoint
+filterConcur            = makeFilter concur
+filterWithin            = makeFilter within
+filterEnclose           = makeFilter enclose
+filterEnclosedBy        = makeFilter enclosedBy
 
 -- | Folds over a list of Paired Intervals and in the case that the 'getPairData' 
 --   is equal between two sequential meeting intervals, these two intervals are 
 --   combined into one. This function is "safe" in the sense that if the input is
 --   invalid and contains any sequential pairs of intervals with an @IntervalRelation@,
 --   other than 'Meets', then the function returns an empty list. 
-foldMeetingSafe :: ( IntervalAlgebraic (PairedInterval b) a, Eq b) =>
+foldMeetingSafe :: (Intervallic (PairedInterval b) a,  Eq b) =>
            [ PairedInterval b a ] -- ^ Be sure this only contains intervals 
                                   --   that sequentially 'meets'.
         -> [ PairedInterval b a ]
@@ -532,7 +432,7 @@ foldMeetingSafe l = maybe [] (getMeeting . foldMeeting) (parseMeeting l)
 -- | Folds over a list of Meeting Paired Intervals and in the case that the 'getPairData' 
 --   is equal between two sequential meeting intervals, these two intervals are 
 --   combined into one.  
-foldMeeting :: ( IntervalAlgebraic (PairedInterval b) a, Eq b) =>
+foldMeeting :: (Eq b, Ord a, Show a) =>
             Meeting [PairedInterval b a ]
         ->  Meeting [PairedInterval b a ]
 foldMeeting (Meeting l) = foldl' joinMeetingPairedInterval (Meeting []) (packMeeting l)
@@ -546,7 +446,7 @@ packMeeting :: [a] -> [Meeting [a]]
 packMeeting = Data.List.map (\z -> Meeting [z])
 
 -- Test a list of intervals to be sure they all meet; if not return Nothing.
-parseMeeting :: (IntervalAlgebraic i a)=> [i a] -> Maybe (Meeting [i a])
+parseMeeting :: Intervallic i a => [i a] -> Maybe (Meeting [i a])
 parseMeeting x
     | all ( == Meets ) (relations x) = Just $ Meeting x
     | otherwise = Nothing
@@ -559,8 +459,8 @@ joinMeetingPairedInterval :: (Eq b, Ord a, Show a) =>
 joinMeetingPairedInterval = joinMeeting equalPairData
 
 -- A general function for combining any two @Meeting [i a]@ by 'listCombiner'.
-joinMeeting :: (IntervalAlgebraic i a) =>
-       ComparativePredicateOf (i a)
+joinMeeting :: Intervallic i a =>
+       ComparativePredicateOf1 (i a)
     -> Meeting [ i a ]
     -> Meeting [ i a ]
     -> Meeting [ i a ]
@@ -568,8 +468,8 @@ joinMeeting f (Meeting x) (Meeting y) = Meeting $ listCombiner (join2MeetingWhen
 
 -- The intervals @x@ and @y@ should meet! The predicate function @p@ determines
 -- when the two intervals that meet should be combined.
-join2MeetingWhen :: (IntervalAlgebraic i a) =>
-       ComparativePredicateOf (i a)
+join2MeetingWhen :: Intervallic i a => 
+       ComparativePredicateOf1 (i a)
     -> Maybe (i a)
     -> Maybe (i a)
     -> [i a]
@@ -589,7 +489,6 @@ before y, then x and y are combined into a single event.
 -}
 disjoinPaired :: ( Eq b
                  , Monoid b
-                 , IntervalAlgebraic (PairedInterval b) a
                  , IntervalSizeable a c) =>
        (PairedInterval b) a
     -> (PairedInterval b) a
@@ -613,7 +512,7 @@ disjoinPaired o e
          b2 = begin y
          e1 = end x
          e2 = end y
-         ev = flip mkPairedInterval
+         ev = flip makePairedInterval
          evp = \b e s -> ev (beginerval (diff e b) b) s
 
 {- | 
@@ -624,16 +523,16 @@ is the accumulator set -- the disjoint events that need no longer be
 compared to input events. The second of the pair are disjoint events that
 still need to be compared to be input events. 
 -}
-mtEvt :: ( Monoid b, Eq b, IntervalSizeable a c) =>
+recurseDisjoin :: ( Monoid b, Eq b, IntervalSizeable a c) =>
        ([(PairedInterval b) a ], [(PairedInterval b) a ])
     -> [(PairedInterval b) a ]
     -> [(PairedInterval b) a ]
-mtEvt (acc, o:os) []     = acc ++ o:os           -- the "final" pattern
-mtEvt (acc, [])   []     = acc                 -- another "final" pattern 
-mtEvt (acc, [])   (e:es) = mtEvt (acc, [e]) es -- the "initialize" pattern
-mtEvt (acc, o:os) (e:es)                       -- the "operating" patterns 
+recurseDisjoin (acc, o:os) []     = acc ++ o:os           -- the "final" pattern
+recurseDisjoin (acc, [])   []     = acc                 -- another "final" pattern 
+recurseDisjoin (acc, [])   (e:es) = recurseDisjoin (acc, [e]) es -- the "initialize" pattern
+recurseDisjoin (acc, o:os) (e:es)                       -- the "operating" patterns 
      -- If input event is equal to the first comparator, skip the comparison.
-    | e == o    = mtEvt (acc, o:os) es
+    | e == o    = recurseDisjoin (acc, o:os) es
 
      {- If the period of o is either before or meets the period of e, then 
      the first of the combined events can be put into the accumulator. 
@@ -641,10 +540,10 @@ mtEvt (acc, o:os) (e:es)                       -- the "operating" patterns
      is before or meets e, then we are assured that all periods up to the 
      beginning of o are fully disjoint and subsequent input events will 
      not overlap these in any way. -}
-    | (before <|> meets) o e = mtEvt (acc ++ nh, mtEvt ([], nt) os ) es
+    | (before <|> meets) o e = recurseDisjoin (acc ++ nh, recurseDisjoin ([], nt) os ) es
 
     --The standard recursive operation.
-    | otherwise = mtEvt (acc,  mtEvt ([], n) os ) es
+    | otherwise = recurseDisjoin (acc,  recurseDisjoin ([], n) os ) es
   where n  = getMeeting $ disjoinPaired o e
         nh = maybeToList (headMay n)
         nt = tailSafe n
@@ -662,8 +561,8 @@ formMeetingSequence :: ( Eq b
                        , IntervalSizeable a c) =>
            [ PairedInterval b a ]
         -> [ PairedInterval b a ]
-formMeetingSequence x = mtEvt ([], []) (mtEvt ([], []) x) 
-   -- the second pass of mtEvt is to handle the situation where the first pass
+formMeetingSequence x = recurseDisjoin ([], []) (recurseDisjoin ([], []) x) 
+   -- the second pass of recurseDisjoin is to handle the situation where the first pass
    -- disjoins all the events correctly into a meeting sequence but -- due to 
    -- nesting of intervals in the input -- some of the sequential pairs have
    -- the same data after the first pass. The second pass merges any sequential
