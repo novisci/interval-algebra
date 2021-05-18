@@ -18,9 +18,10 @@ import IntervalAlgebra.Arbitrary          ( )
 import IntervalAlgebra                    ( Interval
                                           , Intervallic(..)
                                           , IntervalCombinable(..)
-                                          , IntervalAlgebraic(..)
                                           , IntervalRelation (..)
-                                          , beginerval, IntervalSizeable )
+                                          , beginerval
+                                          , IntervalSizeable
+                                          , starts )
 import IntervalAlgebra.IntervalUtilities  ( gaps
                                           , durations
                                           , intersect
@@ -34,7 +35,7 @@ import IntervalAlgebra.IntervalUtilities  ( gaps
                                           , foldMeetingSafe
                                           , formMeetingSequence )
 import IntervalAlgebra.PairedInterval     ( trivialize
-                                          , mkPairedInterval
+                                          , makePairedInterval
                                           , PairedInterval, getPairData )
 import Control.Monad                      ( liftM2 )
 import Data.Foldable
@@ -55,14 +56,14 @@ instance Arbitrary State where
    arbitrary =  State <$> suchThat (listOf arbitrary) (\x -> length x == 3)
 
 instance Arbitrary (PairedInterval State Int) where
-   arbitrary = liftM2 mkPairedInterval arbitrary arbitrary
+   arbitrary = liftM2 makePairedInterval arbitrary arbitrary
 
 instance Arbitrary (Events Int) where
    arbitrary = Events <$> orderedList
 
 
 -- Testing functions
-checkSeqStates :: (IntervalAlgebraic i Int)=> [i Int] -> Bool
+checkSeqStates :: (Intervallic i Int)=> [i Int] -> Bool
 checkSeqStates x = (length x > 1) || all (== Meets) (relations x)
 
 -- Creation functions
@@ -70,7 +71,7 @@ iv :: Int -> Int -> Interval Int
 iv = beginerval
 
 evpi :: Int -> Int -> [Bool] -> StateEvent Int
-evpi i j s = mkPairedInterval (State s) (beginerval i j)
+evpi i j s = makePairedInterval (State s) (beginerval i j)
 
 -- Test cases
 containmentInt :: Interval Int
@@ -92,14 +93,14 @@ meets2 :: [Interval Int]
 meets2 = [iv 2 0, iv 2 2, iv 10 4, iv 2 14]
 
 meets3 :: [PairedInterval Int Int]
-meets3 = map (uncurry mkPairedInterval) [
+meets3 = map (uncurry makePairedInterval) [
       (5,  iv 2 0)
     , (5,  iv 2 2)
     , (9,  iv 10 4)
     , (10, iv 2 14)]
 
 meets3eq :: [PairedInterval Int Int]
-meets3eq = map (uncurry mkPairedInterval) [
+meets3eq = map (uncurry makePairedInterval) [
       (5,  iv 4 0)
     , (9,  iv 10 4)
     , (10, iv 2 14)]
@@ -159,7 +160,7 @@ c4out =
 -- Properties
 
 -- Check that the only relation remaining after applying a function is Before
-prop_before:: (IntervalAlgebraic Interval a, IntervalCombinable Interval a)=>
+prop_before:: (Intervallic Interval a, IntervalCombinable Interval a)=>
       ([Interval a] -> [Interval a])
    -> [Interval a]
    -> Property
@@ -171,7 +172,7 @@ prop_combineIntervals1:: (Ord a, Show a, Eq a)=>
    -> Property
 prop_combineIntervals1 = prop_before combineIntervals
 
-prop_gaps1:: (IntervalAlgebraic Interval a, IntervalCombinable Interval a)=>
+prop_gaps1:: (Intervallic Interval a, IntervalCombinable Interval a)=>
      [Interval a]
    -> Property
 prop_gaps1 = prop_before gaps
