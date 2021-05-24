@@ -1,5 +1,9 @@
 # Changelog for interval-algebra
 
+## 0.8.2 
+
+* Removes `Show` constraint from `intervals` function in `PairIntervals`.
+
 ## 0.8.1
 
 * Generalizes `gaps`, `gapsWithin`, and `combineIntervals` to take general `Intervallic` inputs but still return `Interval`s.

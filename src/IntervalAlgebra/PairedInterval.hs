@@ -51,7 +51,7 @@ instance (Eq a, Eq b, Ord a) => Ord (PairedInterval b a) where
 instance (Show b, Show a, Ord a) => Show (PairedInterval b a) where
     show x = "{" ++ show (getInterval x) ++ ", " ++ show (getPairData x) ++ "}"
 
-instance (Ord a, Show a, Eq b, Monoid b) => 
+instance (Ord a, Eq b, Monoid b) => 
           IntervalCombinable (PairedInterval b) a where
     (><) x y = fmap (makePairedInterval mempty) (getInterval x >< getInterval y)
 
@@ -74,7 +74,7 @@ equalPairData :: (Eq b) => ComparativePredicateOf1 (PairedInterval b a)
 equalPairData x y = getPairData x == getPairData y
 
 -- | Gets the intervals from a list of paired intervals.
-intervals :: (Ord a, Show a) => [PairedInterval b a] -> [Interval a]
+intervals :: (Ord a) => [PairedInterval b a] -> [Interval a]
 intervals = map getInterval
 
 -- | Empty is used to trivially lift an @Interval a@ into a @PairedInterval@.
