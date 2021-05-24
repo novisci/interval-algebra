@@ -1,5 +1,11 @@
 # Changelog for interval-algebra
 
+## 0.8.1
+
+* Generalizes `gaps`, `gapsWithin`, and `combineIntervals` to take general `Intervallic` inputs but still return `Interval`s.
+* Relaxes the `Show a` constraint on `Intervallic` class.
+* Removes unnecessary pragmas.
+
 ## 0.8.0
 
 * Removes the `IntervalAlgebraic` typeclass. The functions that were in this class are now regular functions exported in the main module.

@@ -30,7 +30,6 @@ constructing, relating, and combining types that contain @'Interval'@s:
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
 module IntervalAlgebra(
@@ -214,11 +213,17 @@ parseInterval x y
     |  y < x    = Left  $ show y ++ "<" ++ show x
     | otherwise = Right $ Interval (x, y)
 
-intervalBegin :: Interval a -> a
+intervalBegin :: (Ord a) => Interval a -> a
 intervalBegin (Interval x) = fst x
 
-intervalEnd :: Interval a -> a
+intervalEnd :: (Ord a) => Interval a -> a
 intervalEnd (Interval x) = snd x
+
+instance Functor Interval where
+    fmap f (Interval (x, y)) = Interval (f x, f y)
+
+instance (Show a, Ord a) => Show (Interval a) where
+   show x = "(" ++ show (begin x) ++ ", " ++ show (end x) ++ ")"
 
 {- | 
 The @'Intervallic'@ typeclass defines how to get and set the 'Interval' content
@@ -234,7 +239,7 @@ of a data structure. It also includes functions for getting the endpoints of the
 >>> end (Interval (0, 10))
 10
 -}
-class (Ord a, Show a) => Intervallic i a where
+class (Ord a) => Intervallic i a where
 
     -- | Get the interval from an @i a@.
     getInterval :: i a -> Interval a
@@ -541,7 +546,7 @@ converse = Data.Set.map converseRelation
 The 'IntervalSizeable' typeclass provides functions to determine the size of an
 'Intervallic' type and to resize an 'Interval a'.
 -}
-class (Show a, Ord a, Num b, Ord b) => IntervalSizeable a b| a -> b where
+class (Ord a, Num b, Ord b) => IntervalSizeable a b| a -> b where
 
     -- | The smallest duration for an 'Interval a'.
     moment :: b
@@ -650,12 +655,13 @@ extenterval x y = Interval (s, e)
 
 {- |
 The @'IntervalCombinable'@ typeclass provides methods for (possibly) combining
-two @i a@s to form an @'Interval'@.
+two @i a@s to form a @'Maybe' i a@, or in case of @><@, a possibly different 
+@Intervallic@ type.
 -}
 class (Intervallic i a) => IntervalCombinable i a where
 
     -- | Maybe form a new @i a@ by the union of two @i a@s that 'meets'.
-    (.+.) ::   i a -> i a -> Maybe (i a)
+    (.+.) ::  i a -> i a -> Maybe (i a)
     (.+.) x y
       | x `meets` y = Just $ setInterval y $ Interval (b, e)
       | otherwise   = Nothing
@@ -692,7 +698,7 @@ type ComparativePredicateOf2 a b = (a -> b -> Bool)
 
 -- | Imposes a total ordering on @'Interval' a@ based on first ordering the 
 --   'begin's then the 'end's.
-instance (Eq (Interval a), Intervallic Interval a) => Ord (Interval a) where
+instance (Ord a) => Ord (Interval a) where
     (<=) x y
       | begin x <  begin y = True
       | begin x == begin y = end x <= end y
@@ -702,17 +708,11 @@ instance (Eq (Interval a), Intervallic Interval a) => Ord (Interval a) where
       | begin x == begin y = end x < end y
       | otherwise = False
 
-instance Functor Interval where
-    fmap f (Interval (x, y)) = Interval (f x, f y)
-
-instance (Intervallic Interval a) => Show (Interval a) where
-   show x = "(" ++ show (begin x) ++ ", " ++ show (end x) ++ ")"
-
-instance (Ord a, Show a) => Intervallic Interval a where
+instance (Ord a) => Intervallic Interval a where
     getInterval = id
     setInterval _ x = x
 
-instance (Ord a, Show a) => IntervalCombinable Interval a where
+instance (Ord a) => IntervalCombinable Interval a where
     (><) x y
         | x `before` y = Just $ Interval (end x, begin y)
         | otherwise    = Nothing

@@ -1,6 +1,5 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 module IntervalAlgebra.IntervalUtilitiesSpec (spec) where
 
@@ -160,7 +159,7 @@ c4out =
 -- Properties
 
 -- Check that the only relation remaining after applying a function is Before
-prop_before:: (Intervallic Interval a, IntervalCombinable Interval a)=>
+prop_before:: (Ord a)=>
       ([Interval a] -> [Interval a])
    -> [Interval a]
    -> Property
@@ -172,7 +171,7 @@ prop_combineIntervals1:: (Ord a, Show a, Eq a)=>
    -> Property
 prop_combineIntervals1 = prop_before combineIntervals
 
-prop_gaps1:: (Intervallic Interval a, IntervalCombinable Interval a)=>
+prop_gaps1:: (Ord a)=>
      [Interval a]
    -> Property
 prop_gaps1 = prop_before gaps
@@ -252,7 +251,7 @@ spec = do
             gapsWithin (iv 9 1) [iv 5 0, iv 2 7, iv 3 12]
                `shouldBe` Just [iv 2 5, iv 1 9]
          it "gapsWithin (1, 10) [] should be []" $
-             gapsWithin (iv 9 1) [] `shouldBe` Nothing
+             gapsWithin (iv 9 1) ([] :: [Interval a]) `shouldBe` Nothing
          it "more gapsWithin tests" pending
 
    describe "emptyIf tests" $

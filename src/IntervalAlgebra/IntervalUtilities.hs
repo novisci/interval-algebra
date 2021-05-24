@@ -12,8 +12,6 @@ In the examples below, @iv@ is a synonym for 'beginerval' used to save space.
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE MonoLocalBinds #-}
 
 module IntervalAlgebra.IntervalUtilities (
 
@@ -68,7 +66,7 @@ module IntervalAlgebra.IntervalUtilities (
 import Prelude          ( (<*>), seq)
 import GHC.Show         ( Show )
 import GHC.Num          ( )
-import GHC.Int          ( Int ) 
+import GHC.Int          ( Int )
 import Control.Applicative
                         ( Applicative(pure) )
 import Data.Bool        ( Bool, otherwise, not )
@@ -78,7 +76,7 @@ import Data.Function    ( ($), (.), flip )
 import Data.Functor     ( Functor(fmap) )
 import Data.Monoid      ( Monoid(mempty) )
 import Data.Maybe       ( Maybe(..), maybe, maybeToList, mapMaybe, catMaybes, fromMaybe )
-import Data.List        ( (++), map )
+import Data.List        ( (++) )
 import Data.Ord         ( Ord(min, max) )
 import Data.Semigroup   ( Semigroup((<>)) )
 import Data.Tuple       ( fst )
@@ -193,7 +191,7 @@ relations' = foldlAccume relate
 -- 
 -- >>> intersect (iv 5 0) (iv 2 3)
 -- Just (3, 5)
-intersect :: (Intervallic i a, IntervalSizeable a b) => 
+intersect :: (Intervallic i a, IntervalSizeable a b) =>
     i a -> i a -> Maybe (Interval a)
 intersect x y
     | disjoint x y = Nothing
@@ -207,11 +205,11 @@ intersect x y
 --
 -- >>> gaps [iv 4 1, iv 4 8, iv 3 11]
 -- [(5, 8)]
-gaps :: (IntervalCombinable Interval a
+gaps :: (  IntervalCombinable i a
          , Applicative f
          , Monoid (f (Interval a))
          , Foldable f) =>
-      f (Interval a) ->
+      f (i a) ->
       f (Interval a)
 gaps x = liftListToFoldable (gaps' x)
 
@@ -219,13 +217,13 @@ gaps x = liftListToFoldable (gaps' x)
 --   intervals in the input container. *To work properly, the input should be 
 --   sorted*. This version outputs a list. See 'gaps' for a version that lifts
 --   the result to same input structure @f@.
-gaps' :: (IntervalCombinable Interval a
+gaps' :: ( Intervallic i a
          , Applicative f
          , Monoid (f (Interval a))
          , Foldable f) =>
-      f (Interval a) ->
+      f (i a) ->
       [Interval a]
-gaps' x = catMaybes (foldlAccume (><) x)
+gaps' x = catMaybes (foldlAccume (\i j -> getInterval i >< getInterval j) x)
 
 -- | Returns the 'duration' of each 'Intervallic i a' in the 'Functor' @f@.
 --
@@ -243,15 +241,15 @@ durations = fmap duration
 --
 -- >>> clip (iv 3 0) (iv 2 4)
 -- Nothing
-clip :: (IntervalSizeable a b)=>
-       Interval a
-    -> Interval a
+clip :: (Intervallic i0 a, Intervallic i1 a, IntervalSizeable a b)=>
+       i0 a
+    -> i1 a
     -> Maybe (Interval a)
 clip x y
    | overlaps x y     = Just $ enderval   (diff (end x) (begin y)) (end x)
    | overlappedBy x y = Just $ beginerval (diff (end y) (begin x)) (begin x)
-   | jx x y           = Just x
-   | jy x y           = Just y
+   | jx x y           = Just (getInterval x)
+   | jy x y           = Just (getInterval y)
    | disjoint x y     = Nothing
    where jy = equals <|> startedBy <|> contains <|> finishedBy
          jx = starts <|> during <|> finishes
@@ -267,10 +265,11 @@ gapsWithin :: ( Applicative f
                , Foldable f
                , Monoid (f (Interval a))
                , IntervalSizeable a b
-               , IntervalCombinable Interval a
-               , Filterable f)=>
-     Interval a     -- ^ i
-  -> f (Interval a) -- ^ x
+               , IntervalCombinable i0 a
+               , IntervalCombinable i1 a
+               , Filterable f )=>
+        i0 a  -- ^ i
+  -> f (i1 a) -- ^ x
   -> Maybe (f (Interval a))
 gapsWithin i x
   | null ivs  = Nothing
@@ -284,10 +283,10 @@ gapsWithin i x
 -- 'combineIntervals''.
 newtype Box a = Box { unBox :: [a] }
 
-packBoxes :: [a] -> [Box a]
-packBoxes  = Data.List.map (\z -> Box [z])
+packIntervalBoxes :: (Intervallic i a)=> [i a] -> [Box (Interval a)]
+packIntervalBoxes  = fmap (\z -> Box [getInterval z])
 
-instance (Ord a, Show a, IntervalCombinable i a) => Semigroup (Box (i a)) where
+instance (Ord a) => Semigroup (Box (Interval a)) where
     Box x <> Box y = Box $ listCombiner (<->) x y
 
 -- | Returns a container of intervals where any intervals that meet or share support
@@ -297,10 +296,11 @@ instance (Ord a, Show a, IntervalCombinable i a) => Semigroup (Box (i a)) where
 -- >>> combineIntervals [iv 10 0, iv 5 2, iv 2 10, iv 2 13]
 -- [(0, 12),(13, 15)]
 combineIntervals :: ( Applicative f
-                    , Intervallic Interval a
+                    , Ord a
+                    , Intervallic i a
                     , Monoid (f (Interval a))
                     , Foldable f ) =>
-      f (Interval a) ->
+      f (i a) ->
       f (Interval a)
 combineIntervals x = liftListToFoldable (combineIntervals' $ toList x)
 
@@ -310,19 +310,19 @@ combineIntervals x = liftListToFoldable (combineIntervals' $ toList x)
 --
 -- >>> combineIntervals' [iv 10 0, iv 5 2, iv 2 10, iv 2 13]
 -- [(0, 12),(13, 15)]
-combineIntervals' :: (Intervallic Interval a)=> [Interval a] -> [Interval a]
-combineIntervals' l = unBox $ foldl' (<>) (Box []) (packBoxes l)
+combineIntervals' :: (Intervallic i a)=> [i a] -> [Interval a]
+combineIntervals' l = unBox $ foldl' (<>) (Box []) (packIntervalBoxes l)
 
 -- Internal function for combining maybe intervals in the 'combineIntervals'' 
 -- function
 (<->) :: (IntervalCombinable i a) =>
        Maybe (i a)
     -> Maybe (i a)
-    -> [i a]
+    -> [Interval a]
 (<->) Nothing Nothing   = []
-(<->) Nothing (Just y)  = [y]
-(<->) (Just x) Nothing  = [x]
-(<->) (Just x) (Just y) = (<+>) x y
+(<->) Nothing (Just y)  = [getInterval y]
+(<->) (Just x) Nothing  = [getInterval x]
+(<->) (Just x) (Just y) = (<+>) (getInterval x) (getInterval y)
 
 -- | Given a predicate combinator, a predicate, and list of intervals, returns 
 --   the input unchanged if the predicate combinator is @True@. Otherwise, returns
@@ -391,11 +391,11 @@ Filter 'Filterable' containers of one @'Intervallic'@ type based by comparing to
 a (potentially different) 'Intervallic' type using the corresponding interval
 predicate function.
 -}
-filterOverlaps, filterOverlappedBy, filterBefore, filterAfter, 
-  filterStarts, filterStartedBy, filterFinishes, filterFinishedBy, 
+filterOverlaps, filterOverlappedBy, filterBefore, filterAfter,
+  filterStarts, filterStartedBy, filterFinishes, filterFinishedBy,
   filterMeets, filterMetBy, filterDuring, filterContains, filterEquals,
   filterDisjoint, filterNotDisjoint, filterConcur, filterWithin,
-  filterEnclose, filterEnclosedBy :: 
+  filterEnclose, filterEnclosedBy ::
     ( Filterable f , Intervallic i0 a, Intervallic i1 a) =>
     i0 a -> f (i1 a) -> f (i1 a)
 filterOverlaps          = makeFilter overlaps
@@ -423,7 +423,7 @@ filterEnclosedBy        = makeFilter enclosedBy
 --   combined into one. This function is "safe" in the sense that if the input is
 --   invalid and contains any sequential pairs of intervals with an @IntervalRelation@,
 --   other than 'Meets', then the function returns an empty list. 
-foldMeetingSafe :: (Intervallic (PairedInterval b) a,  Eq b) =>
+foldMeetingSafe :: (Eq b, Ord a, Show a)  =>
            [ PairedInterval b a ] -- ^ Be sure this only contains intervals 
                                   --   that sequentially 'meets'.
         -> [ PairedInterval b a ]
@@ -443,7 +443,7 @@ newtype Meeting a = Meeting { getMeeting :: a } deriving (Eq, Show)
 
 -- Box up Meeting.
 packMeeting :: [a] -> [Meeting [a]]
-packMeeting = Data.List.map (\z -> Meeting [z])
+packMeeting = fmap (\z -> Meeting [z])
 
 -- Test a list of intervals to be sure they all meet; if not return Nothing.
 parseMeeting :: Intervallic i a => [i a] -> Maybe (Meeting [i a])
@@ -468,7 +468,7 @@ joinMeeting f (Meeting x) (Meeting y) = Meeting $ listCombiner (join2MeetingWhen
 
 -- The intervals @x@ and @y@ should meet! The predicate function @p@ determines
 -- when the two intervals that meet should be combined.
-join2MeetingWhen :: Intervallic i a => 
+join2MeetingWhen :: Intervallic i a =>
        ComparativePredicateOf1 (i a)
     -> Maybe (i a)
     -> Maybe (i a)
@@ -489,6 +489,7 @@ before y, then x and y are combined into a single event.
 -}
 disjoinPaired :: ( Eq b
                  , Monoid b
+                 , Show a
                  , IntervalSizeable a c) =>
        (PairedInterval b) a
     -> (PairedInterval b) a
@@ -523,7 +524,7 @@ is the accumulator set -- the disjoint events that need no longer be
 compared to input events. The second of the pair are disjoint events that
 still need to be compared to be input events. 
 -}
-recurseDisjoin :: ( Monoid b, Eq b, IntervalSizeable a c) =>
+recurseDisjoin :: ( Monoid b, Eq b, IntervalSizeable a c, Show a ) =>
        ([(PairedInterval b) a ], [(PairedInterval b) a ])
     -> [(PairedInterval b) a ]
     -> [(PairedInterval b) a ]
@@ -557,11 +558,12 @@ combined using the Monoid '<>' function, hence the pair data must be a
 'Monoid' instance.
 -}
 formMeetingSequence :: ( Eq b
+                       , Show a
                        , Monoid b
                        , IntervalSizeable a c) =>
            [ PairedInterval b a ]
         -> [ PairedInterval b a ]
-formMeetingSequence x = recurseDisjoin ([], []) (recurseDisjoin ([], []) x) 
+formMeetingSequence x = recurseDisjoin ([], []) (recurseDisjoin ([], []) x)
    -- the second pass of recurseDisjoin is to handle the situation where the first pass
    -- disjoins all the events correctly into a meeting sequence but -- due to 
    -- nesting of intervals in the input -- some of the sequential pairs have

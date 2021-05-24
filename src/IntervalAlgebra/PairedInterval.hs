@@ -10,7 +10,6 @@ Stability   : experimental
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleContexts #-}
 
 module IntervalAlgebra.PairedInterval (
       PairedInterval
@@ -36,7 +35,7 @@ import Data.Bifunctor   ( Bifunctor(bimap) )
 newtype PairedInterval b a = PairedInterval (Interval a, b)
     deriving (Eq)
 
-instance (Ord a, Show a) => Intervallic (PairedInterval b) a where
+instance (Ord a) => Intervallic (PairedInterval b) a where
     getInterval (PairedInterval x)        = fst x
     setInterval (PairedInterval (x, y)) i = PairedInterval (i, y)
 
@@ -45,7 +44,7 @@ instance Bifunctor PairedInterval where
 
 -- | Defines A total ordering on 'PairedInterval b a' based on the 'Interval a'
 --   part.
-instance (Eq a, Eq b, Ord a, Show a) => Ord (PairedInterval b a) where
+instance (Eq a, Eq b, Ord a) => Ord (PairedInterval b a) where
   (<=) x y = getInterval x <= getInterval y
   (<) x y  = getInterval x <  getInterval y
 
