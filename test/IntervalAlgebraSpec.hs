@@ -1,8 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE MonoLocalBinds #-}
 module IntervalAlgebraSpec (spec) where
 
 import Test.Hspec                 ( hspec, describe, it, Spec, shouldBe, pending )
@@ -103,7 +101,7 @@ m1set x a b c = M1set p1 p2 p3 p4
    \forall i,j,k,l s.t. (i:j & i:k & l:j) \implies l:k
  \] 
 -}
-prop_IAaxiomM1 :: (Intervallic Interval a) => M1set a -> Property
+prop_IAaxiomM1 :: (Ord a) => M1set a -> Property
 prop_IAaxiomM1 x =
   (i `meets` j && i `meets` k && l `meets` j) ==> (l `meets` k)
   where i = m11 x
@@ -167,7 +165,8 @@ That is,
  \] 
 -}
 
-prop_IAaxiomM2 :: (Intervallic Interval a, IntervalSizeable a b) => M2set a -> Property
+prop_IAaxiomM2 :: (IntervalSizeable a b, Show a) => 
+    M2set a -> Property
 prop_IAaxiomM2 x =
   (i `meets` j && k `meets` l) ==>
     (i `meets` l)  `xor`
@@ -197,7 +196,7 @@ prop_IAaxiomM2_Day = prop_IAaxiomM2
  \] 
 -}
 
-prop_IAaxiomML1 :: (Intervallic Interval a) => Interval a -> Property
+prop_IAaxiomML1 :: (Ord a) => Interval a -> Property
 prop_IAaxiomML1 x = not (x `meets` x) === True
 
 prop_IAaxiomML1_Int :: Interval Int -> Property
@@ -217,7 +216,7 @@ If i meets j then j does not meet i.
 \] 
 -}
 
-prop_IAaxiomML2 :: (Intervallic Interval a)=> M2set a -> Property
+prop_IAaxiomML2 :: (Ord a)=> M2set a -> Property
 prop_IAaxiomML2 x =
   (i `meets` j) ==> not (j `meets` i)
   where i = m21 x
@@ -240,7 +239,7 @@ Time does not start or stop:
 \] 
 -}
 
-prop_IAaxiomM3 :: (Intervallic Interval a, IntervalSizeable a b)=>
+prop_IAaxiomM3 :: (IntervalSizeable a b)=>
       b -> Interval a -> Property
 prop_IAaxiomM3 b i =
    (j `meets` i && i `meets` k) === True
@@ -264,7 +263,7 @@ If two meets are separated by intervals, then this sequence is a longer interval
 \] 
 -}
 
-prop_IAaxiomM4 :: (Intervallic Interval a, IntervalSizeable a b)=>
+prop_IAaxiomM4 :: (IntervalSizeable a b)=>
      b -> M2set a -> Property
 prop_IAaxiomM4 b x =
    ((m `meets` i && i `meets` j && j `meets` n) &&
@@ -319,7 +318,7 @@ m5set x a b = M5set p1 p2
         ps = end (expandr (makePos b) x) -- creating l by shifting and expanding i
 
 
-prop_IAaxiomM5 :: (Intervallic Interval a, IntervalSizeable a b) => 
+prop_IAaxiomM5 :: (IntervalSizeable a b) => 
     M5set a -> Property
 prop_IAaxiomM5 x =
    ((i `meets` j && j `meets` l) &&
@@ -347,7 +346,7 @@ Ordered unions:
 \] 
 -}
 
-prop_IAaxiomM4_1 :: (IntervalSizeable a b, IntervalCombinable Interval a)=>
+prop_IAaxiomM4_1 :: (IntervalSizeable a b)=>
                     b -> M2set a -> Property
 prop_IAaxiomM4_1 b x =
    ((m `meets` i && i `meets` j && j `meets` n) &&
@@ -368,10 +367,7 @@ prop_IAaxiomM4_1_Day = prop_IAaxiomM4_1 1
 * Interval Relation property testing 
 -}
 
-class ( Intervallic Interval a
-      , IntervalCombinable Interval a
-      , IntervalSizeable a b
-      ) => IntervalRelationProperties a b where
+class ( IntervalSizeable a b ) => IntervalRelationProperties a b where
 
     prop_IAbefore :: Interval a -> Interval a -> Property
     prop_IAbefore i j =
@@ -413,7 +409,7 @@ class ( Intervallic Interval a
 
 instance IntervalRelationProperties Int Int
 
-allIArelations:: Intervallic Interval a => [ComparativePredicateOf1 (Interval a)]
+allIArelations:: (Ord a) => [ComparativePredicateOf1 (Interval a)]
 allIArelations =   [  IA.equals
                     , IA.meets
                     , IA.metBy
@@ -428,14 +424,14 @@ allIArelations =   [  IA.equals
                     , IA.during
                     , IA.contains ]
 
-prop_expandl_end ::(Intervallic Interval a, IntervalSizeable a b)=>
+prop_expandl_end ::(IntervalSizeable a b, Show a)=>
        b
     -> Interval a
     -> Property
 prop_expandl_end d i = end (expandl d i) === end i
 
 
-prop_expandr_begin ::(Intervallic Interval a, IntervalSizeable a b)=>
+prop_expandr_begin ::(IntervalSizeable a b, Show a)=>
        b
     -> Interval a
     -> Property
@@ -443,7 +439,7 @@ prop_expandr_begin d i = begin (expandr d i) === begin i
 
 -- | The relation between x and z should be an element of the set of the
 --   composed relations between x y and between y z.
-prop_compose :: Intervallic Interval a =>
+prop_compose :: Ord a =>
        Interval a
     -> Interval a
     -> Interval a
