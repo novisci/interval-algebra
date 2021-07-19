@@ -38,11 +38,13 @@ import IntervalAlgebra as IA      ( enderval
                                   , compose
                                   , disjoint
                                   , (<|>)
+                                  , begin
+                                  , end
                                   , IntervalCombinable((.+.))
                                   , IntervalSizeable(moment, diff)
                                   , ComparativePredicateOf1
                                   , ComparativePredicateOf2
-                                  , Intervallic(begin, end)
+                                  , Intervallic
                                   , Interval )
 
 mkIntrvl :: Int -> Int -> Interval Int

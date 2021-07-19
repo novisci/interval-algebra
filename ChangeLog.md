@@ -1,6 +1,14 @@
 # Changelog for interval-algebra
 
-## 0.8.2 
+## 0.8.3
+
+* Moves `begin` and `end` out of the `Intervallic` class.
+* Avoids incomplete patterns warnings by:
+  * deriving `Enum` instance of `IntervalRelation`
+  * catching equals case with `otherwise` in `disjoinPairs`
+  * catching disjoint case with `otherwise` in `clip`
+
+## 0.8.2
 
 * Removes `Show` constraint from `intervals` function in `PairIntervals`.
 
