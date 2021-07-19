@@ -83,6 +83,8 @@ import Data.Tuple       ( fst )
 import Safe             ( headMay, lastMay, initSafe, tailSafe)
 import Witherable       ( Filterable(filter) )
 import IntervalAlgebra  ( (<|>),
+                          begin, 
+                          end,
                           after,
                           before,
                           beginerval,
@@ -250,7 +252,7 @@ clip x y
    | overlappedBy x y = Just $ beginerval (diff (end y) (begin x)) (begin x)
    | jx x y           = Just (getInterval x)
    | jy x y           = Just (getInterval y)
-   | disjoint x y     = Nothing
+   | otherwise        = Nothing {- disjoint x y case -}
    where jy = equals <|> startedBy <|> contains <|> finishedBy
          jx = starts <|> during <|> finishes
 
@@ -387,7 +389,7 @@ makeFilter :: ( Filterable f
 makeFilter f p = Witherable.filter (f p)
 
 {- | 
-Filter 'Filterable' containers of one @'Intervallic'@ type based by comparing to 
+Filter 'Witherable.Filterable' containers of one @'Intervallic'@ type based by comparing to 
 a (potentially different) 'Intervallic' type using the corresponding interval
 predicate function.
 -}
@@ -501,7 +503,7 @@ disjoinPaired o e
    | x `finishedBy` y  = foldMeeting $ Meeting [ evp b1 b2 s1, ev i2 sc ]
    | x `contains` y    = foldMeeting $ Meeting [ evp b1 b2 s1, evp b2 e2 sc, evp e2 e1 s1 ]
    | x `starts` y      = foldMeeting $ Meeting [ ev i1 sc, evp e1 e2 s2 ]
-   | x `equals` y      = Meeting [ ev i1 sc ]
+   | otherwise         = Meeting [ ev i1 sc ] {- x `equals` y  case -}
    where x  = min o e
          y  = max o e
          i1 = getInterval x

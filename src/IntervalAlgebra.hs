@@ -37,6 +37,8 @@ module IntervalAlgebra(
     -- * Intervals
       Interval
     , Intervallic(..)
+    , begin
+    , end
 
     -- ** Create new intervals
     , parseInterval
@@ -247,11 +249,10 @@ class (Ord a) => Intervallic i a where
     -- | Set the interval in an @i a@.
     setInterval :: i a -> Interval a -> i a
 
-    -- | Access the endpoints of an @i a@ .
-    begin, end :: i a -> a
-    begin = intervalBegin . getInterval
-    end   = intervalEnd . getInterval
-
+-- | Access the endpoints of an @i a@ .
+begin, end :: Intervallic i a => i a -> a
+begin = intervalBegin . getInterval
+end   = intervalEnd . getInterval
 
 {- | 
 The 'IntervalRelation' type and the associated predicate functions enumerate
@@ -260,55 +261,24 @@ to Allen's interval algebra. Constructors are shown with their corresponding
 predicate function.
 -}
 data IntervalRelation =
-      Meets         -- ^ `meets`
-    | MetBy         -- ^ `metBy`
-    | Before        -- ^ `before`
-    | After         -- ^ `after`
-    | Overlaps      -- ^ `overlaps`    
-    | OverlappedBy  -- ^ `overlappedBy`
-    | Starts        -- ^ `starts`
-    | StartedBy     -- ^ `startedBy`
-    | Finishes      -- ^ `finishes`
+      Before        -- ^ `before`
+    | Meets         -- ^ `meets`
+    | Overlaps      -- ^ `overlaps`
     | FinishedBy    -- ^ `finishedBy`
-    | During        -- ^ `during`
     | Contains      -- ^ `contains`
+    | Starts        -- ^ `starts`
     | Equals        -- ^ `equals`
-    deriving (Eq, Show, Read)
+    | StartedBy     -- ^ `startedBy`
+    | During        -- ^ `during`
+    | Finishes      -- ^ `finishes`
+    | OverlappedBy  -- ^ `overlappedBy`
+    | MetBy         -- ^ `metBy`
+    | After         -- ^ `after`
+    deriving (Eq, Show, Read, Enum)
 
 instance Bounded IntervalRelation where
     minBound = Before
     maxBound = After
-
-instance Enum IntervalRelation where
-    fromEnum r = case r of
-                    Before       -> 0
-                    Meets        -> 1
-                    Overlaps     -> 2
-                    FinishedBy   -> 3
-                    Contains     -> 4
-                    Starts       -> 5
-                    Equals       -> 6
-                    StartedBy    -> 7
-                    During       -> 8
-                    Finishes     -> 9
-                    OverlappedBy -> 10
-                    MetBy        -> 11
-                    After        -> 12
-
-    toEnum i = case i of
-               0  -> Before
-               1  -> Meets
-               2  -> Overlaps
-               3  -> FinishedBy
-               4  -> Contains
-               5  -> Starts
-               6  -> Equals
-               7  -> StartedBy
-               8  -> During
-               9 -> Finishes
-               10 -> OverlappedBy
-               11 -> MetBy
-               12 -> After
 
 instance Ord IntervalRelation where
     compare x y = compare (fromEnum x) (fromEnum y)
