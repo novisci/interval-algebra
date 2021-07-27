@@ -51,6 +51,14 @@ instance Monoid State where
     mempty = State [False, False, False]
 type StateEvent a = PairedInterval State a
 
+
+readInterval :: IntervalSizeable a a => (a, a) -> Interval a
+readInterval (b, e) = beginerval (e - b) b
+
+mkEv :: IntervalSizeable a a => (a, a) -> b -> PairedInterval b a
+mkEv i s = makePairedInterval s (readInterval i)
+
+
 instance Arbitrary State where
    arbitrary =  State <$> suchThat (listOf arbitrary) (\x -> length x == 3)
 
@@ -156,6 +164,24 @@ c4out =
   , evpi 3 0     [False, False, False]
   , evpi 1 3     [True, False, True ]]
 
+
+
+c5in :: [StateEvent Int]
+c5in = [
+     mkEv (-63, 21) (State [False,True,True])
+   , mkEv (-56, 20) (State [True,True,True])
+   , mkEv (1, 41) (State [False,True,False])
+   , mkEv (11, 34) (State [True,False,True])
+   , mkEv (27, 28) (State [False,True,True])
+   ]
+
+c5out :: [StateEvent Int]
+c5out = [
+     mkEv (-63, -56) (State [False,True,True])
+   , mkEv (-56, 34) (State [True,True,True])
+   , mkEv (34, 41) (State [False,True,False])
+   ]
+
 -- Properties
 
 -- Check that the only relation remaining after applying a function is Before
@@ -175,6 +201,15 @@ prop_gaps1:: (Ord a)=>
      [Interval a]
    -> Property
 prop_gaps1 = prop_before gaps
+
+-- In the case that that the input is not null, then 
+-- * all relations should be `Meets` after formMeetingSequence
+prop_formMeetingSequence0::
+     Events Int
+   -> Property
+prop_formMeetingSequence0 x =
+   not (null es)  ==> all (==Meets) (relations $ formMeetingSequence es) === True
+   where es = getEvents x
 
 -- In the case that that the input has
 -- *     at least one Before relation between consequent pairs
@@ -329,19 +364,24 @@ spec = do
 
    describe "formMeetingSequence unit tests" $
       do
-         it "formMeetingSequence 0" $
+         it "formMeetingSequence unit test 0" $
             formMeetingSequence c0in `shouldBe` c0out
-         it "formMeetingSequence 1"$
+         it "formMeetingSequence unit test 1"$
             formMeetingSequence c1in `shouldBe` c1out
-         it "formMeetingSequence 2"$
+         it "formMeetingSequence unit test 2"$
             formMeetingSequence c2in `shouldBe` c2out
-         it "formMeetingSequence 3"$
+         it "formMeetingSequence unit test 3"$
             formMeetingSequence c3in `shouldBe` c3out
-         it "formMeetingSequence 4"$
+         it "formMeetingSequence unit test 4"$
             formMeetingSequence c4in `shouldBe` c4out
+         it "formMeetingSequence unit test 5"$
+            formMeetingSequence c5in `shouldBe` c5out
 
    describe "formMeetingSequence property tests" $
+      modifyMaxSuccess (*50) $
       do
+          it "prop_formMeetingSequence0" $
+            property prop_formMeetingSequence0
           it "prop_formMeetingSequence1" $
             property prop_formMeetingSequence1
           it "prop_formMeetingSequence2" $

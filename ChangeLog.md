@@ -1,5 +1,9 @@
 # Changelog for interval-algebra
 
+## 0.8.4
+
+* Fixes bug in `formMeetingSequence` wherein sequences of events with >2 nested events were not returning a meeting sequence. 
+
 ## 0.8.3
 
 * Moves `begin` and `end` out of the `Intervallic` class.
