@@ -7,3 +7,4 @@
 *yaml.lock
 dist*
 .vscode*
+cabal.project.local

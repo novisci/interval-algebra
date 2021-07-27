@@ -1,6 +1,6 @@
 cabal-version:  2.2
 name:           interval-algebra
-version:        0.8.3
+version:        0.8.4
 synopsis:       An implementation of Allen's interval algebra for temporal logic
 description:    Please see the README on GitHub at <https://github.com/novisci/interval-algebra>
 category:       Algebra,Time
@@ -42,7 +42,9 @@ library
   default-language: Haskell2010
 
 test-suite interval-algebra-test
-  type: exitcode-stdio-1.0
+  type: exitcode-stdio-1.0  
+  -- this type means successful test run returns the zero exit code, 
+  -- and a failed test run returns a non-zero exit code
   main-is: Spec.hs 
   other-modules:
       IntervalAlgebraSpec
@@ -57,7 +59,7 @@ test-suite interval-algebra-test
   build-depends:
       QuickCheck
     , base >=4.7 && <5
-    , hspec
+    , hspec == 2.8.2
     , containers >= 0.6
     , interval-algebra
     , time >=1.8 && <2

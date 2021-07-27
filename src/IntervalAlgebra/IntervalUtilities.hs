@@ -65,13 +65,13 @@ module IntervalAlgebra.IntervalUtilities (
 
 import Prelude          ( (<*>), seq)
 import GHC.Show         ( Show )
-import GHC.Num          ( )
+import GHC.Num          (xorInteger )
 import GHC.Int          ( Int )
 import Control.Applicative
                         ( Applicative(pure) )
-import Data.Bool        ( Bool, otherwise, not )
+import Data.Bool        ( Bool, otherwise, not, (||), (&&) )
 import Data.Eq          ( Eq((==)) )
-import Data.Foldable    ( Foldable(null, foldl', toList), all, any )
+import Data.Foldable    ( Foldable(null, foldl', toList), all, any, or )
 import Data.Function    ( ($), (.), flip )
 import Data.Functor     ( Functor(fmap) )
 import Data.Monoid      ( Monoid(mempty) )
@@ -83,7 +83,7 @@ import Data.Tuple       ( fst )
 import Safe             ( headMay, lastMay, initSafe, tailSafe)
 import Witherable       ( Filterable(filter) )
 import IntervalAlgebra  ( (<|>),
-                          begin, 
+                          begin,
                           end,
                           after,
                           before,
@@ -112,7 +112,7 @@ import IntervalAlgebra  ( (<|>),
                           ComparativePredicateOf2,
                           Interval,
                           IntervalCombinable((<+>), (><)),
-                          IntervalRelation(Meets),
+                          IntervalRelation(..),
                           IntervalSizeable(diff, duration),
                           Intervallic(..) )
 import IntervalAlgebra.PairedInterval
@@ -496,14 +496,21 @@ disjoinPaired :: ( Eq b
        (PairedInterval b) a
     -> (PairedInterval b) a
     -> Meeting [(PairedInterval b) a]
-disjoinPaired o e
-   | x `before` y      = Meeting [ x, evp e1 b2 mempty, y ]
-   | x `meets` y       = foldMeeting $ Meeting [ x, y ]
-   | x `overlaps` y    = foldMeeting $ Meeting [ evp b1 b2 s1, evp b2 e1 sc, evp e1 e2 s2 ]
-   | x `finishedBy` y  = foldMeeting $ Meeting [ evp b1 b2 s1, ev i2 sc ]
-   | x `contains` y    = foldMeeting $ Meeting [ evp b1 b2 s1, evp b2 e2 sc, evp e2 e1 s1 ]
-   | x `starts` y      = foldMeeting $ Meeting [ ev i1 sc, evp e1 e2 s2 ]
-   | otherwise         = Meeting [ ev i1 sc ] {- x `equals` y  case -}
+disjoinPaired o e = case relate x y of
+     Before     -> Meeting [ x, evp e1 b2 mempty, y ]
+     Meets      -> foldMeeting $ Meeting [ x, y ]
+     Overlaps   ->  foldMeeting $ Meeting [ evp b1 b2 s1, evp b2 e1 sc, evp e1 e2 s2 ]
+     FinishedBy -> foldMeeting $ Meeting [ evp b1 b2 s1, ev i2 sc ]
+     Contains   -> foldMeeting $ Meeting [ evp b1 b2 s1, evp b2 e2 sc, evp e2 e1 s1 ]
+     Starts     -> foldMeeting $ Meeting [ ev i1 sc, evp e1 e2 s2 ]
+     _           -> Meeting [ ev i1 sc ] {- Equals case -}
+  --  | x `before` y      = Meeting [ x, evp e1 b2 mempty, y ]
+  --  | x `meets` y       = foldMeeting $ Meeting [ x, y ]
+  --  | x `overlaps` y    = foldMeeting $ Meeting [ evp b1 b2 s1, evp b2 e1 sc, evp e1 e2 s2 ]
+  --  | x `finishedBy` y  = foldMeeting $ Meeting [ evp b1 b2 s1, ev i2 sc ]
+  --  | x `contains` y    = foldMeeting $ Meeting [ evp b1 b2 s1, evp b2 e2 sc, evp e2 e1 s1 ]
+  --  | x `starts` y      = foldMeeting $ Meeting [ ev i1 sc, evp e1 e2 s2 ]
+  --  | otherwise         = Meeting [ ev i1 sc ] {- x `equals` y  case -}
    where x  = min o e
          y  = max o e
          i1 = getInterval x
@@ -537,7 +544,7 @@ recurseDisjoin (acc, o:os) (e:es)                       -- the "operating" patte
      -- If input event is equal to the first comparator, skip the comparison.
     | e == o    = recurseDisjoin (acc, o:os) es
 
-     {- If the period of o is either before or meets the period of e, then 
+     {- If o is either before or meets e, then 
      the first of the combined events can be put into the accumulator. 
      That is, since the inputs events are ordered, once the beginning of o 
      is before or meets e, then we are assured that all periods up to the 
@@ -565,11 +572,22 @@ formMeetingSequence :: ( Eq b
                        , IntervalSizeable a c) =>
            [ PairedInterval b a ]
         -> [ PairedInterval b a ]
-formMeetingSequence x = recurseDisjoin ([], []) (recurseDisjoin ([], []) x)
-   -- the second pass of recurseDisjoin is to handle the situation where the first pass
-   -- disjoins all the events correctly into a meeting sequence but -- due to 
-   -- nesting of intervals in the input -- some of the sequential pairs have
-   -- the same data after the first pass. The second pass merges any sequential
+formMeetingSequence x
+  | null x  = []
+  | allMeet x && not (hasEqData x) = x
+  | otherwise  = formMeetingSequence (recurseDisjoin ([], []) x)
+  -- recurseDisjoin ([], []) (recurseDisjoin ([], []) (recurseDisjoin ([], []) x))
+
+   -- the multiple passes of recurseDisjoin is to handle the situation where the 
+   -- initial passes almost disjoins all the events correctly into a meeting sequence
+   -- but due to nesting of intervals in the input -- some of the sequential pairs have
+   -- the same data after the first pass. The recursive passes merges any sequential
    -- intervals that have the same data.
    --
-   -- There is probably a more efficient way to do this.
+   -- There is probably a more efficient way to do this
+
+allMeet :: (Ord a) => [PairedInterval b a] -> Bool
+allMeet x = all ( == Meets) ( relations x )
+
+hasEqData :: (Eq b) => [PairedInterval b a] -> Bool
+hasEqData x = or (foldlAccume (==)  (fmap getPairData x) :: [Bool])
