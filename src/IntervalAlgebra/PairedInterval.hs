@@ -74,8 +74,8 @@ equalPairData :: (Eq b) => ComparativePredicateOf1 (PairedInterval b a)
 equalPairData x y = getPairData x == getPairData y
 
 -- | Gets the intervals from a list of paired intervals.
-intervals :: (Ord a) => [PairedInterval b a] -> [Interval a]
-intervals = map getInterval
+intervals :: (Ord a, Functor f) => f (PairedInterval b a) -> f (Interval a)
+intervals = fmap getInterval
 
 -- | Empty is used to trivially lift an @Interval a@ into a @PairedInterval@.
 data Empty = Empty deriving (Eq, Ord, Show)

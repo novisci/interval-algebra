@@ -3,33 +3,62 @@
 {-# LANGUAGE FlexibleInstances #-}
 module IntervalAlgebra.IntervalUtilitiesSpec (spec) where
 
-import Test.Hspec.QuickCheck              ( modifyMaxSuccess )
+import Test.Hspec.QuickCheck              ( modifyMaxSuccess
+                                          , modifyMaxDiscardRatio )
 import Test.Hspec                         ( Spec
-                                          , it, shouldBe, describe, pending, xcontext )
+                                          , it
+                                          , shouldBe
+                                          , describe
+                                          , pending
+                                          , xcontext )
 import Test.QuickCheck                    ( Property
                                           , Testable(property)
                                           , Arbitrary(arbitrary, shrink)
                                           , suchThat
                                           , (===), (==>)
-                                          , Arbitrary1 (liftArbitrary), listOf, orderedList)
+                                          , Arbitrary1 (liftArbitrary)
+                                          , listOf
+                                          , orderedList)
 import Data.List                          (sort)
 import IntervalAlgebra.Arbitrary          ( )
 import IntervalAlgebra                    ( Interval
                                           , Intervallic(..)
                                           , IntervalCombinable(..)
                                           , IntervalRelation (..)
-                                          , beginerval
                                           , IntervalSizeable
-                                          , starts )
-import IntervalAlgebra.IntervalUtilities  ( gaps
+                                          , beginerval
+                                          , complement
+                                          , starts
+                                          , disjointRelations
+                                          , withinRelations
+                                          , predicate  )
+import IntervalAlgebra.IntervalUtilities  ( gapsL
+                                          , gaps
                                           , durations
                                           , intersect
-                                          , relations
+                                          , relationsL
                                           , clip
                                           , gapsWithin
                                           , nothingIfNone
+                                          , filterBefore
+                                          , filterMeets
+                                          , filterOverlaps
+                                          , filterFinishedBy
+                                          , filterContains
+                                          , filterStarts
+                                          , filterEquals
+                                          , filterStartedBy
+                                          , filterDuring
+                                          , filterFinishes
+                                          , filterOverlappedBy
+                                          , filterMetBy
+                                          , filterAfter
                                           , filterDisjoint
                                           , filterNotDisjoint
+                                          , filterConcur
+                                          , filterWithin
+                                          , filterEnclose
+                                          , filterEnclosedBy
                                           , combineIntervals
                                           , foldMeetingSafe
                                           , formMeetingSequence )
@@ -37,7 +66,8 @@ import IntervalAlgebra.PairedInterval     ( trivialize
                                           , makePairedInterval
                                           , PairedInterval, getPairData )
 import Control.Monad                      ( liftM2 )
-import Data.Foldable
+import Data.Set                           ( Set, fromList, member )
+import Witherable                         ( Filterable )
 
 -- Types for testing
 
@@ -71,7 +101,7 @@ instance Arbitrary (Events Int) where
 
 -- Testing functions
 checkSeqStates :: (Intervallic i Int)=> [i Int] -> Bool
-checkSeqStates x = (length x > 1) || all (== Meets) (relations x)
+checkSeqStates x = (length x > 1) || all (== Meets) (relationsL x)
 
 -- Creation functions
 iv :: Int -> Int -> Interval Int
@@ -189,7 +219,7 @@ prop_before:: (Ord a)=>
       ([Interval a] -> [Interval a])
    -> [Interval a]
    -> Property
-prop_before f x = relations ci === replicate (length ci - 1) Before
+prop_before f x = relationsL ci === replicate (length ci - 1) Before
       where ci = f (sort x)
 
 prop_combineIntervals1:: (Ord a, Show a, Eq a)=>
@@ -200,15 +230,15 @@ prop_combineIntervals1 = prop_before combineIntervals
 prop_gaps1:: (Ord a)=>
      [Interval a]
    -> Property
-prop_gaps1 = prop_before gaps
+prop_gaps1 = prop_before gapsL
 
 -- In the case that that the input is not null, then 
--- * all relations should be `Meets` after formMeetingSequence
+-- * all relationsL should be `Meets` after formMeetingSequence
 prop_formMeetingSequence0::
      Events Int
    -> Property
 prop_formMeetingSequence0 x =
-   not (null es)  ==> all (==Meets) (relations $ formMeetingSequence es) === True
+   not (null es)  ==> all (==Meets) (relationsL $ formMeetingSequence es) === True
    where es = getEvents x
 
 -- In the case that that the input has
@@ -216,7 +246,7 @@ prop_formMeetingSequence0 x =
 -- * AND does not have any empty states
 --
 -- THEN the number empty states in the output should smaller than or equal to
---      the number before relations in the output 
+--      the number before relationsL in the output 
 prop_formMeetingSequence1::
      Events Int
    -> Property
@@ -225,7 +255,7 @@ prop_formMeetingSequence1 x =
      not (any (\x -> getPairData x == State [False, False, False]) (getEvents x))
    ) ==> beforeCount >= emptyCount
    where res = formMeetingSequence (getEvents x)
-         beforeCount = lengthWhen (== Before) (relations (getEvents x))
+         beforeCount = lengthWhen (== Before) (relationsL (getEvents x))
          emptyCount  = lengthWhen (\x -> getPairData x == mempty ) res
          lengthWhen f x = length $ filter f x
 
@@ -237,17 +267,111 @@ prop_formMeetingSequence2::
 prop_formMeetingSequence2 x = not (null $ getEvents x) ==> not $ null res
    where res = formMeetingSequence (getEvents x)
 
+class ( Ord a ) => FiltrationProperties a  where
+   prop_filtration ::
+      (Interval a ->  [Interval a] -> [Interval a])
+      -> Set IntervalRelation
+      -> Interval a
+      -> [Interval a]
+      -> Property 
+   prop_filtration fltr s x l = 
+      not (null res) ==> and (fmap (predicate s x) res) === True
+     where res = fltr x l
+
+   prop_filterOverlaps :: Interval a
+      -> [Interval a]
+      -> Property 
+   prop_filterOverlaps = prop_filtration filterOverlaps (fromList [Overlaps])
+
+   prop_filterOverlappedBy :: Interval a
+      -> [Interval a]
+      -> Property 
+   prop_filterOverlappedBy = prop_filtration filterOverlappedBy (fromList [OverlappedBy])
+
+   prop_filterBefore :: Interval a
+      -> [Interval a]
+      -> Property 
+   prop_filterBefore = prop_filtration filterBefore (fromList [Before])
+
+   prop_filterAfter :: Interval a
+      -> [Interval a]
+      -> Property 
+   prop_filterAfter = prop_filtration filterAfter (fromList [After])
+
+   prop_filterStarts :: Interval a
+      -> [Interval a]
+      -> Property 
+   prop_filterStarts = prop_filtration filterStarts (fromList [Starts])
+
+   prop_filterStartedBy :: Interval a
+      -> [Interval a]
+      -> Property 
+   prop_filterStartedBy = prop_filtration filterStartedBy (fromList [StartedBy])
+
+   prop_filterFinishes :: Interval a
+      -> [Interval a]
+      -> Property 
+   prop_filterFinishes = prop_filtration filterFinishes (fromList [Finishes])
+
+   prop_filterFinishedBy :: Interval a
+      -> [Interval a]
+      -> Property 
+   prop_filterFinishedBy = prop_filtration filterFinishedBy (fromList [FinishedBy])
+
+   prop_filterMeets :: Interval a
+      -> [Interval a]
+      -> Property 
+   prop_filterMeets = prop_filtration filterMeets (fromList [Meets])
+
+   prop_filterMetBy :: Interval a
+      -> [Interval a]
+      -> Property 
+   prop_filterMetBy = prop_filtration filterMetBy (fromList [MetBy])
+
+   prop_filterDuring :: Interval a
+      -> [Interval a]
+      -> Property 
+   prop_filterDuring = prop_filtration filterDuring (fromList [During])
+
+   prop_filterContains :: Interval a
+      -> [Interval a]
+      -> Property 
+   prop_filterContains = prop_filtration filterContains (fromList [Contains])
+
+   prop_filterEquals :: Interval a
+      -> [Interval a]
+      -> Property 
+   prop_filterEquals = prop_filtration filterEquals (fromList [Equals])
+
+   prop_filterDisjoint :: Interval a
+      -> [Interval a]
+      -> Property 
+   prop_filterDisjoint = prop_filtration filterDisjoint disjointRelations
+
+   prop_filterNotDisjoint :: Interval a
+      -> [Interval a]
+      -> Property 
+   prop_filterNotDisjoint = prop_filtration filterNotDisjoint (complement disjointRelations)
+
+   prop_filterWithin :: Interval a
+      -> [Interval a]
+      -> Property 
+   prop_filterWithin = prop_filtration filterWithin withinRelations
+
+instance FiltrationProperties Int
+
+
 spec :: Spec
 spec = do
    describe "gaps tests" $
     modifyMaxSuccess (*10) $
     do
       it "no gaps in containmentInt and noncontainmentInt" $
-         gaps [containmentInt, noncontainmentInt] `shouldBe` []
+         gapsL [containmentInt, noncontainmentInt] `shouldBe` []
       it "no gaps in containmentInt" $
-         gaps [containmentInt] `shouldBe` []
+         gapsL [containmentInt] `shouldBe` []
       it "single gap between containmentInt and anotherInt" $
-         gaps [containmentInt, anotherInt] `shouldBe` [gapInt]
+         gapsL [containmentInt, anotherInt] `shouldBe` [gapInt]
       it "after gaps, only relation should be Before" $
          property (prop_gaps1 @Int)
 
@@ -269,16 +393,16 @@ spec = do
              Just (iv 6 4)
          it "clip x y === intersect sort x y " pending
 
-   describe "relations tests" $
+   describe "relationsL tests" $
          do
-            it "relations [(0, 10), (4, 10), (10, 15), (15, 20)] == [FinishedBy, Meets, Meets]" $
-               relations [containmentInt, noncontainmentInt, gapInt, anotherInt] `shouldBe`
+            it "relationsL [(0, 10), (4, 10), (10, 15), (15, 20)] == [FinishedBy, Meets, Meets]" $
+               relationsL [containmentInt, noncontainmentInt, gapInt, anotherInt] `shouldBe`
                   [FinishedBy, Meets, Meets]
-            it "relations of [] shouldBe []" $
-               relations ([] :: [Interval Int]) `shouldBe` []
-            it "relations of singleton shouldBe []" $
-               relations [containmentInt] `shouldBe` []
-            it "more relations tests" pending
+            it "relationsL of [] shouldBe []" $
+               relationsL ([] :: [Interval Int]) `shouldBe` []
+            it "relationsL of singleton shouldBe []" $
+               relationsL [containmentInt] `shouldBe` []
+            it "more relationsL tests" pending
 
    describe "gapsWithin tests" $
       do
@@ -300,6 +424,7 @@ spec = do
          it "more emptyif tests" pending
 
    describe "filtration tests" $
+      modifyMaxDiscardRatio (*2) $
       do
          it "disjoint filter should filter out noncontainment" $
             filterDisjoint containmentInt [noncontainmentInt, anotherInt]
@@ -307,6 +432,32 @@ spec = do
          it "notDisjoint filter should keep noncontainment" $
             filterNotDisjoint containmentInt [noncontainmentInt, anotherInt]
                `shouldBe` [noncontainmentInt]
+         it "filterBefore property" $ property (prop_filterBefore @Int)
+         it "filterAfter property" $ property (prop_filterAfter @Int)
+         it "filterOverlaps property" $ property (prop_filterOverlaps @Int)
+         it "filterOverlappedBy property" $ property (prop_filterOverlappedBy @Int)
+         it "filterStarts property" $ property (prop_filterStarts @Int)
+         it "filterStartedBy property" $ property (prop_filterStartedBy @Int)
+         it "filterFinishes property" $ property (prop_filterFinishes @Int)
+         it "filterFinishedBy property" $ property (prop_filterFinishedBy @Int)
+         it "filterMeets property" $ property (prop_filterMeets @Int)
+         it "filterMetBy property" $ property (prop_filterMetBy @Int)
+         it "filterDuring property" $ property (prop_filterDuring @Int)
+         it "filterContains property" $ property (prop_filterContains @Int)
+         it "filterEquals property" $ property (prop_filterEquals @Int)
+         it "filterDisjoint property" $ property (prop_filterDisjoint @Int)
+         it "filterNotDisjoint property" $ property (prop_filterNotDisjoint @Int)
+         it "filterWithin property" $ property (prop_filterWithin @Int)
+
+
+   describe "intersection tests" $
+      do
+         it "intersection of (0, 2) (2, 4) should be Nothing" $
+            intersect (iv 2 0) (iv 2 2)    `shouldBe` Nothing
+         it "intersection of (0, 2) (3, 4) should be Nothing" $
+            intersect (iv 2 0) (iv 1 3)    `shouldBe` Nothing
+         it "intersection of (2, 4) (0, 2) should be Nothing" $
+            intersect (iv 2 2) (iv 2 0)    `shouldBe` Nothing 
 
    describe "intersection tests" $
       do
@@ -376,6 +527,8 @@ spec = do
             formMeetingSequence c4in `shouldBe` c4out
          it "formMeetingSequence unit test 5"$
             formMeetingSequence c5in `shouldBe` c5out
+         it "formMeetingSequence unit test 6"$
+            formMeetingSequence ([] :: [StateEvent Int]) `shouldBe` []
 
    describe "formMeetingSequence property tests" $
       modifyMaxSuccess (*50) $
