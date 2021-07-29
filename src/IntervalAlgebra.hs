@@ -147,12 +147,16 @@ module IntervalAlgebra(
     , equals
 
     -- ** Additional predicates and utilities
+    , precedes, precededBy
     , disjoint , notDisjoint, concur
     , within, enclose, enclosedBy
     , (<|>)
-    , unionPredicates
+    , predicate, unionPredicates
+    , disjointRelations, withinRelations
     , ComparativePredicateOf1
     , ComparativePredicateOf2
+    , beginervalFromEnd
+    , endervalFromBegin
 
     -- ** Algebraic operations
     , intervalRelations
@@ -172,7 +176,7 @@ module IntervalAlgebra(
 
 ) where
 
-import Prelude                  ( Eq, Show, Read, Enum(..), Bounded(..)
+import Prelude                  ( Eq, Show, Enum(..), Bounded(..)
                                 , Maybe(..), Either(..), String, Bool(..)
                                 , Integer, Int, Num
                                 , map, otherwise, show
@@ -274,7 +278,7 @@ data IntervalRelation =
     | OverlappedBy  -- ^ `overlappedBy`
     | MetBy         -- ^ `metBy`
     | After         -- ^ `after`
-    deriving (Eq, Show, Read, Enum)
+    deriving (Eq, Show, Enum)
 
 instance Bounded IntervalRelation where
     minBound = Before
@@ -290,11 +294,12 @@ meets x y = end x == begin y
 metBy     = flip meets
 
 -- | Is x before y? Is x after y?
-before, after  :: (Intervallic i0 a, Intervallic i1 a)=>
+before, after, precedes, precededBy  :: (Intervallic i0 a, Intervallic i1 a)=>
     ComparativePredicateOf2 (i0 a) (i1 a)
 before   x y  = end x < begin y
 after         = flip before
-
+precedes      = before
+precededBy    = after
 -- | Does x overlap y? Is x overlapped by y?
 overlaps, overlappedBy :: (Intervallic i0 a, Intervallic i1 a)=>
     ComparativePredicateOf2 (i0 a) (i1 a)
@@ -302,12 +307,10 @@ overlaps x y  = begin x < begin y && end x < end y && end x > begin y
 overlappedBy  = flip overlaps
 
 -- | Does x start y? Is x started by y?
-starts, startedBy, precedes, precededBy :: (Intervallic i0 a, Intervallic i1 a)=>
+starts, startedBy :: (Intervallic i0 a, Intervallic i1 a)=>
     ComparativePredicateOf2 (i0 a) (i1 a)
 starts   x y  = begin x == begin y && end x < end y
 startedBy     = flip starts
-precedes      = starts
-precededBy    = startedBy
 
 -- | Does x finish y? Is x finished by y?
 finishes, finishedBy :: (Intervallic i0 a, Intervallic i1 a)=>
@@ -333,9 +336,11 @@ equals   x y  = begin x == begin y && end x == end y
     -> ComparativePredicateOf2 (i0 a) (i1 a)
 (<|>) f g = unionPredicates [f, g]
 
+-- | The set of @IntervalRelation@ meaning two intervals are disjoint.
 disjointRelations :: Data.Set.Set IntervalRelation
 disjointRelations = toSet [Before, After, Meets, MetBy]
 
+-- | The set of @IntervalRelation@ meaning one interval is within the other.
 withinRelations :: Data.Set.Set IntervalRelation
 withinRelations = toSet [Starts, During, Finishes, Equals]
 
@@ -612,6 +617,21 @@ enderval :: (IntervalSizeable a b) =>
        -> Interval a
 enderval dur x = Interval (add (negate $ max (moment' i) dur) x, x)
     where i = Interval (x, x)
+
+-- | Creates a new Interval from the 'end' of an @i a@.
+beginervalFromEnd :: (IntervalSizeable a b, Intervallic i a) =>
+        b  -- ^ @dur@ation to add to the 'end' 
+     -> i a -- ^ the @i a@ from which to get the 'end'
+     -> Interval a
+beginervalFromEnd d i = beginerval d (end i)
+
+-- | Creates a new Interval from the 'begin' of an @i a@.
+endervalFromBegin :: (IntervalSizeable a b, Intervallic i a) => 
+       b -- ^ @dur@ation to subtract from the 'begin'  
+    -> i a -- ^ the @i a@ from which to get the 'begin'
+     -> Interval a
+endervalFromBegin d i = enderval d (begin i)
+
 
 -- | Creates a new @Interval@ spanning the extent x and y.
 --

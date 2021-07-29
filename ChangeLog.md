@@ -1,8 +1,17 @@
 # Changelog for interval-algebra
 
+## 0.8.6
+
+* Adds the `beginervalFromEnd` and `endervalFromBegin` utilities to create an interval of the provided duration from the end (respectively, begin) of another interval.
+* Cleans up some of the internals in the `IntervalUtilies` using functions from the `foldl` package rather than homemade versions.
+
+## 0.8.5
+
+* Fixes synonyms so that `before == precedes` and `after == precededBy`, rather than the incorrect `starts == precedes` and `startedBy == precededBy`.
+
 ## 0.8.4
 
-* Fixes bug in `formMeetingSequence` wherein sequences of events with >2 nested events were not returning a meeting sequence. 
+* Fixes bug in `formMeetingSequence` wherein sequences of events with >2 nested events were not returning a meeting sequence.
 
 ## 0.8.3
 

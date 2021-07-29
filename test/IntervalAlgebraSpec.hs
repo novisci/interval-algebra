@@ -13,8 +13,13 @@ import Test.QuickCheck            ( (===)
 import Data.Maybe                 ( fromJust )
 import Data.Either                ( isRight )
 import IntervalAlgebra.Arbitrary  ()
-import Data.Time as DT            ( Day )
-import Data.Set                   ( member )
+import Data.Time as DT            ( Day(..)
+                                  , fromGregorian
+                                  )
+import Data.Set                   ( Set
+                                  , member
+                                  , disjointUnion
+                                  , fromList )
 import IntervalAlgebra as IA      ( enderval
                                   , beginerval
                                   , expandr
@@ -27,6 +32,8 @@ import IntervalAlgebra as IA      ( enderval
                                   , finishedBy
                                   , contains
                                   , starts
+                                  , precedes
+                                  , precededBy
                                   , equals
                                   , startedBy
                                   , during
@@ -37,15 +44,27 @@ import IntervalAlgebra as IA      ( enderval
                                   , relate
                                   , compose
                                   , disjoint
+                                  , within
+                                  , concur
+                                  , notDisjoint
+                                  , enclose
+                                  , enclosedBy
                                   , (<|>)
                                   , begin
                                   , end
+                                  , disjointRelations
+                                  , withinRelations
+                                  , converse
+                                  , union
+                                  , intersection
+                                  , complement
                                   , IntervalCombinable((.+.))
                                   , IntervalSizeable(moment, diff)
                                   , ComparativePredicateOf1
                                   , ComparativePredicateOf2
                                   , Intervallic
-                                  , Interval )
+                                  , Interval
+                                  , IntervalRelation (..), intervalRelations, notDisjoint )
 
 mkIntrvl :: Int -> Int -> Interval Int
 mkIntrvl = beginerval
@@ -167,7 +186,7 @@ That is,
  \] 
 -}
 
-prop_IAaxiomM2 :: (IntervalSizeable a b, Show a) => 
+prop_IAaxiomM2 :: (IntervalSizeable a b, Show a) =>
     M2set a -> Property
 prop_IAaxiomM2 x =
   (i `meets` j && k `meets` l) ==>
@@ -245,7 +264,7 @@ prop_IAaxiomM3 :: (IntervalSizeable a b)=>
       b -> Interval a -> Property
 prop_IAaxiomM3 b i =
    (j `meets` i && i `meets` k) === True
-   where j = enderval   b (begin i) 
+   where j = enderval   b (begin i)
          k = beginerval b (end i)
 
 prop_IAaxiomM3_Int :: Interval Int -> Property
@@ -276,7 +295,7 @@ prop_IAaxiomM4 b x =
          n = beginerval b (end j)
          k = beginerval g (end m)
          g = diff (begin n) (end m)
- 
+
 prop_IAaxiomM4_Int :: M2set Int -> Property
 prop_IAaxiomM4_Int = prop_IAaxiomM4 1
 
@@ -320,7 +339,7 @@ m5set x a b = M5set p1 p2
         ps = end (expandr (makePos b) x) -- creating l by shifting and expanding i
 
 
-prop_IAaxiomM5 :: (IntervalSizeable a b) => 
+prop_IAaxiomM5 :: (IntervalSizeable a b) =>
     M5set a -> Property
 prop_IAaxiomM5 x =
    ((i `meets` j && j `meets` l) &&
@@ -409,7 +428,58 @@ class ( IntervalSizeable a b ) => IntervalRelationProperties a b where
     prop_exclusiveRelations x y =
       (  1 == length (filter id $ map (\r -> r x y) allIArelations)) === True
 
+    -- | Given a set of interval relations and predicate function, test that the 
+    -- predicate between two interval is equivalent to the relation of two intervals 
+    -- being in the set of relations.
+    prop_predicate_unions :: Ord a =>
+          Set IntervalRelation 
+        -> ComparativePredicateOf2 (Interval a) (Interval a)
+        -> Interval a 
+        -> Interval a
+        -> Property
+    prop_predicate_unions s pred i0 i1 = 
+      pred i0 i1 === (relate i0 i1 `elem` s)
+
+    prop_disjoint_predicate :: (Ord a) =>        
+          Interval a 
+        -> Interval a
+        -> Property 
+    prop_disjoint_predicate = prop_predicate_unions disjointRelations disjoint
+
+    prop_notdisjoint_predicate :: (Ord a) =>        
+          Interval a 
+        -> Interval a
+        -> Property 
+    prop_notdisjoint_predicate = 
+      prop_predicate_unions (complement disjointRelations) notDisjoint
+
+    prop_concur_predicate :: (Ord a) =>        
+          Interval a 
+        -> Interval a
+        -> Property 
+    prop_concur_predicate = 
+      prop_predicate_unions (complement disjointRelations) concur 
+
+    prop_within_predicate :: (Ord a) =>        
+          Interval a 
+        -> Interval a
+        -> Property 
+    prop_within_predicate = prop_predicate_unions withinRelations within
+
+    prop_enclosedBy_predicate :: (Ord a) =>        
+          Interval a 
+        -> Interval a
+        -> Property 
+    prop_enclosedBy_predicate = prop_predicate_unions withinRelations enclosedBy
+
+    prop_enclose_predicate :: (Ord a) =>        
+          Interval a 
+        -> Interval a
+        -> Property 
+    prop_enclose_predicate = prop_predicate_unions (converse withinRelations) enclose
+
 instance IntervalRelationProperties Int Int
+instance IntervalRelationProperties Day Integer
 
 allIArelations:: (Ord a) => [ComparativePredicateOf1 (Interval a)]
 allIArelations =   [  IA.equals
@@ -445,14 +515,61 @@ prop_compose :: Ord a =>
        Interval a
     -> Interval a
     -> Interval a
-    -> Property 
+    -> Property
 prop_compose x y z = member (relate x z) (compose (relate x y) (relate y z)) === True
 
 
 spec :: Spec
 spec = do
+  describe "Basic Interval unit tests of typeclass and creation methods" $
+    do
+      it "equality works" $ beginerval 6 (1::Int) == beginerval 6 1 `shouldBe` True
+      it "equality works" $ beginerval 0 (1::Int) == beginerval (-1) 1 `shouldBe` True
+      it "equality works" $ enderval 1 (2::Int) == beginerval 1 1 `shouldBe` True
+
+      it "parsing fails on bad inputs" $
+         parseInterval 10 0 `shouldBe` Left "0<10"
+      it "parsing works on good inputs" $
+         parseInterval 0 10 `shouldBe` Right (beginerval 10 (0::Int))
+
+      it "show displays intervals as expected" $
+         show (beginerval 10 (0::Int)) `shouldBe` "(0, 10)"
+
+      it "fmap can convert Interval Integer to Interval Day" $
+         fmap ModifiedJulianDay (beginerval 1 0) `shouldBe`
+            beginerval 1 (fromGregorian 1858 11 17)
+
+      it "(0, 2) <= (1, 3) is True" $
+          beginerval 2 (0::Int) <= beginerval 2 1 `shouldBe` True
+
+      it "(0, 2) < (1, 3) is True" $
+          beginerval 2 (0::Int) < beginerval 2 1 `shouldBe` True
+      it "(0, 2) < (0, 3) is True" $
+          beginerval 2 (0::Int) < beginerval 3 0 `shouldBe` True
+
+
+  describe "Basic IntervalRelation unit tests" $
+    do 
+      it "equality of IntervalRelations" $ Before == Before `shouldBe` True
+      it "equality of IntervalRelations" $ Before /= After `shouldBe` True
+
+      it "Bounds are set correctly" $ minBound @IntervalRelation `shouldBe` Before
+      it "Bounds are set correctly" $ maxBound @IntervalRelation `shouldBe` After
+
+      it "show Before is Before" $ show Before `shouldBe` "Before"
+
+  describe "IntervalRelation algebraic operations" $
+    do 
+      it "converse of Before is After" $ converse (fromList [Before]) `shouldBe`  fromList [After]
+
+      it "union of IntervalRelations" $ union (fromList [Before]) (fromList [After]) 
+        `shouldBe` fromList [Before, After]
+      it "intersection of IntervalRelations" $ intersection (fromList [Before]) (fromList [After]) 
+        `shouldBe` fromList []
+
   describe "IntervalSizeable tests" $
     do
+      it "moment is 1" $ moment @Int `shouldBe` 1
       it "expandl doesn't change end"   $ property (prop_expandl_end @Int)
       it "expandr doesn't change begin" $ property (prop_expandr_begin @Int)
       it "expand 0 5 Interval (0, 1) should be Interval (0, 6)" $
@@ -462,12 +579,12 @@ spec = do
       it "expand 5 5 Interval (0, 1) should be Interval (-5, 6)" $
         expand 5 5 (beginerval (1::Int) (0::Int)) `shouldBe` beginerval (11::Int) (-5::Int)
       it "expand -1 5 Interval (0, 1) should be Interval (-5, 6)" $
-        expand (-1) 5 (beginerval (1::Int) (0::Int)) `shouldBe` beginerval (6::Int) (0::Int) 
+        expand (-1) 5 (beginerval (1::Int) (0::Int)) `shouldBe` beginerval (6::Int) (0::Int)
       it "expand 5 -5 Interval (0, 1) should be Interval (-5, 1)" $
         expand 5 (-5) (beginerval (1::Int) (0::Int)) `shouldBe` beginerval (6::Int) (-5::Int)
       it "expand moment 0 Interval (0, 1) should be Interval (-1, 1)" $
         expand (moment @Int) 0 (beginerval (1::Int) (0::Int)) `shouldBe`
-         beginerval (2::Int) (-1::Int) 
+         beginerval (2::Int) (-1::Int)
 
       it "beginerval 2 10 should be Interval (10, 12)" $
         Right (beginerval (2::Int) 10) `shouldBe` parseInterval (10::Int) (12::Int)
@@ -497,11 +614,18 @@ spec = do
       it "disjoint x y same as explicit union of predicates" $
          disjoint (mkIntrvl 2 0) (mkIntrvl 2 3) `shouldBe`
          (before <|> after <|> meets <|> metBy) (mkIntrvl 2 0) (mkIntrvl 2 3)
+      it "within x y same as explicit union of predicates" $
+         within (mkIntrvl 2 3) (mkIntrvl 2 3) `shouldBe`
+         (starts <|> during <|> finishes <|> equals) (mkIntrvl 2 3) (mkIntrvl 2 3)
       it "prop_compose holds" $
          property (prop_compose @Int)
 
   describe "IntervalCombinable tests" $
       do
+        it "join non-meeting intervals is Nothing" $ 
+          beginerval 2 (0::Int) .+. beginerval 6 5 `shouldBe` Nothing
+        it "join meeting intervals is Just _" $ 
+          beginerval 2 (0::Int) .+. beginerval 6 2 `shouldBe` Just (beginerval 8 0) 
         it "" pending
 
   describe "Interval Algebra Axioms for meets properties" $
@@ -530,7 +654,6 @@ spec = do
       it "M4.1_Int" $ property prop_IAaxiomM4_1_Int
       it "M4.1_Day" $ property prop_IAaxiomM4_1_Day
 
-
   describe "Interval Algebra relation properties" $
       modifyMaxSuccess (*10) $
     do
@@ -539,8 +662,49 @@ spec = do
       it "finishes" $ property (prop_IAfinishes @Int)
       it "overlaps" $ property (prop_IAoverlaps @Int)
       it "during"   $ property (prop_IAduring @Int)
+      it "before"   $ property (prop_IAbefore @Day)
+      it "starts"   $ property (prop_IAstarts @Day)
+      it "finishes" $ property (prop_IAfinishes @Day)
+      it "overlaps" $ property (prop_IAoverlaps @Day)
+      it "during"   $ property (prop_IAduring @Day)
+
+      it "disjoint" $ property (prop_disjoint_predicate @Int)
+      it "disjoint" $ property (prop_disjoint_predicate @Day)
+      it "within" $ property (prop_within_predicate @Int)
+      it "within" $ property (prop_within_predicate @Day)
+      it "enclose" $ property (prop_enclose_predicate @Int)
+      it "enclose" $ property (prop_enclose_predicate @Day)
+      it "enclosedBy" $ property (prop_enclosedBy_predicate @Int)
+      it "enclosedBy" $ property (prop_enclosedBy_predicate @Day)
+      it "notDisjoint" $ property (prop_notdisjoint_predicate @Int)
+      it "notDisjoint" $ property (prop_notdisjoint_predicate @Day)
+      it "concur" $ property (prop_concur_predicate @Int)
+      it "concur" $ property (prop_concur_predicate @Day)
+
+  describe "Interval Algebra relation unit tests for synonyms" $
+    do
+      it "(0, 2) precedes (10, 12)" $
+          beginerval  2 (0::Int) `precedes` beginerval 2 10 `shouldBe` True
+      it "precedes matches before" $
+          beginerval  10 (0::Int) `precedes` beginerval 1 11 `shouldBe`
+          beginerval  10 (0::Int) `before` beginerval 1 11
+      it "(10, 12) precededBy (0, 2)" $
+          precededBy (beginerval 2 10) (beginerval  2 (0::Int)) `shouldBe` True
+      it "precededBy matches after" $
+          precededBy (beginerval 1 11) (beginerval  10 (0::Int)) `shouldBe` 
+          after (beginerval 1 11) (beginerval  10 (0::Int))
+      it "concur matches notDdisjoint" $
+          concur (beginerval 1 11) (beginerval  10 (0::Int)) `shouldBe` 
+          notDisjoint (beginerval 1 11) (beginerval  10 (0::Int))
+      it "concur matches notDisjoint" $
+          concur (beginerval 1 0) (beginerval  10 (0::Int)) `shouldBe` 
+          notDisjoint (beginerval 1 0) (beginerval  10 (0::Int)) 
+
 
   describe "Interval Algebra relation uniqueness" $
       modifyMaxSuccess (*100) $
     do
-      it "exactly one relation must be true" $ property (prop_exclusiveRelations @Int)
+      it "exactly one relation must be true" $
+        property (prop_exclusiveRelations @Int)
+      it "exactly one relation must be true" $
+        property (prop_exclusiveRelations @Day)

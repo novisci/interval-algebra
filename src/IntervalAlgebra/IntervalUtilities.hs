@@ -17,9 +17,9 @@ module IntervalAlgebra.IntervalUtilities (
 
     -- * Fold over sequential intervals
       combineIntervals
-    , combineIntervals'
+    , combineIntervalsL
     , gaps
-    , gaps'
+    , gapsL
     , gapsWithin
 
     -- * Operations on Meeting sequences of paired intervals
@@ -57,69 +57,80 @@ module IntervalAlgebra.IntervalUtilities (
 
     -- * Misc utilities
     , relations
-    , relations'
+    , relationsL
     , intersect
     , clip
     , durations
 ) where
 
-import Prelude          ( (<*>), seq)
-import GHC.Show         ( Show )
-import GHC.Num          (xorInteger )
-import GHC.Int          ( Int )
-import Control.Applicative
-                        ( Applicative(pure) )
-import Data.Bool        ( Bool, otherwise, not, (||), (&&) )
-import Data.Eq          ( Eq((==)) )
-import Data.Foldable    ( Foldable(null, foldl', toList), all, any, or )
-import Data.Function    ( ($), (.), flip )
-import Data.Functor     ( Functor(fmap) )
-import Data.Monoid      ( Monoid(mempty) )
-import Data.Maybe       ( Maybe(..), maybe, maybeToList, mapMaybe, catMaybes, fromMaybe )
-import Data.List        ( (++) )
-import Data.Ord         ( Ord(min, max) )
-import Data.Semigroup   ( Semigroup((<>)) )
-import Data.Tuple       ( fst )
-import Safe             ( headMay, lastMay, initSafe, tailSafe)
-import Witherable       ( Filterable(filter) )
-import IntervalAlgebra  ( (<|>),
-                          begin,
-                          end,
-                          after,
-                          before,
-                          beginerval,
-                          concur,
-                          contains,
-                          disjoint,
-                          during,
-                          enclose,
-                          enclosedBy,
-                          enderval,
-                          equals,
-                          extenterval,
-                          finishedBy,
-                          finishes,
-                          meets,
-                          metBy,
-                          notDisjoint,
-                          overlappedBy,
-                          overlaps,
-                          relate,
-                          startedBy,
-                          starts,
-                          within,
-                          ComparativePredicateOf1,
-                          ComparativePredicateOf2,
-                          Interval,
-                          IntervalCombinable((<+>), (><)),
-                          IntervalRelation(..),
-                          IntervalSizeable(diff, duration),
-                          Intervallic(..) )
-import IntervalAlgebra.PairedInterval
-                        ( PairedInterval
-                        , makePairedInterval
-                        , getPairData
-                        , equalPairData )
+import safe GHC.Show              ( Show )
+import safe GHC.Int               ( Int )
+import safe Control.Applicative   ( Applicative(pure)
+                                  , (<*>) )
+import qualified Control.Foldl as L
+import safe Control.Monad         ( Functor(fmap) )
+import safe Data.Bool             ( Bool, otherwise, not, (||), (&&) )
+import safe Data.Eq               ( Eq((==)) )
+import safe Data.Foldable         ( Foldable(null, foldl', toList)
+                                  , all
+                                  , any
+                                  , or )
+import safe Data.Function         ( ($), (.), flip )
+import safe Data.Monoid           ( Monoid(mempty) )
+import safe Data.Maybe            ( Maybe(..)
+                                  , maybe
+                                  , maybeToList )
+import safe Data.Ord              ( Ord(min, max) )
+import safe Data.Semigroup        ( Semigroup((<>)) )
+import safe Data.Traversable      ( Traversable(sequenceA) )
+import safe Data.Tuple            ( fst )
+import safe Safe                  ( headMay, lastMay, initSafe, tailSafe)
+import safe Witherable            ( Filterable(filter)
+                                  , Witherable(..)
+                                  , mapMaybe
+                                  , catMaybes )
+import safe IntervalAlgebra       ( (<|>),
+                                  begin,
+                                  end,
+                                  after,
+                                  before,
+                                  beginerval,
+                                  beginervalFromEnd,
+                                  endervalFromBegin,
+                                  concur,
+                                  contains,
+                                  disjoint,
+                                  during,
+                                  enclose,
+                                  enclosedBy,
+                                  enderval,
+                                  equals,
+                                  extenterval,
+                                  finishedBy,
+                                  finishes,
+                                  meets,
+                                  metBy,
+                                  notDisjoint,
+                                  overlappedBy,
+                                  overlaps,
+                                  relate,
+                                  startedBy,
+                                  starts,
+                                  within,
+                                  ComparativePredicateOf1,
+                                  ComparativePredicateOf2,
+                                  Interval,
+                                  IntervalCombinable((<+>), (><)),
+                                  IntervalRelation(..),
+                                  IntervalSizeable(diff, duration),
+                                  Intervallic(..) )
+import safe IntervalAlgebra.PairedInterval
+                                  ( PairedInterval
+                                  , makePairedInterval
+                                  , getPairData
+                                  , equalPairData )
+
+
 
 -------------------------------------------------
 -- Unexported utilties used in functions below --
@@ -129,30 +140,17 @@ import IntervalAlgebra.PairedInterval
 iv :: Int -> Int -> Interval Int
 iv = beginerval
 
--- TODO: does this function and applyAccume reinvent an existing foldable function?
--- Fold over consecutive pairs of foldable structure and collect the results in 
--- a monoidal structure.
-foldlAccume :: (Foldable f, Applicative m, Monoid (m a))=>
-      (b -> b -> a) -- ^ @f@: a function to apply to consecutive elements of @f b@
-    -> f b
-    -> m a
-foldlAccume f x = fst $ foldl' (applyAccume f) (mempty, Nothing) x
-
--- Apply a function and accumulate the results in a monoidal structure.
-applyAccume :: (Monoid (f a), Applicative f) =>
-       (b -> b -> a)  -- ^ @f@: a function combining two @b@s to get an @a@
-    -> (f a, Maybe b) -- ^ a pair (accumulating monoid for @b@s, optional @a@)
-    -> b              -- ^ this will be the second argument to @f@
-    -> (f a, Maybe b)
-applyAccume f (fs, Nothing) x = (fs, Just x)
-applyAccume f (fs, Just x)  y = (fs <> pure (f x y), Just y)
-
--- Lifts a list to a foldable, applicative monoid 
-liftListToFoldable :: ( Applicative f
-                      , Monoid (f a)
-                      , Foldable f) =>
-    [a] -> f a
-liftListToFoldable = foldl' (\x y -> x <> pure y) mempty
+-- An internal utility function for creating a @Fold@ that maps over a structure
+-- by consecutive pairs into a new structure.
+makeFolder :: (Monoid (m b), Applicative m) =>
+   (a -> a -> b)
+   -> L.Fold a (m b)
+makeFolder f = L.Fold step begin done
+  where
+    begin = (mempty, Nothing)
+    step (fs, Nothing) y = (fs, Just y)
+    step (fs, Just x) y  = (fs <> pure (f x y), Just y)
+    done (fs, _) = fs
 
 -- Used to combine two lists by combining the last element of @x@ and the first 
 -- element of @y@ by @f@. The combining function @f@ will generally return a 
@@ -162,31 +160,31 @@ listCombiner :: (Maybe a -> Maybe a -> [a]) -- ^ f
                 -> [a] -- ^ x
                 -> [a] -- ^ y
                 -> [a]
-listCombiner f x y = initSafe x ++ f (lastMay x) (headMay y) ++ tailSafe y
+listCombiner f x y = initSafe x <> f (lastMay x) (headMay y) <> tailSafe y
+
 
 -- | Returns a list of the 'IntervalRelation' between each consecutive pair 
---   of intervals. This the specialized form of 'relations'' which can return
---   any 'Applicative', 'Monoid' structure.
+--   of intervals. This is just a specialized 'relations' which returns a list.
 --
--- >>> relations [iv 1 0, iv 1 1] 
+-- >>> relationsL [iv 1 0, iv 1 1] 
 -- [Meets]
-relations :: (Foldable f, Intervallic i a )=>
+relationsL :: (Foldable f, Intervallic i a )=>
        f (i a)
     -> [IntervalRelation]
-relations = relations'
+relationsL = relations
 
 -- | A generic form of 'relations' which can output any 'Applicative' and 
 --   'Monoid' structure. 
--- >>> (relations' [iv 1 0, iv 1 1]) :: [IntervalRelation (Interval Int)]
+-- >>> (relations [iv 1 0, iv 1 1]) :: [IntervalRelation (Interval Int)]
 -- [Meets]
 --
-relations' :: ( Foldable f
+relations :: ( Foldable f
               , Applicative m
               , Intervallic i a
               , Monoid (m IntervalRelation ))=>
         f (i a)
      -> m IntervalRelation
-relations' = foldlAccume relate
+relations = L.fold (makeFolder relate)
 
 -- | Forms a 'Just' new interval from the intersection of two intervals, 
 --   provided the intervals are not disjoint.
@@ -201,31 +199,41 @@ intersect x y
         where b = max (begin x) (begin y)
               e = min (end x) (end y)
 
--- | Returns a (possibly empty) container of intervals consisting of the gaps 
+-- Internal function which folds over a structure by consecutive pairs, returing
+-- gaps between each pair (@Nothing@ if no such gap exists).
+gapsM:: ( IntervalCombinable i a
+        , Traversable f
+        , Monoid (f (Maybe (Interval a)))
+        , Applicative f) =>
+      f (i a) ->
+      f (Maybe (Interval a))
+gapsM =  L.fold (makeFolder (\i j -> getInterval i >< getInterval j))
+
+-- | Returns a @Maybe@ container of intervals consisting of the gaps 
 --   between intervals in the input. *To work properly, the input should be
---   sorted*. See 'gaps'' for a version that returns a list.
+--   sorted*. See 'gapsL' for a version that always returns a list.
 --
 -- >>> gaps [iv 4 1, iv 4 8, iv 3 11]
--- [(5, 8)]
-gaps :: (  IntervalCombinable i a
-         , Applicative f
-         , Monoid (f (Interval a))
-         , Foldable f) =>
+--
+gaps:: ( IntervalCombinable i a
+        , Traversable f
+        , Monoid (f (Maybe (Interval a)))
+        , Applicative f) =>
       f (i a) ->
-      f (Interval a)
-gaps x = liftListToFoldable (gaps' x)
+      Maybe (f (Interval a))
+gaps = sequenceA.gapsM
 
 -- | Returns a (possibly empty) list of intervals consisting of the gaps between
 --   intervals in the input container. *To work properly, the input should be 
 --   sorted*. This version outputs a list. See 'gaps' for a version that lifts
 --   the result to same input structure @f@.
-gaps' :: ( Intervallic i a
+gapsL :: ( IntervalCombinable i a
          , Applicative f
-         , Monoid (f (Interval a))
-         , Foldable f) =>
+         , Monoid (f (Maybe (Interval a)))
+         , Traversable f) =>
       f (i a) ->
       [Interval a]
-gaps' x = catMaybes (foldlAccume (\i j -> getInterval i >< getInterval j) x)
+gapsL x = maybe [] toList (gaps x)
 
 -- | Returns the 'duration' of each 'Intervallic i a' in the 'Functor' @f@.
 --
@@ -258,31 +266,33 @@ clip x y
 
 -- | Applies 'gaps' to all the non-disjoint intervals in @x@ that are *not* disjoint
 -- from @i@. Intervals that 'overlaps' or are 'overlappedBy' @i@ are 'clip'ped 
--- to @i@, so that all the intervals are 'within' @i@. If there are no gaps, then
--- 'Nothing' is returned.
+-- to @i@, so that all the intervals are 'within' @i@. If there are no gaps or if the 
+-- input is empty, then 'Nothing' is returned.
 --
 -- >>> gapsWithin (iv 9 1) [iv 5 0, iv 2 7, iv 3 12]
 -- Just [(5, 7),(9, 10)]
 gapsWithin :: ( Applicative f
-               , Foldable f
+               , Witherable f 
                , Monoid (f (Interval a))
+               , Monoid (f (Maybe (Interval a)))
                , IntervalSizeable a b
                , IntervalCombinable i0 a
                , IntervalCombinable i1 a
-               , Filterable f )=>
+               ) =>
         i0 a  -- ^ i
   -> f (i1 a) -- ^ x
   -> Maybe (f (Interval a))
-gapsWithin i x
-  | null ivs  = Nothing
-  | otherwise = Just $ gaps $ pure s <> ivs <> pure e
-        where s   = enderval   0 (begin i)
-              e   = beginerval 0 (end i)
-              nd  = toList (filterNotDisjoint i x)
-              ivs = liftListToFoldable (mapMaybe (clip i) nd)
+gapsWithin i x 
+  | null x   = Nothing
+  | null res = Nothing 
+  | otherwise = Just res
+    where s   = pure (endervalFromBegin 0 i)
+          e   = pure (beginervalFromEnd 0 i)
+          ivs = mapMaybe (clip i) (filterNotDisjoint i x)
+          res = catMaybes $ gapsM ( s <> ivs <> e ) 
 
 -- The Box is an internal type used to hold accumulated, combined intervals in 
--- 'combineIntervals''.
+-- 'combineIntervalsL'.
 newtype Box a = Box { unBox :: [a] }
 
 packIntervalBoxes :: (Intervallic i a)=> [i a] -> [Box (Interval a)]
@@ -293,7 +303,7 @@ instance (Ord a) => Semigroup (Box (Interval a)) where
 
 -- | Returns a container of intervals where any intervals that meet or share support
 --   are combined into one interval. *To work properly, the input should 
---   be sorted*. See 'combineIntervals'' for a version that works only on lists.
+--   be sorted*. See 'combineIntervalsL' for a version that works only on lists.
 --
 -- >>> combineIntervals [iv 10 0, iv 5 2, iv 2 10, iv 2 13]
 -- [(0, 12),(13, 15)]
@@ -304,18 +314,20 @@ combineIntervals :: ( Applicative f
                     , Foldable f ) =>
       f (i a) ->
       f (Interval a)
-combineIntervals x = liftListToFoldable (combineIntervals' $ toList x)
+combineIntervals x = 
+  foldl' (\x y -> x <> pure y) mempty (combineIntervalsL $ toList x)
+  -- TODO: surely combineIntervals and combineIntervalsL could be combined
 
 -- | Returns a list of intervals where any intervals that meet or share support
 --   are combined into one interval. *To work properly, the input list should 
 --   be sorted*. 
 --
--- >>> combineIntervals' [iv 10 0, iv 5 2, iv 2 10, iv 2 13]
+-- >>> combineIntervalsL [iv 10 0, iv 5 2, iv 2 10, iv 2 13]
 -- [(0, 12),(13, 15)]
-combineIntervals' :: (Intervallic i a)=> [i a] -> [Interval a]
-combineIntervals' l = unBox $ foldl' (<>) (Box []) (packIntervalBoxes l)
+combineIntervalsL :: (Intervallic i a)=> [i a] -> [Interval a]
+combineIntervalsL l = unBox $ foldl' (<>) (Box []) (packIntervalBoxes l)
 
--- Internal function for combining maybe intervals in the 'combineIntervals'' 
+-- Internal function for combining maybe intervals in the 'combineIntervalsL' 
 -- function
 (<->) :: (IntervalCombinable i a) =>
        Maybe (i a)
@@ -450,7 +462,7 @@ packMeeting = fmap (\z -> Meeting [z])
 -- Test a list of intervals to be sure they all meet; if not return Nothing.
 parseMeeting :: Intervallic i a => [i a] -> Maybe (Meeting [i a])
 parseMeeting x
-    | all ( == Meets ) (relations x) = Just $ Meeting x
+    | all ( == Meets ) (relationsL x) = Just $ Meeting x
     | otherwise = Nothing
 
 -- A specific case of 'joinMeeting' for @PairedIntervals@.
@@ -499,18 +511,11 @@ disjoinPaired :: ( Eq b
 disjoinPaired o e = case relate x y of
      Before     -> Meeting [ x, evp e1 b2 mempty, y ]
      Meets      -> foldMeeting $ Meeting [ x, y ]
-     Overlaps   ->  foldMeeting $ Meeting [ evp b1 b2 s1, evp b2 e1 sc, evp e1 e2 s2 ]
+     Overlaps   -> foldMeeting $ Meeting [ evp b1 b2 s1, evp b2 e1 sc, evp e1 e2 s2 ]
      FinishedBy -> foldMeeting $ Meeting [ evp b1 b2 s1, ev i2 sc ]
      Contains   -> foldMeeting $ Meeting [ evp b1 b2 s1, evp b2 e2 sc, evp e2 e1 s1 ]
      Starts     -> foldMeeting $ Meeting [ ev i1 sc, evp e1 e2 s2 ]
      _           -> Meeting [ ev i1 sc ] {- Equals case -}
-  --  | x `before` y      = Meeting [ x, evp e1 b2 mempty, y ]
-  --  | x `meets` y       = foldMeeting $ Meeting [ x, y ]
-  --  | x `overlaps` y    = foldMeeting $ Meeting [ evp b1 b2 s1, evp b2 e1 sc, evp e1 e2 s2 ]
-  --  | x `finishedBy` y  = foldMeeting $ Meeting [ evp b1 b2 s1, ev i2 sc ]
-  --  | x `contains` y    = foldMeeting $ Meeting [ evp b1 b2 s1, evp b2 e2 sc, evp e2 e1 s1 ]
-  --  | x `starts` y      = foldMeeting $ Meeting [ ev i1 sc, evp e1 e2 s2 ]
-  --  | otherwise         = Meeting [ ev i1 sc ] {- x `equals` y  case -}
    where x  = min o e
          y  = max o e
          i1 = getInterval x
@@ -537,7 +542,7 @@ recurseDisjoin :: ( Monoid b, Eq b, IntervalSizeable a c, Show a ) =>
        ([(PairedInterval b) a ], [(PairedInterval b) a ])
     -> [(PairedInterval b) a ]
     -> [(PairedInterval b) a ]
-recurseDisjoin (acc, o:os) []     = acc ++ o:os           -- the "final" pattern
+recurseDisjoin (acc, o:os) []     = acc <> (o:os)           -- the "final" pattern
 recurseDisjoin (acc, [])   []     = acc                 -- another "final" pattern 
 recurseDisjoin (acc, [])   (e:es) = recurseDisjoin (acc, [e]) es -- the "initialize" pattern
 recurseDisjoin (acc, o:os) (e:es)                       -- the "operating" patterns 
@@ -550,7 +555,7 @@ recurseDisjoin (acc, o:os) (e:es)                       -- the "operating" patte
      is before or meets e, then we are assured that all periods up to the 
      beginning of o are fully disjoint and subsequent input events will 
      not overlap these in any way. -}
-    | (before <|> meets) o e = recurseDisjoin (acc ++ nh, recurseDisjoin ([], nt) os ) es
+    | (before <|> meets) o e = recurseDisjoin (acc <> nh, recurseDisjoin ([], nt) os ) es
 
     --The standard recursive operation.
     | otherwise = recurseDisjoin (acc,  recurseDisjoin ([], n) os ) es
@@ -587,7 +592,7 @@ formMeetingSequence x
    -- There is probably a more efficient way to do this
 
 allMeet :: (Ord a) => [PairedInterval b a] -> Bool
-allMeet x = all ( == Meets) ( relations x )
+allMeet x = all ( == Meets) ( relationsL x )
 
 hasEqData :: (Eq b) => [PairedInterval b a] -> Bool
-hasEqData x = or (foldlAccume (==)  (fmap getPairData x) :: [Bool])
+hasEqData x = or (L.fold (makeFolder (==)) (fmap getPairData x) :: [Bool])
