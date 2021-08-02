@@ -161,7 +161,7 @@ listCombiner :: (Maybe a -> Maybe a -> [a]) -- ^ f
                 -> [a] -- ^ y
                 -> [a]
 listCombiner f x y = initSafe x <> f (lastMay x) (headMay y) <> tailSafe y
-
+{-# INLINABLE listCombiner #-}
 
 -- | Returns a list of the 'IntervalRelation' between each consecutive pair 
 --   of intervals. This is just a specialized 'relations' which returns a list.
@@ -185,6 +185,7 @@ relations :: ( Foldable f
         f (i a)
      -> m IntervalRelation
 relations = L.fold (makeFolder relate)
+{-# INLINABLE relations #-}
 
 -- | Forms a 'Just' new interval from the intersection of two intervals, 
 --   provided the intervals are not disjoint.
@@ -208,6 +209,7 @@ gapsM:: ( IntervalCombinable i a
       f (i a) ->
       f (Maybe (Interval a))
 gapsM =  L.fold (makeFolder (\i j -> getInterval i >< getInterval j))
+{-# INLINABLE gapsM #-}
 
 -- | Returns a @Maybe@ container of intervals consisting of the gaps 
 --   between intervals in the input. *To work properly, the input should be
@@ -222,6 +224,7 @@ gaps:: ( IntervalCombinable i a
       f (i a) ->
       Maybe (f (Interval a))
 gaps = sequenceA.gapsM
+{-# INLINABLE gaps #-}
 
 -- | Returns a (possibly empty) list of intervals consisting of the gaps between
 --   intervals in the input container. *To work properly, the input should be 
@@ -234,6 +237,7 @@ gapsL :: ( IntervalCombinable i a
       f (i a) ->
       [Interval a]
 gapsL x = maybe [] toList (gaps x)
+{-# INLINABLE gapsL #-}
 
 -- | Returns the 'duration' of each 'Intervallic i a' in the 'Functor' @f@.
 --
@@ -263,6 +267,7 @@ clip x y
    | otherwise        = Nothing {- disjoint x y case -}
    where jy = equals <|> startedBy <|> contains <|> finishedBy
          jx = starts <|> during <|> finishes
+{-# INLINABLE clip #-}
 
 -- | Applies 'gaps' to all the non-disjoint intervals in @x@ that are *not* disjoint
 -- from @i@. Intervals that 'overlaps' or are 'overlappedBy' @i@ are 'clip'ped 
@@ -290,6 +295,7 @@ gapsWithin i x
           e   = pure (beginervalFromEnd 0 i)
           ivs = mapMaybe (clip i) (filterNotDisjoint i x)
           res = catMaybes $ gapsM ( s <> ivs <> e ) 
+{-# INLINABLE gapsWithin #-}
 
 -- The Box is an internal type used to hold accumulated, combined intervals in 
 -- 'combineIntervalsL'.
@@ -317,6 +323,7 @@ combineIntervals :: ( Applicative f
 combineIntervals x = 
   foldl' (\x y -> x <> pure y) mempty (combineIntervalsL $ toList x)
   -- TODO: surely combineIntervals and combineIntervalsL could be combined
+{-# INLINABLE combineIntervals #-}
 
 -- | Returns a list of intervals where any intervals that meet or share support
 --   are combined into one interval. *To work properly, the input list should 
@@ -326,6 +333,7 @@ combineIntervals x =
 -- [(0, 12),(13, 15)]
 combineIntervalsL :: (Intervallic i a)=> [i a] -> [Interval a]
 combineIntervalsL l = unBox $ foldl' (<>) (Box []) (packIntervalBoxes l)
+{-# INLINABLE combineIntervalsL #-}
 
 -- Internal function for combining maybe intervals in the 'combineIntervalsL' 
 -- function
@@ -337,6 +345,7 @@ combineIntervalsL l = unBox $ foldl' (<>) (Box []) (packIntervalBoxes l)
 (<->) Nothing (Just y)  = [getInterval y]
 (<->) (Just x) Nothing  = [getInterval x]
 (<->) (Just x) (Just y) = (<+>) (getInterval x) (getInterval y)
+{-# INLINABLE (<->) #-}
 
 -- | Given a predicate combinator, a predicate, and list of intervals, returns 
 --   the input unchanged if the predicate combinator is @True@. Otherwise, returns
@@ -529,6 +538,7 @@ disjoinPaired o e = case relate x y of
          e2 = end y
          ev = flip makePairedInterval
          evp = \b e s -> ev (beginerval (diff e b) b) s
+{-# INLINABLE disjoinPaired #-}
 
 {- | 
 The internal function for converting a non-disjoint, ordered sequence of
@@ -562,6 +572,7 @@ recurseDisjoin (acc, o:os) (e:es)                       -- the "operating" patte
   where n  = getMeeting $ disjoinPaired o e
         nh = maybeToList (headMay n)
         nt = tailSafe n
+{-# INLINABLE recurseDisjoin #-}
 
 {- | 
 Convert an ordered sequence of @PairedInterval b a@. that may have any interval relation
@@ -590,6 +601,7 @@ formMeetingSequence x
    -- intervals that have the same data.
    --
    -- There is probably a more efficient way to do this
+{-# INLINABLE formMeetingSequence #-}
 
 allMeet :: (Ord a) => [PairedInterval b a] -> Bool
 allMeet x = all ( == Meets) ( relationsL x )

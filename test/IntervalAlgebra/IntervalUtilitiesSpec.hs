@@ -28,6 +28,7 @@ import IntervalAlgebra                    ( Interval
                                           , IntervalSizeable
                                           , beginerval
                                           , complement
+                                          , converse
                                           , starts
                                           , disjointRelations
                                           , withinRelations
@@ -59,6 +60,8 @@ import IntervalAlgebra.IntervalUtilities  ( gapsL
                                           , filterWithin
                                           , filterEnclose
                                           , filterEnclosedBy
+                                          , nothingIfAll
+                                          , nothingIfAny
                                           , combineIntervals
                                           , foldMeetingSafe
                                           , formMeetingSequence )
@@ -358,6 +361,21 @@ class ( Ord a ) => FiltrationProperties a  where
       -> Property 
    prop_filterWithin = prop_filtration filterWithin withinRelations
 
+   prop_filterEnclosedBy :: Interval a
+      -> [Interval a]
+      -> Property 
+   prop_filterEnclosedBy = prop_filtration filterEnclosedBy withinRelations
+
+   prop_filterEnclose :: Interval a
+      -> [Interval a]
+      -> Property 
+   prop_filterEnclose = prop_filtration filterEnclose (converse withinRelations)
+
+   prop_filterConcur :: Interval a
+      -> [Interval a]
+      -> Property 
+   prop_filterConcur = prop_filtration filterConcur (complement disjointRelations)
+
 instance FiltrationProperties Int
 
 
@@ -448,8 +466,21 @@ spec = do
          it "filterDisjoint property" $ property (prop_filterDisjoint @Int)
          it "filterNotDisjoint property" $ property (prop_filterNotDisjoint @Int)
          it "filterWithin property" $ property (prop_filterWithin @Int)
+         it "filterConcur property" $ property (prop_filterConcur @Int)
+         it "filterEnclose property" $ property (prop_filterEnclose @Int)
+         it "filterEnclosedBy property" $ property (prop_filterEnclosedBy @Int)
 
-
+   describe "nothingIf unit tests" $
+     do 
+        it "nothing from nothingIfAll" $ 
+         nothingIfAll (starts (iv 2 3)) [iv 3 3, iv 4 3] `shouldBe` Nothing
+        it "something from nothingIfAll" $
+         nothingIfAll (starts (iv 2 3)) [iv 3 0, iv 4 3] `shouldBe` Just [iv 3 0, iv 4 3] 
+        it "nothing from nothingIfAny" $ 
+         nothingIfAny (starts (iv 2 3)) [iv 3 3, iv 1 5] `shouldBe` Nothing
+        it "something from nothingIfAny" $
+         nothingIfAny (starts (iv 2 3)) [iv 3 1, iv 1 5] `shouldBe` Just [iv 3 1, iv 1 5]
+   
    describe "intersection tests" $
       do
          it "intersection of (0, 2) (2, 4) should be Nothing" $

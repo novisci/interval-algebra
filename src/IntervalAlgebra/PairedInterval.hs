@@ -13,7 +13,7 @@ Stability   : experimental
 
 module IntervalAlgebra.PairedInterval (
       PairedInterval
-    , Empty
+    , Empty(..)
     , makePairedInterval
     , getPairData
     , intervals
@@ -57,9 +57,9 @@ instance (Ord a, Eq b, Monoid b) =>
 
     (<+>) x y
         | x `before` y = pure x <> pure y
-        | otherwise    = pure $ makePairedInterval (getPairData x <> getPairData y)
-                                                 (extenterval x y) 
-
+        | otherwise    = pure $
+            makePairedInterval (getPairData x <> getPairData y)
+                                (extenterval x y) 
 
 -- | Make a paired interval. 
 makePairedInterval :: b -> Interval a -> PairedInterval b a

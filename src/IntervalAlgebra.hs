@@ -598,6 +598,7 @@ beginerval dur x = Interval (x, y)
     where i = Interval (x, x)
           d = max (moment' i) dur
           y = add d x
+{-# INLINABLE beginerval #-}
 
 -- | Safely creates an 'Interval a' using @x@ as the 'end' and adding
 --   @negate max 'moment' dur@ to @x@ as the 'begin'.
@@ -617,6 +618,7 @@ enderval :: (IntervalSizeable a b) =>
        -> Interval a
 enderval dur x = Interval (add (negate $ max (moment' i) dur) x, x)
     where i = Interval (x, x)
+{-# INLINABLE enderval #-}
 
 -- | Creates a new Interval from the 'end' of an @i a@.
 beginervalFromEnd :: (IntervalSizeable a b, Intervallic i a) =>
@@ -657,6 +659,7 @@ class (Intervallic i a) => IntervalCombinable i a where
       | otherwise   = Nothing
       where b = begin x
             e = end y
+    {-# INLINABLE (.+.) #-}
 
     -- | If @x@ is 'before' @y@, then form a new @Just Interval a@ from the 
     --   interval in the "gap" between @x@ and @y@ from the 'end' of @x@ to the
@@ -706,10 +709,12 @@ instance (Ord a) => IntervalCombinable Interval a where
     (><) x y
         | x `before` y = Just $ Interval (end x, begin y)
         | otherwise    = Nothing
+    {-# INLINABLE (><) #-}
 
     (<+>) x y
         | x `before` y = pure ( getInterval x ) <> pure ( getInterval y )
         | otherwise    = pure ( extenterval x y )
+    {-# INLINABLE (<+>) #-}
 
 instance IntervalSizeable Int Int where
     moment = 1
