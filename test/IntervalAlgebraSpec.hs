@@ -59,12 +59,14 @@ import IntervalAlgebra as IA      ( enderval
                                   , intersection
                                   , complement
                                   , IntervalCombinable((.+.))
-                                  , IntervalSizeable(moment, diff)
+                                  , IntervalSizeable(moment, moment', diff)
                                   , ComparativePredicateOf1
                                   , ComparativePredicateOf2
                                   , Intervallic
                                   , Interval
-                                  , IntervalRelation (..), intervalRelations, notDisjoint )
+                                  , IntervalRelation (..)
+                                  , intervalRelations
+                                  , notDisjoint )
 
 mkIntrvl :: Int -> Int -> Interval Int
 mkIntrvl = beginerval
@@ -526,6 +528,7 @@ spec = do
       it "equality works" $ beginerval 6 (1::Int) == beginerval 6 1 `shouldBe` True
       it "equality works" $ beginerval 0 (1::Int) == beginerval (-1) 1 `shouldBe` True
       it "equality works" $ enderval 1 (2::Int) == beginerval 1 1 `shouldBe` True
+      it "not equality works" $ enderval 5 (2::Int) /= beginerval 1 1 `shouldBe` True
 
       it "parsing fails on bad inputs" $
          parseInterval 10 0 `shouldBe` Left "0<10"
@@ -542,11 +545,12 @@ spec = do
       it "(0, 2) <= (1, 3) is True" $
           beginerval 2 (0::Int) <= beginerval 2 1 `shouldBe` True
 
+      it "(1, 2) < (0, 3) is True" $
+          beginerval 2 (1::Int) < beginerval 3 0 `shouldBe` False
       it "(0, 2) < (1, 3) is True" $
           beginerval 2 (0::Int) < beginerval 2 1 `shouldBe` True
       it "(0, 2) < (0, 3) is True" $
           beginerval 2 (0::Int) < beginerval 3 0 `shouldBe` True
-
 
   describe "Basic IntervalRelation unit tests" $
     do 
@@ -557,6 +561,33 @@ spec = do
       it "Bounds are set correctly" $ maxBound @IntervalRelation `shouldBe` After
 
       it "show Before is Before" $ show Before `shouldBe` "Before"
+
+  describe "Relate unit tests" $
+    do 
+      it "relate before" $ 
+        relate (beginerval 1 (0::Int)) (beginerval 1 2) `shouldBe` Before 
+      it "relate after" $
+        relate (beginerval 1 (2::Int)) (beginerval 1 0) `shouldBe` After 
+      it "relate meets" $ 
+        relate (beginerval 1 (0::Int)) (beginerval 1 1) `shouldBe` Meets 
+      it "relate metBy" $ 
+        relate (beginerval 1 (1::Int)) (beginerval 1 0) `shouldBe` MetBy 
+      it "relate overlaps" $ 
+        relate (beginerval 3 (0::Int)) (beginerval 5 2) `shouldBe` Overlaps 
+      it "relate overlappedBy" $ 
+        relate (beginerval 5 (2::Int)) (beginerval 3 0) `shouldBe` OverlappedBy
+      it "relate starts" $
+        relate (beginerval 3 (0::Int)) (beginerval 5 0) `shouldBe` Starts 
+      it "relate startedBy" $
+        relate (beginerval 5 (0::Int)) (beginerval 3 0) `shouldBe` StartedBy
+      it "relate finishes" $
+        relate (enderval 3 (0::Int)) (enderval 5 0) `shouldBe` Finishes
+      it "relate finishedBy" $
+        relate (enderval 5 (0::Int)) (enderval 3 0) `shouldBe` FinishedBy
+      it "relate during" $
+        relate (beginerval 1 (1::Int)) (beginerval 3 0) `shouldBe` During
+      it "relate Contains" $
+        relate (beginerval 3 (0::Int)) (beginerval 1 1) `shouldBe` Contains
 
   describe "IntervalRelation algebraic operations" $
     do 
@@ -570,6 +601,7 @@ spec = do
   describe "IntervalSizeable tests" $
     do
       it "moment is 1" $ moment @Int `shouldBe` 1
+      it "moment' is 1" $ moment' (beginerval 1 (0::Int)) `shouldBe` 1
       it "expandl doesn't change end"   $ property (prop_expandl_end @Int)
       it "expandr doesn't change begin" $ property (prop_expandr_begin @Int)
       it "expand 0 5 Interval (0, 1) should be Interval (0, 6)" $

@@ -3,11 +3,13 @@ module IntervalAlgebra.PairedIntervalSpec (spec) where
 import Test.Hspec                       ( it, describe, Spec, shouldBe )
 import IntervalAlgebra.PairedInterval   ( PairedInterval
                                         , makePairedInterval
-                                        , intervals )
+                                        , intervals
+                                        , Empty(..) )
 import IntervalAlgebra                  ( beginerval
                                         , IntervalSizeable(duration)
                                         , equals
-                                        , before )
+                                        , before
+                                        , IntervalCombinable(..) )
 import Data.Bifunctor                   ( Bifunctor(bimap) )
 import Data.Bool
 import Data.Time                        ( Day(ModifiedJulianDay)
@@ -25,15 +27,19 @@ t2 = mkTestPr "bye" 4 6
 t3 :: TestPair
 t3 = mkTestPr "hello" 5 0
 
+-- insta
+
 spec :: Spec
 spec = do
-    describe "Basic tests of paired intervals" $
-        do 
-            it "the same pairInterval should be equal" $ t1 == t1 `shouldBe` True 
-            it "different pairInterval should not be equal" $ t1 /= t2 `shouldBe` True  
-            it "bimapping into a different type" $ 
-                bimap (== "hi") ModifiedJulianDay (makePairedInterval "hi" (beginerval 5 0))
-                    `shouldBe `makePairedInterval True (beginerval 5 (fromGregorian 1858 11 17))
+  describe "Basic tests of paired intervals" $
+    do 
+    it "the same pairInterval should be equal" $ t1 == t1 `shouldBe` True 
+    it "different pairInterval should not be equal" $ t1 /= t2 `shouldBe` True  
+    it "bimapping into a different type" $ 
+        bimap (== "hi") ModifiedJulianDay (makePairedInterval "hi" (beginerval 5 0))
+            `shouldBe `makePairedInterval True (beginerval 5 (fromGregorian 1858 11 17))
+    it "show paired interval" $
+      show t1 `shouldBe` "{(0, 5), \"hi\"}"
 
     describe "tests on paired intervals" $
         do 
@@ -48,4 +54,19 @@ spec = do
             it "getintervals [t1, t2, t3]" $
                 intervals [t1, t2, t3] `shouldBe`
                  [beginerval 5 0, beginerval 4 6, beginerval 5 0]
-                
+    
+    describe "IntervalCombinable tests" $
+      do 
+        it "" $ (t1 >< t3) `shouldBe` Nothing
+        it "" $ (t1 >< mkTestPr "hello" 1 6) `shouldBe` Just (mkTestPr "" 1 5)
+        it "" $ (t1 <+> mkTestPr "hello" 1 6) `shouldBe` [t1, mkTestPr "hello" 1 6]
+        it "" $ (t1 <+> mkTestPr "hello" 5 3) `shouldBe` [mkTestPr "hihello" 8 0]
+    
+    describe "tests on empty" $
+      do 
+        it "show empty" $ show Empty `shouldBe` "Empty"
+        it "combine emptyies" $ Empty <> Empty `shouldBe` Empty 
+        it "monoid empty" $ (mempty :: Empty) `shouldBe` Empty
+        it "monoid mappend" $ mappend Empty Empty `shouldBe` Empty 
+        it "ord empty" $ Empty < Empty `shouldBe` False
+        it "ord empty" $ Empty <= Empty `shouldBe` True
