@@ -1,5 +1,9 @@
 # Changelog for interval-algebra
 
+## 0.9.0
+
+* Fixes bug in `gapsWithin` introduced in last version.
+
 ## 0.8.6
 
 * Adds the `beginervalFromEnd` and `endervalFromBegin` utilities to create an interval of the provided duration from the end (respectively, begin) of another interval.

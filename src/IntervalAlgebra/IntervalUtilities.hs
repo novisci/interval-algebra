@@ -271,8 +271,10 @@ clip x y
 
 -- | Applies 'gaps' to all the non-disjoint intervals in @x@ that are *not* disjoint
 -- from @i@. Intervals that 'overlaps' or are 'overlappedBy' @i@ are 'clip'ped 
--- to @i@, so that all the intervals are 'within' @i@. If there are no gaps or if the 
--- input is empty, then 'Nothing' is returned.
+-- to @i@, so that all the intervals are 'within' @i@. If all of the input intervals 
+-- are disjoint from the focal interval or if the input is empty, then 'Nothing' 
+-- is returned. When there are no gaps among the concurring intervals, then 
+-- `Just mempty` (e.g. `Just []`) is returned.
 --
 -- >>> gapsWithin (iv 9 1) [iv 5 0, iv 2 7, iv 3 12]
 -- Just [(5, 7),(9, 10)]
@@ -288,8 +290,7 @@ gapsWithin :: ( Applicative f
   -> f (i1 a) -- ^ x
   -> Maybe (f (Interval a))
 gapsWithin i x 
-  | null x   = Nothing
-  | null res = Nothing 
+  | null ivs = Nothing 
   | otherwise = Just res
     where s   = pure (endervalFromBegin 0 i)
           e   = pure (beginervalFromEnd 0 i)
