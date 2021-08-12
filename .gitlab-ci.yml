@@ -10,7 +10,7 @@ before_script:
 stages:
   - docker
   - test
-  - coverage
+  # - coverage
 
 docker-build:
  stage : docker
@@ -33,20 +33,20 @@ test:
     - cabal --version
     - cabal test --test-show-details=always --enable-coverage
 
-coverage-report:
-  stage: coverage
-  image: registry.novisci.com/nsstat/$PKG/$PKG-build:latest
-  cache:
-    key: "$CI_COMMIT_REF_SLUG"
-    paths:
-      - dist-newstyle/
-  script:
-    - echo $VERSION
-    - ls dist-newstyle
-    - DISTPATH=dist-newstyle/build/x86_64-linux/ghc-$GHC/$PKG-$VERSION/hpc/vanilla
-    - hpc report $DISTPATH/tix/$PKG-$VERSION/interval-algebra-$VERSION.tix --hpcdir=$DISTPATH/mix/$PKG-$VERSION
-    - mkdir coverage
-    - hpc report --xml-output --per-module $DISTPATH/tix/$PKG-$VERSION/interval-algebra-$VERSION.tix --hpcdir=$DISTPATH/mix/$PKG-$VERSION > coverage/coverage.xml
-  artifacts:
-    reports:
-      cobertura: coverage/coverage.xml
+# coverage-report:
+#   stage: coverage
+#   image: registry.novisci.com/nsstat/$PKG/$PKG-build:latest
+#   cache:
+#     key: "$CI_COMMIT_REF_SLUG"
+#     paths:
+#       - dist-newstyle/
+#   script:
+#     - echo $VERSION
+#     - ls dist-newstyle
+#     - DISTPATH=dist-newstyle/build/x86_64-linux/ghc-$GHC/$PKG-$VERSION/hpc/vanilla
+#     - hpc report $DISTPATH/tix/$PKG-$VERSION/interval-algebra-$VERSION.tix --hpcdir=$DISTPATH/mix/$PKG-$VERSION
+#     - mkdir coverage
+#     - hpc report --xml-output --per-module $DISTPATH/tix/$PKG-$VERSION/interval-algebra-$VERSION.tix --hpcdir=$DISTPATH/mix/$PKG-$VERSION > coverage/coverage.xml
+#   artifacts:
+#     reports:
+#       cobertura: coverage/coverage.xml

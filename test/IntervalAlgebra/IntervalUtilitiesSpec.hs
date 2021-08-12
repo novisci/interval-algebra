@@ -427,6 +427,13 @@ spec = do
          it "gapsWithin (1, 10) [(0,5), (7,9), (12,15)] should be [(5,7), (9,10)]" $
             gapsWithin (iv 9 1) [iv 5 0, iv 2 7, iv 3 12]
                `shouldBe` Just [iv 2 5, iv 1 9]
+         it "gapsWithin (1, 10) [(-1, 0), (12,15)] should be [(5,7), (9,10)]" $
+            gapsWithin (iv 9 1) [iv 1 (-1), iv 3 12]
+               `shouldBe` Nothing
+         it "gapsWithin (0, 455) [(0, 730), (731, 762), (763, 793)]" $ 
+            gapsWithin (readInterval (0 :: Int, 455)) 
+               (fmap readInterval [(0, 730), (731, 762), (763, 793)])
+               `shouldBe` Just []
          it "gapsWithin (1, 10) [] should be []" $
              gapsWithin (iv 9 1) ([] :: [Interval a]) `shouldBe` Nothing
          it "more gapsWithin tests" pending
