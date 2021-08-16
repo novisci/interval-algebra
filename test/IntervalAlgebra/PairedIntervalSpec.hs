@@ -34,7 +34,10 @@ spec = do
   describe "Basic tests of paired intervals" $
     do 
     it "the same pairInterval should be equal" $ t1 == t1 `shouldBe` True 
-    it "different pairInterval should not be equal" $ t1 /= t2 `shouldBe` True  
+    it "different pairInterval should not be equal" $ t1 /= t2 `shouldBe` True
+    it "fmapping into a different interval type" $ 
+        fmap ModifiedJulianDay (makePairedInterval "hi" (beginerval 5 0))
+            `shouldBe` makePairedInterval "hi" (beginerval 5 (fromGregorian 1858 11 17)) 
     it "bimapping into a different type" $ 
         bimap (== "hi") ModifiedJulianDay (makePairedInterval "hi" (beginerval 5 0))
             `shouldBe `makePairedInterval True (beginerval 5 (fromGregorian 1858 11 17))

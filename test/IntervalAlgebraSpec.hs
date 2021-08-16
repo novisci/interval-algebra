@@ -58,6 +58,8 @@ import IntervalAlgebra as IA      ( enderval
                                   , union
                                   , intersection
                                   , complement
+                                  , diffFromBegin
+                                  , diffFromEnd
                                   , IntervalCombinable((.+.))
                                   , IntervalSizeable(moment, moment', diff)
                                   , ComparativePredicateOf1
@@ -630,6 +632,30 @@ spec = do
         Right (enderval (0::Int) 10) `shouldBe` parseInterval (9::Int) (10::Int)
       it "enderval -2 10 should be Interval (9, 10)" $
         Right (enderval (-2::Int) 10) `shouldBe` parseInterval (9::Int) (10::Int)
+
+      it "diffFromBegin can convert Interval Int to Interval Int" $
+         diffFromBegin 
+            (beginerval 2 (4 :: Int))
+            (beginerval 2 10) `shouldBe`
+            beginerval 2 6 -- (6, 8)
+
+      it "diffFromEnd can convert Interval Int to Interval Int" $
+         diffFromEnd
+            (beginerval 2 (4 :: Int))
+            (beginerval 2 10) `shouldBe`
+            beginerval 2 4 -- (4, 6)
+
+      it "diffFromBegin can convert Interval Day to Interval Integer" $
+         diffFromBegin 
+            (beginerval 2 (fromGregorian 2001 1 1))
+            (beginerval 2 (fromGregorian 2001 1 10)) `shouldBe`
+            beginerval 2 9 -- (9, 11)
+
+      it "diffFromEnd can convert Interval Day to Interval Integer" $
+         diffFromEnd
+            (beginerval 2 (fromGregorian 2001 1 1))
+            (beginerval 2 (fromGregorian 2001 1 10)) `shouldBe`
+            beginerval 2 7 -- (7, 9)
 
   describe "Intervallic tests" $
      modifyMaxSuccess (*10000) $
