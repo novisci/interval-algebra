@@ -157,6 +157,8 @@ module IntervalAlgebra(
     , ComparativePredicateOf2
     , beginervalFromEnd
     , endervalFromBegin
+    , diffFromBegin
+    , diffFromEnd
 
     -- ** Algebraic operations
     , intervalRelations
@@ -634,7 +636,6 @@ endervalFromBegin :: (IntervalSizeable a b, Intervallic i a) =>
      -> Interval a
 endervalFromBegin d i = enderval d (begin i)
 
-
 -- | Creates a new @Interval@ spanning the extent x and y.
 --
 -- >>> extenterval (Interval (0, 1)) (Interval (9, 10))
@@ -644,6 +645,22 @@ extenterval :: Intervallic i a => i a -> i a -> Interval a
 extenterval x y = Interval (s, e)
     where s = min (begin x) (begin y)
           e = max (end x) (end y)
+
+-- | Modifies the endpoints of second argument's interval by taking the difference
+--   from the first's input's 'begin'. 
+diffFromBegin :: ( IntervalSizeable a b
+                 , Functor i1
+                 , Intervallic i0 a ) => 
+    i0 a -> i1 a -> i1 b
+diffFromBegin i = fmap (`diff` begin i)
+
+-- | Modifies the endpoints of second argument's interval by taking the difference
+--   from the first's input's 'end'. 
+diffFromEnd :: ( IntervalSizeable a b
+               , Functor i1
+               , Intervallic i0 a ) => 
+    i0 a -> i1 a -> i1 b
+diffFromEnd i = fmap (`diff` end i)
 
 {- |
 The @'IntervalCombinable'@ typeclass provides methods for (possibly) combining
