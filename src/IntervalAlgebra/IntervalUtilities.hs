@@ -278,6 +278,7 @@ clip x y
 --
 -- >>> gapsWithin (iv 9 1) [iv 5 0, iv 2 7, iv 3 12]
 -- Just [(5, 7),(9, 10)]
+--
 gapsWithin :: ( Applicative f
                , Witherable f 
                , Monoid (f (Interval a))
@@ -525,7 +526,7 @@ disjoinPaired o e = case relate x y of
      FinishedBy -> foldMeeting $ Meeting [ evp b1 b2 s1, ev i2 sc ]
      Contains   -> foldMeeting $ Meeting [ evp b1 b2 s1, evp b2 e2 sc, evp e2 e1 s1 ]
      Starts     -> foldMeeting $ Meeting [ ev i1 sc, evp e1 e2 s2 ]
-     _           -> Meeting [ ev i1 sc ] {- Equals case -}
+     _          -> Meeting [ ev i1 sc ] {- Equals case -}
    where x  = min o e
          y  = max o e
          i1 = getInterval x
