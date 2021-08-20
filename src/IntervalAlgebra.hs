@@ -648,6 +648,12 @@ extenterval x y = Interval (s, e)
 
 -- | Modifies the endpoints of second argument's interval by taking the difference
 --   from the first's input's 'begin'. 
+-- >>> diffFromBegin (Interval ((5::Int), 6)) (Interval (10, 15))
+-- (5, 10)
+--
+-- >>> diffFromBegin (Interval ((1::Int), 2)) (Interval (3, 15))
+-- (2, 14)
+--
 diffFromBegin :: ( IntervalSizeable a b
                  , Functor i1
                  , Intervallic i0 a ) => 
@@ -655,7 +661,13 @@ diffFromBegin :: ( IntervalSizeable a b
 diffFromBegin i = fmap (`diff` begin i)
 
 -- | Modifies the endpoints of second argument's interval by taking the difference
---   from the first's input's 'end'. 
+--   from the first's input's 'end'.
+-- >>> diffFromEnd (Interval ((5::Int), 6)) (Interval (10, 15))
+-- (4, 9)
+--
+-- >>> diffFromEnd (Interval ((1::Int), 2)) (Interval (3, 15))
+-- (1, 13)
+--
 diffFromEnd :: ( IntervalSizeable a b
                , Functor i1
                , Intervallic i0 a ) => 
