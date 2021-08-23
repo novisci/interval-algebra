@@ -1,5 +1,9 @@
 # Changelog for interval-algebra
 
+## 0.10.1
+
+* Replaces unnecessary `IntervalCombinable i0 a` constraint in `gapsWithin` with `Intervallic i0 a`.
+
 ## 0.10.0
 
 * Adds `diffFromBegin` (`diffFromEnd`) functions (not totally satisfied with these names) which change the reference point of the interval in the second argument by the difference from the `begin` (`end`) of the interval in the first argument.
