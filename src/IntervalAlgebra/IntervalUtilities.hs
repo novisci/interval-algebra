@@ -284,7 +284,7 @@ gapsWithin :: ( Applicative f
                , Monoid (f (Interval a))
                , Monoid (f (Maybe (Interval a)))
                , IntervalSizeable a b
-               , IntervalCombinable i0 a
+               , Intervallic i0 a
                , IntervalCombinable i1 a
                ) =>
         i0 a  -- ^ i
