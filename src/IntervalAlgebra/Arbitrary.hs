@@ -9,6 +9,7 @@ Stability   : experimental
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE Safe #-}
+{-# LANGUAGE TypeApplications #-}
 
 module IntervalAlgebra.Arbitrary() where
 

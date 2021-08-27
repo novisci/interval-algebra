@@ -1,5 +1,9 @@
 # Changelog for interval-algebra
 
+## 0.10.2
+
+* Adds the `momentize` function for changing the duration of some interval value to a moment.
+
 ## 0.10.1
 
 * Replaces unnecessary `IntervalCombinable i0 a` constraint in `gapsWithin` with `Intervallic i0 a`.

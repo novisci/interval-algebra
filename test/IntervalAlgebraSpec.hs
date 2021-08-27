@@ -68,7 +68,8 @@ import IntervalAlgebra as IA      ( enderval
                                   , Interval
                                   , IntervalRelation (..)
                                   , intervalRelations
-                                  , notDisjoint )
+                                  , notDisjoint
+                                  , momentize )
 
 mkIntrvl :: Int -> Int -> Interval Int
 mkIntrvl = beginerval
@@ -656,6 +657,13 @@ spec = do
             (beginerval 2 (fromGregorian 2001 1 1))
             (beginerval 2 (fromGregorian 2001 1 10)) `shouldBe`
             beginerval 2 7 -- (7, 9)
+
+      it "momentize works" $
+         momentize
+            (beginerval 2 (fromGregorian 2001 1 1))
+            `shouldBe`
+            beginerval 1 (fromGregorian 2001 1 1)
+
 
   describe "Intervallic tests" $
      modifyMaxSuccess (*10000) $
