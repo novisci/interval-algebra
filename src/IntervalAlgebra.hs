@@ -159,6 +159,7 @@ module IntervalAlgebra(
     , endervalFromBegin
     , diffFromBegin
     , diffFromEnd
+    , momentize
 
     -- ** Algebraic operations
     , intervalRelations
@@ -673,6 +674,16 @@ diffFromEnd :: ( IntervalSizeable a b
                , Intervallic i0 a ) => 
     i0 a -> i1 a -> i1 b
 diffFromEnd i = fmap (`diff` end i)
+
+-- | Changes the duration of an 'Intervallic' value to a moment starting at the 
+--   'begin' of the interval.
+-- 
+-- >>> momentize (Interval (6, 10))
+-- (6, 7)
+--
+momentize :: ( IntervalSizeable a b, Intervallic i a ) =>
+    i a -> i a
+momentize i = setInterval i (beginerval (moment' i) (begin i))
 
 {- |
 The @'IntervalCombinable'@ typeclass provides methods for (possibly) combining
