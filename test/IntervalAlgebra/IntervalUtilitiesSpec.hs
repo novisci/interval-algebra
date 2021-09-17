@@ -8,9 +8,7 @@ import Test.Hspec.QuickCheck              ( modifyMaxSuccess
 import Test.Hspec                         ( Spec
                                           , it
                                           , shouldBe
-                                          , describe
-                                          , pending
-                                          , xcontext )
+                                          , describe )
 import Test.QuickCheck                    ( Property
                                           , Testable(property)
                                           , Arbitrary(arbitrary, shrink)
@@ -71,6 +69,7 @@ import IntervalAlgebra.PairedInterval     ( trivialize
 import Control.Monad                      ( liftM2 )
 import Data.Set                           ( Set, fromList, member )
 import Witherable                         ( Filterable )
+import Data.Time                          ( Day, UTCTime )
 
 -- Types for testing
 
@@ -276,108 +275,112 @@ class ( Ord a ) => FiltrationProperties a  where
       -> Set IntervalRelation
       -> Interval a
       -> [Interval a]
-      -> Property 
-   prop_filtration fltr s x l = 
+      -> Property
+   prop_filtration fltr s x l =
       not (null res) ==> and (fmap (predicate s x) res) === True
      where res = fltr x l
 
    prop_filterOverlaps :: Interval a
       -> [Interval a]
-      -> Property 
+      -> Property
    prop_filterOverlaps = prop_filtration filterOverlaps (fromList [Overlaps])
 
    prop_filterOverlappedBy :: Interval a
       -> [Interval a]
-      -> Property 
+      -> Property
    prop_filterOverlappedBy = prop_filtration filterOverlappedBy (fromList [OverlappedBy])
 
    prop_filterBefore :: Interval a
       -> [Interval a]
-      -> Property 
+      -> Property
    prop_filterBefore = prop_filtration filterBefore (fromList [Before])
 
    prop_filterAfter :: Interval a
       -> [Interval a]
-      -> Property 
+      -> Property
    prop_filterAfter = prop_filtration filterAfter (fromList [After])
 
    prop_filterStarts :: Interval a
       -> [Interval a]
-      -> Property 
+      -> Property
    prop_filterStarts = prop_filtration filterStarts (fromList [Starts])
 
    prop_filterStartedBy :: Interval a
       -> [Interval a]
-      -> Property 
+      -> Property
    prop_filterStartedBy = prop_filtration filterStartedBy (fromList [StartedBy])
 
    prop_filterFinishes :: Interval a
       -> [Interval a]
-      -> Property 
+      -> Property
    prop_filterFinishes = prop_filtration filterFinishes (fromList [Finishes])
 
    prop_filterFinishedBy :: Interval a
       -> [Interval a]
-      -> Property 
+      -> Property
    prop_filterFinishedBy = prop_filtration filterFinishedBy (fromList [FinishedBy])
 
    prop_filterMeets :: Interval a
       -> [Interval a]
-      -> Property 
+      -> Property
    prop_filterMeets = prop_filtration filterMeets (fromList [Meets])
 
    prop_filterMetBy :: Interval a
       -> [Interval a]
-      -> Property 
+      -> Property
    prop_filterMetBy = prop_filtration filterMetBy (fromList [MetBy])
 
    prop_filterDuring :: Interval a
       -> [Interval a]
-      -> Property 
+      -> Property
    prop_filterDuring = prop_filtration filterDuring (fromList [During])
 
    prop_filterContains :: Interval a
       -> [Interval a]
-      -> Property 
+      -> Property
    prop_filterContains = prop_filtration filterContains (fromList [Contains])
 
    prop_filterEquals :: Interval a
       -> [Interval a]
-      -> Property 
+      -> Property
    prop_filterEquals = prop_filtration filterEquals (fromList [Equals])
 
    prop_filterDisjoint :: Interval a
       -> [Interval a]
-      -> Property 
+      -> Property
    prop_filterDisjoint = prop_filtration filterDisjoint disjointRelations
 
    prop_filterNotDisjoint :: Interval a
       -> [Interval a]
-      -> Property 
+      -> Property
    prop_filterNotDisjoint = prop_filtration filterNotDisjoint (complement disjointRelations)
 
    prop_filterWithin :: Interval a
       -> [Interval a]
-      -> Property 
+      -> Property
    prop_filterWithin = prop_filtration filterWithin withinRelations
 
    prop_filterEnclosedBy :: Interval a
       -> [Interval a]
-      -> Property 
+      -> Property
    prop_filterEnclosedBy = prop_filtration filterEnclosedBy withinRelations
 
    prop_filterEnclose :: Interval a
       -> [Interval a]
-      -> Property 
+      -> Property
    prop_filterEnclose = prop_filtration filterEnclose (converse withinRelations)
 
    prop_filterConcur :: Interval a
       -> [Interval a]
-      -> Property 
+      -> Property
    prop_filterConcur = prop_filtration filterConcur (complement disjointRelations)
 
 instance FiltrationProperties Int
 
+prop_clip_intersect :: (Show a, Ord a, IntervalSizeable a b) =>
+   Interval a -> Interval a -> Property
+prop_clip_intersect x y =
+   clip x y === intersect (min x y) (max x y)
 
 spec :: Spec
 spec = do
@@ -409,7 +412,8 @@ spec = do
          it "clip Interval (4, 10) Interval (0, 10) should be Interval (4, 10)" $
            clip noncontainmentInt containmentInt `shouldBe`
              Just (iv 6 4)
-         it "clip x y === intersect sort x y " pending
+         it "clip x y === intersect sort x y " $
+            property (prop_clip_intersect @Int)
 
    describe "relationsL tests" $
          do
@@ -420,7 +424,8 @@ spec = do
                relationsL ([] :: [Interval Int]) `shouldBe` []
             it "relationsL of singleton shouldBe []" $
                relationsL [containmentInt] `shouldBe` []
-            it "more relationsL tests" pending
+            it "length of relationsL result should be 1 less then length of input" $
+               property (\x  -> not (null x) ==> length (relationsL x) === length (x :: [Interval Int]) - 1 )
 
    describe "gapsWithin tests" $
       do
@@ -430,13 +435,12 @@ spec = do
          it "gapsWithin (1, 10) [(-1, 0), (12,15)] should be [(5,7), (9,10)]" $
             gapsWithin (iv 9 1) [iv 1 (-1), iv 3 12]
                `shouldBe` Nothing
-         it "gapsWithin (0, 455) [(0, 730), (731, 762), (763, 793)]" $ 
-            gapsWithin (readInterval (0 :: Int, 455)) 
+         it "gapsWithin (0, 455) [(0, 730), (731, 762), (763, 793)]" $
+            gapsWithin (readInterval (0 :: Int, 455))
                (fmap readInterval [(0, 730), (731, 762), (763, 793)])
                `shouldBe` Just []
          it "gapsWithin (1, 10) [] should be []" $
              gapsWithin (iv 9 1) ([] :: [Interval a]) `shouldBe` Nothing
-         it "more gapsWithin tests" pending
 
    describe "emptyIf tests" $
       do
@@ -446,7 +450,6 @@ spec = do
          it "emptyIfNone (starts (3, 5)) [(3,6), (5,6)] shoiuld be input" $
             nothingIfNone (starts (iv 2 3)) [iv 3 3, iv 1 5]
                `shouldBe` Just [ iv 3 3, iv 1 5]
-         it "more emptyif tests" pending
 
    describe "filtration tests" $
       modifyMaxDiscardRatio (*2) $
@@ -478,16 +481,16 @@ spec = do
          it "filterEnclosedBy property" $ property (prop_filterEnclosedBy @Int)
 
    describe "nothingIf unit tests" $
-     do 
-        it "nothing from nothingIfAll" $ 
+     do
+        it "nothing from nothingIfAll" $
          nothingIfAll (starts (iv 2 3)) [iv 3 3, iv 4 3] `shouldBe` Nothing
         it "something from nothingIfAll" $
-         nothingIfAll (starts (iv 2 3)) [iv 3 0, iv 4 3] `shouldBe` Just [iv 3 0, iv 4 3] 
-        it "nothing from nothingIfAny" $ 
+         nothingIfAll (starts (iv 2 3)) [iv 3 0, iv 4 3] `shouldBe` Just [iv 3 0, iv 4 3]
+        it "nothing from nothingIfAny" $
          nothingIfAny (starts (iv 2 3)) [iv 3 3, iv 1 5] `shouldBe` Nothing
         it "something from nothingIfAny" $
          nothingIfAny (starts (iv 2 3)) [iv 3 1, iv 1 5] `shouldBe` Just [iv 3 1, iv 1 5]
-   
+
    describe "intersection tests" $
       do
          it "intersection of (0, 2) (2, 4) should be Nothing" $
@@ -495,7 +498,7 @@ spec = do
          it "intersection of (0, 2) (3, 4) should be Nothing" $
             intersect (iv 2 0) (iv 1 3)    `shouldBe` Nothing
          it "intersection of (2, 4) (0, 2) should be Nothing" $
-            intersect (iv 2 2) (iv 2 0)    `shouldBe` Nothing 
+            intersect (iv 2 2) (iv 2 0)    `shouldBe` Nothing
 
    describe "intersection tests" $
       do
@@ -539,6 +542,10 @@ spec = do
       do
          it "after combining, only relation should be Before" $
                property ( prop_combineIntervals1 @Int)
+         it "after combining, only relation should be Before" $
+               property ( prop_combineIntervals1 @Day)
+         it "after combining, only relation should be Before" $
+               property ( prop_combineIntervals1 @UTCTime)
 
    describe "foldMeets unit tests" $
       do

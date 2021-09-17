@@ -1,5 +1,13 @@
 # Changelog for interval-algebra
 
+## 1.0.0
+
+* Moves the main `IntervalAlgebra` module to `IntervalAlgebra.Core` and `IntervalAlgebra` now reexports `IntervalAlgebra.Core`, `IntervalAlgebra.IntervalUtilites`, and `IntervalAlgebra.PairedInterval`.
+* Creates a new `IntervalAlgebra.Axioms` module containing the `IntervalAxioms` typeclass of property tests of the interval algebra axioms. These were in the testing suite. Including this as a module in case users need add new `Interval` types and want to test the axioms.
+* Creates a new `IntervalAlgebra.RelationProperties` module containing a typeclass of property tests of the interval algebra. These were in the testing suite. Including this as a module in case users need add new `Interval` types and want to test the axioms.
+* Adds `UTCTime`/`NominalDiffTime` instance for `IntervalSizeable`.
+* Adds additional tests to the testing suite.
+
 ## 0.10.2
 
 * Adds the `momentize` function for changing the duration of some interval value to a moment.

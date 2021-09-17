@@ -89,7 +89,7 @@ import safe Witherable            ( Filterable(filter)
                                   , Witherable(..)
                                   , mapMaybe
                                   , catMaybes )
-import safe IntervalAlgebra       ( (<|>),
+import safe IntervalAlgebra.Core ( (<|>),
                                   begin,
                                   end,
                                   after,
