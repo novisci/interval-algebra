@@ -22,14 +22,14 @@ module IntervalAlgebra.PairedInterval (
     , trivialize
 ) where
 
-import IntervalAlgebra  ( Interval
-                        , Intervallic(..)
-                        , before
-                        , IntervalCombinable(..)
-                        , ComparativePredicateOf1
-                        , extenterval )
-import Witherable       ( Filterable(filter) )
-import Data.Bifunctor   ( Bifunctor(bimap) )
+import safe IntervalAlgebra.Core    ( Interval
+                                    , Intervallic(..)
+                                    , before
+                                    , IntervalCombinable(..)
+                                    , ComparativePredicateOf1
+                                    , extenterval )
+import safe Witherable              ( Filterable(filter) )
+import safe Data.Bifunctor          ( Bifunctor(bimap) )
 
 -- | An @Interval a@ paired with some other data of type @b@.
 newtype PairedInterval b a = PairedInterval (Interval a, b)
