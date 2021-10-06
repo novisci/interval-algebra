@@ -158,6 +158,8 @@ module IntervalAlgebra.Core(
     , ComparativePredicateOf2
     , beginervalFromEnd
     , endervalFromBegin
+    , beginervalMoment
+    , endervalMoment
     , diffFromBegin
     , diffFromEnd
     , momentize
@@ -652,6 +654,24 @@ endervalFromBegin :: (IntervalSizeable a b, Intervallic i a) =>
     -> i a -- ^ the @i a@ from which to get the 'begin'
      -> Interval a
 endervalFromBegin d i = enderval d (begin i)
+
+-- | Safely creates a new @Interval@ with 'moment' length with 'begin' at @x@
+--
+-- >>> beginervalMoment (10 :: Int)
+-- (10, 11)
+-- 
+beginervalMoment :: (IntervalSizeable a b) => a -> Interval a
+beginervalMoment x = beginerval (moment' i) x
+    where i = Interval (x, x)
+
+-- | Safely creates a new @Interval@ with 'moment' length with 'end' at @x@
+--
+-- >>> endervalMoment (10 :: Int)
+-- (9, 10)
+-- 
+endervalMoment :: (IntervalSizeable a b) => a -> Interval a
+endervalMoment x = enderval (moment' i) x
+    where i = Interval (x, x)
 
 -- | Creates a new @Interval@ spanning the extent x and y.
 --
