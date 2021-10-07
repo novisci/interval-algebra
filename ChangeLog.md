@@ -1,5 +1,9 @@
 # Changelog for interval-algebra
 
+## 1.0.1
+
+* Adds `beginervalMoment` and `endervalMoment` functions to create intervals of moment duration from a begin or end.
+
 ## 1.0.0
 
 * Moves the main `IntervalAlgebra` module to `IntervalAlgebra.Core` and `IntervalAlgebra` now reexports `IntervalAlgebra.Core`, `IntervalAlgebra.IntervalUtilites`, and `IntervalAlgebra.PairedInterval`.
