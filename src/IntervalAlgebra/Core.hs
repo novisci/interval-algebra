@@ -237,8 +237,8 @@ newtype ParseErrorInterval = ParseErrorInterval String
 -- 
 parseInterval :: (Show a, Ord a) => a -> a -> Either ParseErrorInterval (Interval a)
 parseInterval x y
-    |  y < x    = Left  $ ParseErrorInterval $ show y ++ "<" ++ show x
-    | otherwise = Right $ Interval (x, y)
+    | x < y     = Right $ Interval (x, y) 
+    | otherwise = Left  $ ParseErrorInterval $ show y ++ "<=" ++ show x
 
 intervalBegin :: (Ord a) => Interval a -> a
 intervalBegin (Interval x) = fst x

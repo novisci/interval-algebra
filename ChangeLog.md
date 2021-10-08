@@ -1,5 +1,9 @@
 # Changelog for interval-algebra
 
+## 1.1.0
+
+* Fixes bug in `parseInterval`. For example, `parseInterval 0 0` parsed to a `Right (Interval (0, 0))`. Oops, the inequality of the should have been `y <= x` not `y < x`. This was fixed and a test added catch this error.
+
 ## 1.0.1
 
 * Adds `beginervalMoment` and `endervalMoment` functions to create intervals of moment duration from a begin or end.

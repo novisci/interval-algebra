@@ -90,7 +90,9 @@ spec = do
       it "endervalMoment duration is moment" $ moment' (endervalMoment (26::Int)) `shouldBe` (1 :: Int)
 
       it "parsing fails on bad inputs" $ 
-         parseInterval 10 0 `shouldBe` Left (IA.ParseErrorInterval "0<10")
+         parseInterval 10 0 `shouldBe` Left (IA.ParseErrorInterval "0<=10")
+      it "parsing fails on bad inputs" $ 
+         parseInterval 0 0 `shouldBe` Left (IA.ParseErrorInterval "0<=0")
       it "parsing works on good inputs" $
          parseInterval 0 10 `shouldBe` Right (beginerval 10 (0::Int))
 
