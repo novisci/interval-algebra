@@ -1,8 +1,12 @@
 # Changelog for interval-algebra
 
+## 1.1.1
+
+* Modifies internals of `IntervalAlgebra.Arbitrary` module to give uniformity over support for `Integer` and `UTCTime` intervals, yielding better interval generators.
+
 ## 1.1.0
 
-* Fixes bug in `parseInterval`. For example, `parseInterval 0 0` parsed to a `Right (Interval (0, 0))`. Oops, the inequality of the should have been `y <= x` not `y < x`. This was fixed and a test added catch this error.
+* Fixes bug in `parseInterval`. For example, `parseInterval 0 0` parsed to a `Right (Interval (0, 0))`. Oops, the inequality of the should have been `y <= x` not `y < x`. This was fixed and a test added to catch this error.
 
 ## 1.0.1
 

@@ -16,7 +16,9 @@ import Test.QuickCheck                    ( Property
                                           , (===), (==>)
                                           , Arbitrary1 (liftArbitrary)
                                           , listOf
-                                          , orderedList)
+                                          , resize
+                                          , orderedList
+                                          , elements)
 import Data.List                          (sort)
 import IntervalAlgebra.Arbitrary          ( )
 import IntervalAlgebra                    ( Interval
@@ -73,14 +75,25 @@ import Data.Time                          ( Day, UTCTime )
 
 -- Types for testing
 
+-- SmallInterval is just to test properties for which events of interest are so
+-- rare QuickCheck gives up, e.g. filterEquals
+data SmallInterval = SmallInterval { unSmall :: Interval Int } deriving (Show, Eq)
+
+instance Arbitrary SmallInterval where
+   arbitrary = SmallInterval . beginerval 0 <$> elements [0..10]
+
 -- A "state" here is just used test formMeetingSequence 
 newtype Events a = Events {getEvents :: [PairedInterval State a]}
    deriving (Eq, Show, Ord)
+
 newtype State = State [Bool] deriving (Show, Eq)
+
 instance Semigroup State where
      State x <> State y = State $ zipWith (||) x y
+
 instance Monoid State where
     mempty = State [False, False, False]
+
 type StateEvent a = PairedInterval State a
 
 
@@ -94,8 +107,10 @@ mkEv i s = makePairedInterval s (readInterval i)
 instance Arbitrary State where
    arbitrary =  State <$> suchThat (listOf arbitrary) (\x -> length x == 3)
 
+-- SmallInterval again to address issue of generating from too large a possible
+-- range of intervals
 instance Arbitrary (PairedInterval State Int) where
-   arbitrary = liftM2 makePairedInterval arbitrary arbitrary
+   arbitrary = liftM2 makePairedInterval arbitrary (unSmall <$> arbitrary)
 
 instance Arbitrary (Events Int) where
    arbitrary = Events <$> orderedList
@@ -243,7 +258,7 @@ prop_formMeetingSequence0 x =
    not (null es)  ==> all (==Meets) (relationsL $ formMeetingSequence es) === True
    where es = getEvents x
 
--- In the case that that the input has
+-- In the case that the input has
 -- *     at least one Before relation between consequent pairs
 -- * AND does not have any empty states
 --
@@ -259,7 +274,7 @@ prop_formMeetingSequence1 x =
    where res = formMeetingSequence (getEvents x)
          beforeCount = lengthWhen (== Before) (relationsL (getEvents x))
          emptyCount  = lengthWhen (\x -> getPairData x == mempty ) res
-         lengthWhen f x = length $ filter f x
+         lengthWhen f = length . filter f
 
 -- Check that formMeetingSequence doesn't return an empty list unless input is 
 -- empty.
@@ -382,6 +397,18 @@ prop_clip_intersect :: (Show a, Ord a, IntervalSizeable a b) =>
 prop_clip_intersect x y =
    clip x y === intersect (min x y) (max x y)
 
+-- NOTE: use this instead of prop_filterEquals
+prop_small_filterEquals :: SmallInterval -> [SmallInterval] -> Property
+prop_small_filterEquals x l =
+   not (null res) ==> and (fmap (predicate s i) res) === True
+  where 
+     i = unSmall x
+     li = map unSmall l
+     res = filterEquals i li
+     s = fromList [Equals]
+
+-- RUNNER
+
 spec :: Spec
 spec = do
    describe "gaps tests" $
@@ -472,7 +499,7 @@ spec = do
          it "filterMetBy property" $ property (prop_filterMetBy @Int)
          it "filterDuring property" $ property (prop_filterDuring @Int)
          it "filterContains property" $ property (prop_filterContains @Int)
-         it "filterEquals property" $ property (prop_filterEquals @Int)
+         it "filterEquals property" $ property prop_small_filterEquals
          it "filterDisjoint property" $ property (prop_filterDisjoint @Int)
          it "filterNotDisjoint property" $ property (prop_filterNotDisjoint @Int)
          it "filterWithin property" $ property (prop_filterWithin @Int)
