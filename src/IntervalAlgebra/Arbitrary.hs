@@ -55,7 +55,9 @@ instance Arbitrary DT.DiffTime where
    arbitrary = fromInteger <$> (maxDiffTime `resize` arbitrarySizedNatural)
 
 instance Arbitrary DT.UTCTime  where
-    arbitrary = liftA2 UTCTime arbitrary arbitrary
+    -- resize in utctDayTime is to avoid rare leap-seconds-related failure, in
+    -- which e.g.  1858-12-31 00:00:00 UTC /= 1858-12-30 23:59:60 UTC
+    arbitrary = liftA2 UTCTime arbitrary (86399 `resize` arbitrary)
                   
 instance Arbitrary (Interval DT.Day) where
   arbitrary = liftM2 beginerval arbitrary arbitrary

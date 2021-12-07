@@ -2,7 +2,7 @@
 
 ## 1.1.1
 
-* Modifies internals of `IntervalAlgebra.Arbitrary` module to give uniformity over support for `Integer` and `UTCTime` intervals, yielding better interval generators.
+* Modifies internals of `IntervalAlgebra.Arbitrary` module to give uniformity over support for `Integer` and `UTCTime` intervals, yielding better interval generators. Also bounds the `UTCTime` `utctDayTime` argument to `86399` rather than `86400` to avoid trivial and rare cases of property testing failures related to leap seconds.
 
 ## 1.1.0
 
