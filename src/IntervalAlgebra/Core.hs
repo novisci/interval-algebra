@@ -154,6 +154,7 @@ module IntervalAlgebra.Core(
     , (<|>)
     , predicate, unionPredicates
     , disjointRelations, withinRelations
+    , strictWithinRelations
     , ComparativePredicateOf1
     , ComparativePredicateOf2
     , beginervalFromEnd
@@ -364,6 +365,10 @@ disjointRelations = toSet [Before, After, Meets, MetBy]
 -- | The set of @IntervalRelation@ meaning one interval is within the other.
 withinRelations :: Data.Set.Set IntervalRelation
 withinRelations = toSet [Starts, During, Finishes, Equals]
+
+-- | The set of @IntervalRelation@ meaning one interval is *strictly* within the other.
+strictWithinRelations :: Data.Set.Set IntervalRelation
+strictWithinRelations = Data.Set.difference withinRelations (toSet [Equals])
 
 -- | Are x and y disjoint ('before', 'after', 'meets', or 'metBy')?
 disjoint :: (Intervallic i0 a, Intervallic i1 a)=>
