@@ -1,92 +1,85 @@
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeApplications  #-}
 module IntervalAlgebra.IntervalUtilitiesSpec (spec) where
 
-import Test.Hspec.QuickCheck              ( modifyMaxSuccess
-                                          , modifyMaxDiscardRatio )
-import Test.Hspec                         ( Spec
-                                          , it
-                                          , shouldBe
-                                          , describe )
-import Test.QuickCheck                    ( Property
-                                          , Testable(property)
-                                          , Arbitrary(arbitrary, shrink)
-                                          , suchThat
-                                          , (===), (==>)
-                                          , Arbitrary1 (liftArbitrary)
-                                          , listOf
-                                          , resize
-                                          , orderedList
-                                          , elements)
-import Data.List                          (sort)
-import IntervalAlgebra.Arbitrary          ( )
-import IntervalAlgebra                    ( Interval
-                                          , Intervallic(..)
-                                          , IntervalCombinable(..)
-                                          , IntervalRelation (..)
-                                          , IntervalSizeable
-                                          , beginerval
-                                          , complement
-                                          , converse
-                                          , starts
-                                          , disjointRelations
-                                          , withinRelations
-                                          , predicate  )
-import IntervalAlgebra.IntervalUtilities  ( gapsL
-                                          , gaps
-                                          , durations
-                                          , intersect
-                                          , relationsL
-                                          , clip
-                                          , gapsWithin
-                                          , nothingIfNone
-                                          , filterBefore
-                                          , filterMeets
-                                          , filterOverlaps
-                                          , filterFinishedBy
-                                          , filterContains
-                                          , filterStarts
-                                          , filterEquals
-                                          , filterStartedBy
-                                          , filterDuring
-                                          , filterFinishes
-                                          , filterOverlappedBy
-                                          , filterMetBy
-                                          , filterAfter
-                                          , filterDisjoint
-                                          , filterNotDisjoint
-                                          , filterConcur
-                                          , filterWithin
-                                          , filterEnclose
-                                          , filterEnclosedBy
-                                          , nothingIfAll
-                                          , nothingIfAny
-                                          , combineIntervals
-                                          , foldMeetingSafe
-                                          , formMeetingSequence )
-import IntervalAlgebra.PairedInterval     ( trivialize
-                                          , makePairedInterval
-                                          , PairedInterval, getPairData )
-import Control.Monad                      ( liftM2 )
-import Data.Set                           ( Set, fromList, member )
-import Witherable                         ( Filterable )
-import Data.Time                          ( Day, UTCTime )
+import           Control.Monad                     (liftM2)
+import           Data.List                         (sort)
+import           Data.Maybe                        (fromJust, isJust, isNothing)
+import           Data.Set                          (Set, difference, fromList,
+                                                    member, toList)
+import qualified Data.Set                          (null)
+import           Data.Time                         (Day, UTCTime)
+import           IntervalAlgebra                   (Interval,
+                                                    IntervalCombinable (..),
+                                                    IntervalRelation (..),
+                                                    IntervalSizeable,
+                                                    Intervallic (..),
+                                                    beginerval, complement,
+                                                    converse, disjointRelations,
+                                                    duration, intervalRelations,
+                                                    moment', predicate, starts,
+                                                    strictWithinRelations,
+                                                    withinRelations)
+import           IntervalAlgebra.Arbitrary         (arbitraryWithRelation)
+import           IntervalAlgebra.IntervalUtilities (clip, combineIntervals,
+                                                    durations, filterAfter,
+                                                    filterBefore, filterConcur,
+                                                    filterContains,
+                                                    filterDisjoint,
+                                                    filterDuring, filterEnclose,
+                                                    filterEnclosedBy,
+                                                    filterEquals,
+                                                    filterFinishedBy,
+                                                    filterFinishes, filterMeets,
+                                                    filterMetBy,
+                                                    filterNotDisjoint,
+                                                    filterOverlappedBy,
+                                                    filterOverlaps,
+                                                    filterStartedBy,
+                                                    filterStarts, filterWithin,
+                                                    foldMeetingSafe,
+                                                    formMeetingSequence, gaps,
+                                                    gapsL, gapsWithin,
+                                                    intersect, nothingIfAll,
+                                                    nothingIfAny, nothingIfNone,
+                                                    relationsL)
+import           IntervalAlgebra.PairedInterval    (PairedInterval, getPairData,
+                                                    makePairedInterval,
+                                                    trivialize)
+import           Test.Hspec                        (Spec, describe, it,
+                                                    shouldBe)
+import           Test.Hspec.QuickCheck             (modifyMaxDiscardRatio,
+                                                    modifyMaxSuccess)
+import           Test.QuickCheck                   (Arbitrary (arbitrary, shrink),
+                                                    Arbitrary1 (liftArbitrary),
+                                                    Property,
+                                                    Testable (property),
+                                                    elements, listOf,
+                                                    orderedList, resize,
+                                                    sublistOf, suchThat, (===),
+                                                    (==>))
+import           Witherable                        (Filterable)
 
 -- Types for testing
 
 -- SmallInterval is just to test properties for which events of interest are so
 -- rare QuickCheck gives up, e.g. filterEquals
-data SmallInterval = SmallInterval { unSmall :: Interval Int } deriving (Show, Eq)
+newtype SmallInterval
+  = SmallInterval { unSmall :: Interval Int }
+  deriving (Eq, Show)
 
 instance Arbitrary SmallInterval where
    arbitrary = SmallInterval . beginerval 0 <$> elements [0..10]
 
--- A "state" here is just used test formMeetingSequence 
-newtype Events a = Events {getEvents :: [PairedInterval State a]}
-   deriving (Eq, Show, Ord)
+-- A "state" here is just used test formMeetingSequence
+newtype Events a
+  = Events { getEvents :: [PairedInterval State a] }
+  deriving (Eq, Ord, Show)
 
-newtype State = State [Bool] deriving (Show, Eq)
+newtype State
+  = State [Bool]
+  deriving (Eq, Show)
 
 instance Semigroup State where
      State x <> State y = State $ zipWith (||) x y
@@ -96,6 +89,16 @@ instance Monoid State where
 
 type StateEvent a = PairedInterval State a
 
+-- Type for checking arbitraryWithRelation
+-- A target and reference pair, where targetInterval satisfies at least one of
+-- refRelations relative to refInterval
+data IntervalReferenced
+  = IntervalReferenced
+      { refInterval    :: Interval Int
+      , refRelations   :: Set IntervalRelation
+      , targetInterval :: Maybe (Interval Int)
+      }
+  deriving (Eq, Show)
 
 readInterval :: IntervalSizeable a a => (a, a) -> Interval a
 readInterval (b, e) = beginerval (e - b) b
@@ -115,6 +118,13 @@ instance Arbitrary (PairedInterval State Int) where
 instance Arbitrary (Events Int) where
    arbitrary = Events <$> orderedList
 
+-- restricted refIv to decrease rareness causing quickcheck to quit
+instance Arbitrary IntervalReferenced where
+   arbitrary = do
+      refIv <- liftM2 beginerval (elements [1..3]) (elements [0..3])
+      rels <- fromList <$> sublistOf (toList intervalRelations)
+      iv <- arbitraryWithRelation refIv rels
+      return $ IntervalReferenced refIv rels iv
 
 -- Testing functions
 checkSeqStates :: (Intervallic i Int)=> [i Int] -> Bool
@@ -231,6 +241,20 @@ c5out = [
 
 -- Properties
 
+-- arbitraryWithRelation props
+-- 'tautology' because this repeats the logic of arbitraryWithRelation
+prop_withRelation_tautology :: IntervalReferenced -> Bool
+prop_withRelation_tautology ir
+  | isEnclose && isMom = isNothing iv
+  | otherwise = isJust iv && predicate rels refIv (fromJust iv)
+   where
+      refIv = refInterval ir
+      iv = targetInterval ir
+      rels = refRelations ir
+      isEnclose = Data.Set.null $ Data.Set.difference rels (converse strictWithinRelations)
+      isMom = duration refIv == moment' refIv
+
+
 -- Check that the only relation remaining after applying a function is Before
 prop_before:: (Ord a)=>
       ([Interval a] -> [Interval a])
@@ -249,13 +273,13 @@ prop_gaps1:: (Ord a)=>
    -> Property
 prop_gaps1 = prop_before gapsL
 
--- In the case that that the input is not null, then 
+-- In the case that that the input is not null, then
 -- * all relationsL should be `Meets` after formMeetingSequence
 prop_formMeetingSequence0::
      Events Int
    -> Property
 prop_formMeetingSequence0 x =
-   not (null es)  ==> all (==Meets) (relationsL $ formMeetingSequence es) === True
+   not (null es)  ==> all (== Meets) (relationsL $ formMeetingSequence es) === True
    where es = getEvents x
 
 -- In the case that the input has
@@ -263,7 +287,7 @@ prop_formMeetingSequence0 x =
 -- * AND does not have any empty states
 --
 -- THEN the number empty states in the output should smaller than or equal to
---      the number before relationsL in the output 
+--      the number before relationsL in the output
 prop_formMeetingSequence1::
      Events Int
    -> Property
@@ -276,7 +300,7 @@ prop_formMeetingSequence1 x =
          emptyCount  = lengthWhen (\x -> getPairData x == mempty ) res
          lengthWhen f = length . filter f
 
--- Check that formMeetingSequence doesn't return an empty list unless input is 
+-- Check that formMeetingSequence doesn't return an empty list unless input is
 -- empty.
 prop_formMeetingSequence2::
      Events Int
@@ -401,7 +425,7 @@ prop_clip_intersect x y =
 prop_small_filterEquals :: SmallInterval -> [SmallInterval] -> Property
 prop_small_filterEquals x l =
    not (null res) ==> and (fmap (predicate s i) res) === True
-  where 
+  where
      i = unSmall x
      li = map unSmall l
      res = filterEquals i li
@@ -611,3 +635,8 @@ spec = do
             property prop_formMeetingSequence1
           it "prop_formMeetingSequence2" $
             property prop_formMeetingSequence2
+
+   describe "arbitraryWithRelation property tests" $
+      do
+          it "prop_withRelation_tautology" $
+             property prop_withRelation_tautology
