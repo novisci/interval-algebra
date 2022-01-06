@@ -1,0 +1,6 @@
+# ignore haskell build artifacts
+dist-newstyle*
+
+# Ignore git
+.git
+.gitlab-ci.yml

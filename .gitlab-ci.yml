@@ -1,52 +1,70 @@
 variables:
-  GHC: "8.10.4"
+  GHC: "8.10.7"
   PKG: interval-algebra
 
-image: registry.novisci.com/nsstat/statocker/haskell:8.10.4
-
-before_script:
-  - export VERSION=$(grep -e '^version:' interval-algebra.cabal | sed 's/version:[[:space:]]*//g')
+# run on merge request and default branch
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
 
 stages:
-  - docker
+  - prep
+  - build
   - test
-  # - coverage
+  - coverage
+
+build-vars:
+  stage: prep
+  script:
+    - echo VERSION=$(grep -e '^version:' interval-algebra.cabal | sed 's/version:[[:space:]]*//g') >> .env
+  artifacts:
+    reports:
+      dotenv: .env
+
+is-draft: 
+  stage: prep
+  rules: 
+    - if: '$CI_COMMIT_MESSAGE =~ /-draft/'
+  script:
+    - echo DRAFT=true >> draft.env
+  artifacts:
+    reports:
+      dotenv: draft.env 
 
 docker-build:
- stage : docker
+ stage : build
  image: docker:19.03.8
+ needs:
+    - job: build-vars
+      artifacts: true
  script:
-    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin  $CI_REGISTRY
-    - docker build --tag $CI_REGISTRY_IMAGE/$PKG-build:$VERSION --tag $CI_REGISTRY_IMAGE/$PKG-build:latest .
-    - docker push $CI_REGISTRY_IMAGE/$PKG-build:$VERSION
-    - docker push $CI_REGISTRY_IMAGE/$PKG-build:latest
+    - ./ci/ci-build-docker.sh 
 
 test:
   stage: test
-  image: registry.novisci.com/nsstat/$PKG/$PKG-build:latest
-  cache:
-    key: "$CI_COMMIT_REF_SLUG"
+  needs:
+    - job: build-vars
+      artifacts: true
+    - job: is-draft
+      artifacts: true
+      optional: true
+    - job: docker-build
+      optional: true
+  image: registry.novisci.com/nsstat/$PKG/$PKG-build:${VERSION}
+  artifacts:
     paths:
-      - dist-newstyle/
+    - dist-newstyle/build/x86_64-linux/ghc-$GHC/$PKG-$VERSION/hpc/vanilla
   script:
-    - ghc --version
-    - cabal --version
-    - cabal test --test-show-details=always --enable-coverage
+    - ./ci/ci-cabal-test.sh
 
-# coverage-report:
-#   stage: coverage
-#   image: registry.novisci.com/nsstat/$PKG/$PKG-build:latest
-#   cache:
-#     key: "$CI_COMMIT_REF_SLUG"
-#     paths:
-#       - dist-newstyle/
-#   script:
-#     - echo $VERSION
-#     - ls dist-newstyle
-#     - DISTPATH=dist-newstyle/build/x86_64-linux/ghc-$GHC/$PKG-$VERSION/hpc/vanilla
-#     - hpc report $DISTPATH/tix/$PKG-$VERSION/interval-algebra-$VERSION.tix --hpcdir=$DISTPATH/mix/$PKG-$VERSION
-#     - mkdir coverage
-#     - hpc report --xml-output --per-module $DISTPATH/tix/$PKG-$VERSION/interval-algebra-$VERSION.tix --hpcdir=$DISTPATH/mix/$PKG-$VERSION > coverage/coverage.xml
-#   artifacts:
-#     reports:
-#       cobertura: coverage/coverage.xml
+coverage-report:
+  stage: coverage
+  image: registry.novisci.com/nsstat/$PKG/$PKG-build:latest
+  needs:
+    - job: build-vars
+      artifacts: true
+    - job: test
+      artifacts: true
+  script:
+    - ./ci/ci-coverage.sh
