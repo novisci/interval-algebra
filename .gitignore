@@ -1,10 +1,14 @@
-.stack-work/
 *~
 *DS_Store
 *sublime-project
 *sublime-workspace
 *scratch
 *yaml.lock
-dist*
 .vscode*
 cabal.project.local
+
+# build artifacts
+builds*
+coverage*
+.stack-work/
+dist*
