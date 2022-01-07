@@ -1,5 +1,9 @@
 # Changelog for interval-algebra
 
+## 1.1.3
+
+* `Arbitrary` instances for `DiffTime`, `NominalDiffTime` and `Day` are now sized, the absence of which had prevented the 'fix' from version 1.1.1 from being effective. `DiffTime` and `NominalDiffTime` generators are also now limited to a maximum `86399` seconds directly.
+
 ## 1.1.2
 
 * Adds an internal utility to `IntervalAlgebra.Arbitrary` to generate a `Maybe (i a)` for `Intervallic i a` from a reference interval and set of relations. `Nothing` is returned for cases in which no interval can be generated.

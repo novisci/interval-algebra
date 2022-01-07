@@ -38,32 +38,32 @@ import           IntervalAlgebra     (Interval, IntervalRelation (..),
 import           Prelude             (Eq, (==))
 import           Test.QuickCheck     (Arbitrary (arbitrary, shrink), Gen,
                                       NonNegative, arbitrarySizedNatural,
-                                      elements, resize, suchThat)
+                                      elements, resize, suchThat, sized)
 
 -- NOTE: the default size for arbitrary :: Gen Int appears to be 30
 arbitrarySizedPositive :: Integral a => Gen a
 arbitrarySizedPositive = (+ 1) <$> arbitrarySizedNatural
 
+-- resize in utctDayTime is to avoid rare leap-seconds-related failure, in
+-- which e.g.  1858-12-31 00:00:00 UTC /= 1858-12-30 23:59:60 UTC
 maxDiffTime :: Int
-maxDiffTime = 86400
+maxDiffTime = 86399
 
 instance Arbitrary (Interval Int) where
   arbitrary = liftM2 beginerval arbitrarySizedPositive arbitrary
 
 instance Arbitrary DT.Day where
-    arbitrary = DT.ModifiedJulianDay <$> arbitrary
+    arbitrary = sized (\s -> DT.ModifiedJulianDay <$> s `resize` arbitrary)
     shrink    = (DT.ModifiedJulianDay <$>) . shrink . DT.toModifiedJulianDay
 
 instance Arbitrary DT.NominalDiffTime where
-   arbitrary = fromInteger <$> (maxDiffTime `resize` arbitrarySizedNatural)
+   arbitrary = sized (\s -> fromInteger <$> (min s maxDiffTime `resize` arbitrarySizedNatural))
 
 instance Arbitrary DT.DiffTime where
-   arbitrary = fromInteger <$> (maxDiffTime `resize` arbitrarySizedNatural)
+   arbitrary = sized (\s -> fromInteger <$> (min s maxDiffTime `resize` arbitrarySizedNatural))
 
 instance Arbitrary DT.UTCTime  where
-    -- resize in utctDayTime is to avoid rare leap-seconds-related failure, in
-    -- which e.g.  1858-12-31 00:00:00 UTC /= 1858-12-30 23:59:60 UTC
-    arbitrary = liftA2 UTCTime arbitrary (86399 `resize` arbitrary)
+    arbitrary = liftA2 UTCTime arbitrary arbitrary
                   
 instance Arbitrary (Interval DT.Day) where
   arbitrary = liftM2 beginerval arbitrary arbitrary
