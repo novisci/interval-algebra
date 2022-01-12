@@ -1,5 +1,10 @@
 # Changelog for interval-algebra
 
+## 1.1.4
+
+* Derives `Generic` instances for `Interval` and `PairedInterval`.
+* Adds an `Arbitrary` instance for `PairedInterval`. 
+
 ## 1.1.3
 
 * `Arbitrary` instances for `DiffTime`, `NominalDiffTime` and `Day` are now sized, the absence of which had prevented the 'fix' from version 1.1.1 from being effective. `DiffTime` and `NominalDiffTime` generators are also now limited to a maximum `86399` seconds directly.

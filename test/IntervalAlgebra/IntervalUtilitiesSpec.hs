@@ -74,7 +74,7 @@ instance Arbitrary SmallInterval where
 
 -- A "state" here is just used test formMeetingSequence
 newtype Events a
-  = Events { getEvents :: [PairedInterval State a] }
+  = Events { getEvents :: [StateEvent a] }
   deriving (Eq, Ord, Show)
 
 newtype State
@@ -87,7 +87,13 @@ instance Semigroup State where
 instance Monoid State where
     mempty = State [False, False, False]
 
-type StateEvent a = PairedInterval State a
+-- type StateEvent a = PairedInterval State a
+
+newtype StateEvent a = MkEvent { getEvent :: PairedInterval State a } 
+   deriving (Eq, Ord, Show)
+
+unEvents :: [StateEvent a] -> [PairedInterval State a]
+unEvents = fmap getEvent
 
 -- Type for checking arbitraryWithRelation
 -- A target and reference pair, where targetInterval satisfies at least one of
@@ -106,14 +112,15 @@ readInterval (b, e) = beginerval (e - b) b
 mkEv :: IntervalSizeable a a => (a, a) -> b -> PairedInterval b a
 mkEv i s = makePairedInterval s (readInterval i)
 
-
 instance Arbitrary State where
    arbitrary =  State <$> suchThat (listOf arbitrary) (\x -> length x == 3)
 
 -- SmallInterval again to address issue of generating from too large a possible
 -- range of intervals
-instance Arbitrary (PairedInterval State Int) where
-   arbitrary = liftM2 makePairedInterval arbitrary (unSmall <$> arbitrary)
+-- instance Arbitrary (PairedInterval State Int) where
+   --    arbitrary = liftM2 makePairedInterval arbitrary (unSmall <$> arbitrary)
+instance Arbitrary (StateEvent Int) where
+   arbitrary = liftM2 (\x y -> MkEvent $ makePairedInterval x y) arbitrary (unSmall <$> arbitrary)
 
 instance Arbitrary (Events Int) where
    arbitrary = Events <$> orderedList
@@ -135,7 +142,7 @@ iv :: Int -> Int -> Interval Int
 iv = beginerval
 
 evpi :: Int -> Int -> [Bool] -> StateEvent Int
-evpi i j s = makePairedInterval (State s) (beginerval i j)
+evpi i j s = MkEvent $ makePairedInterval (State s) (beginerval i j)
 
 -- Test cases
 containmentInt :: Interval Int
@@ -223,7 +230,7 @@ c4out =
 
 
 
-c5in :: [StateEvent Int]
+c5in :: [PairedInterval State Int]
 c5in = [
      mkEv (-63, 21) (State [False,True,True])
    , mkEv (-56, 20) (State [True,True,True])
@@ -232,7 +239,7 @@ c5in = [
    , mkEv (27, 28) (State [False,True,True])
    ]
 
-c5out :: [StateEvent Int]
+c5out :: [PairedInterval State Int]
 c5out = [
      mkEv (-63, -56) (State [False,True,True])
    , mkEv (-56, 34) (State [True,True,True])
@@ -279,7 +286,7 @@ prop_formMeetingSequence0::
      Events Int
    -> Property
 prop_formMeetingSequence0 x =
-   not (null es)  ==> all (== Meets) (relationsL $ formMeetingSequence es) === True
+   not (null es)  ==> all (== Meets) (relationsL $ formMeetingSequence (unEvents es)) === True
    where es = getEvents x
 
 -- In the case that the input has
@@ -293,10 +300,10 @@ prop_formMeetingSequence1::
    -> Property
 prop_formMeetingSequence1 x =
    ( beforeCount > 0 &&
-     not (any (\x -> getPairData x == State [False, False, False]) (getEvents x))
+     not (any (\x -> getPairData x == State [False, False, False]) (unEvents $ getEvents x))
    ) ==> beforeCount >= emptyCount
-   where res = formMeetingSequence (getEvents x)
-         beforeCount = lengthWhen (== Before) (relationsL (getEvents x))
+   where res = formMeetingSequence (unEvents $ getEvents x)
+         beforeCount = lengthWhen (== Before) (relationsL (unEvents $ getEvents x))
          emptyCount  = lengthWhen (\x -> getPairData x == mempty ) res
          lengthWhen f = length . filter f
 
@@ -306,7 +313,7 @@ prop_formMeetingSequence2::
      Events Int
    -> Property
 prop_formMeetingSequence2 x = not (null $ getEvents x) ==> not $ null res
-   where res = formMeetingSequence (getEvents x)
+   where res = formMeetingSequence (unEvents $ getEvents x)
 
 class ( Ord a ) => FiltrationProperties a  where
    prop_filtration ::
@@ -612,19 +619,19 @@ spec = do
    describe "formMeetingSequence unit tests" $
       do
          it "formMeetingSequence unit test 0" $
-            formMeetingSequence c0in `shouldBe` c0out
+            formMeetingSequence (unEvents c0in) `shouldBe` unEvents c0out
          it "formMeetingSequence unit test 1"$
-            formMeetingSequence c1in `shouldBe` c1out
+            formMeetingSequence (unEvents c1in) `shouldBe` unEvents c1out
          it "formMeetingSequence unit test 2"$
-            formMeetingSequence c2in `shouldBe` c2out
+            formMeetingSequence (unEvents c2in) `shouldBe` unEvents c2out
          it "formMeetingSequence unit test 3"$
-            formMeetingSequence c3in `shouldBe` c3out
+            formMeetingSequence (unEvents c3in) `shouldBe` unEvents c3out
          it "formMeetingSequence unit test 4"$
-            formMeetingSequence c4in `shouldBe` c4out
+            formMeetingSequence (unEvents c4in) `shouldBe` unEvents c4out
          it "formMeetingSequence unit test 5"$
             formMeetingSequence c5in `shouldBe` c5out
          it "formMeetingSequence unit test 6"$
-            formMeetingSequence ([] :: [StateEvent Int]) `shouldBe` []
+            formMeetingSequence ([] :: [PairedInterval State Int]) `shouldBe` []
 
    describe "formMeetingSequence property tests" $
       modifyMaxSuccess (*50) $

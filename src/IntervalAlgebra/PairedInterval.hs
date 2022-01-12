@@ -10,6 +10,7 @@ Stability   : experimental
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module IntervalAlgebra.PairedInterval (
       PairedInterval
@@ -30,10 +31,11 @@ import safe IntervalAlgebra.Core    ( Interval
                                     , extenterval )
 import safe Witherable              ( Filterable(filter) )
 import safe Data.Bifunctor          ( Bifunctor(bimap) )
+import safe GHC.Generics            ( Generic )
 
 -- | An @Interval a@ paired with some other data of type @b@.
 newtype PairedInterval b a = PairedInterval (Interval a, b)
-    deriving (Eq)
+    deriving (Eq, Generic)
 
 instance (Ord a) => Intervallic (PairedInterval b) a where
     getInterval (PairedInterval x)        = fst x
