@@ -27,10 +27,11 @@ constructing, relating, and combining types that contain @'Interval'@s:
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module IntervalAlgebra.Core(
 
@@ -196,6 +197,7 @@ import Prelude                  ( Eq, Show, Enum(..), Bounded(..)
                                 , (++), (==), (&&), (+), (-), (!!), realToFrac)
 import Data.Function            ( ($), id, (.), flip )
 import Data.Functor             ( Functor(fmap) )
+import GHC.Generics             ( Generic )
 import Data.Ord                 ( Ord(..), Ordering(..), min, max )
 import Data.Semigroup           ( Semigroup((<>)) )
 import qualified Data.Set       ( Set
@@ -222,7 +224,7 @@ import Control.Applicative      ( Applicative(pure) )
 {- | An @'Interval' a@ is a pair \( (x, y) \text{ such that } x < y\). To create
 intervals use the @'parseInterval'@, @'beginerval'@, or @'enderval'@ functions.
 -}
-newtype Interval a = Interval (a, a) deriving (Eq)
+newtype Interval a = Interval (a, a) deriving (Eq, Generic)
 
 -- | A type identifying interval parsing errors.
 newtype ParseErrorInterval = ParseErrorInterval String 

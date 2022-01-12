@@ -9,6 +9,7 @@ Stability   : experimental
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE Safe              #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 
 module IntervalAlgebra.Arbitrary( arbitraryWithRelation ) where
@@ -32,6 +33,7 @@ import           GHC.Int             (Int)
 import           GHC.Num
 import           GHC.Real
 import           IntervalAlgebra     (Interval, IntervalRelation (..),
+                                      PairedInterval, makePairedInterval,
                                       IntervalSizeable, Intervallic, beginerval,
                                       converse, duration, moment', predicate,
                                       strictWithinRelations)
@@ -70,6 +72,9 @@ instance Arbitrary (Interval DT.Day) where
 
 instance Arbitrary (Interval DT.UTCTime) where
   arbitrary = liftM2 beginerval arbitrary arbitrary
+
+instance (Arbitrary b, Arbitrary (Interval a)) => Arbitrary (PairedInterval b a) where
+  arbitrary = liftM2 makePairedInterval arbitrary arbitrary 
 
 -- | Conditional generation of intervals relative to a reference.  If the
 -- reference `iv` is of 'moment' duration, it is not possible to generate
