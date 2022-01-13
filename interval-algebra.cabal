@@ -99,4 +99,6 @@ test-suite interval-algebra-test
     , time >=1.8 && <2
     , witherable >= 0.4
     , safe >= 0.3
+  build-tool-depends:
+      hspec-discover:hspec-discover >= 2.9.2
   default-language: Haskell2010
