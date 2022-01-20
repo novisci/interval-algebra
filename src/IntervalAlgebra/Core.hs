@@ -220,6 +220,8 @@ import Data.Time as DT          ( Day
                                 , addDays
                                 , diffDays )
 import Control.Applicative      ( Applicative(pure) )
+import Data.Binary              ( Binary )
+import Control.DeepSeq          ( NFData )
 
 {- | An @'Interval' a@ is a pair \( (x, y) \text{ such that } x < y\). To create
 intervals use the @'parseInterval'@, @'beginerval'@, or @'enderval'@ functions.
@@ -254,6 +256,9 @@ instance Functor Interval where
 
 instance (Show a, Ord a) => Show (Interval a) where
    show x = "(" ++ show (begin x) ++ ", " ++ show (end x) ++ ")"
+
+instance Binary a => Binary (Interval a)
+instance NFData a => NFData (Interval a)
 
 {- | 
 The @'Intervallic'@ typeclass defines how to get and set the 'Interval' content

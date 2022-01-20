@@ -32,6 +32,8 @@ import safe IntervalAlgebra.Core    ( Interval
 import safe Witherable              ( Filterable(filter) )
 import safe Data.Bifunctor          ( Bifunctor(bimap) )
 import safe GHC.Generics            ( Generic )
+import safe Data.Binary             ( Binary )
+import safe Control.DeepSeq         ( NFData )
 
 -- | An @Interval a@ paired with some other data of type @b@.
 newtype PairedInterval b a = PairedInterval (Interval a, b)
@@ -46,6 +48,9 @@ instance Functor (PairedInterval b) where
 
 instance Bifunctor PairedInterval where
     bimap f g (PairedInterval (x, y)) = PairedInterval (fmap g x, f y)
+
+instance (NFData a, NFData b) => NFData (PairedInterval b a)
+instance (Binary a, Binary b) => Binary (PairedInterval b a)
 
 -- | Defines A total ordering on 'PairedInterval b a' based on the 'Interval a'
 --   part.

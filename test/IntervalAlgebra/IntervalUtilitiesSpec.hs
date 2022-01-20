@@ -87,8 +87,6 @@ instance Semigroup State where
 instance Monoid State where
     mempty = State [False, False, False]
 
--- type StateEvent a = PairedInterval State a
-
 newtype StateEvent a = MkEvent { getEvent :: PairedInterval State a } 
    deriving (Eq, Ord, Show)
 
@@ -117,8 +115,6 @@ instance Arbitrary State where
 
 -- SmallInterval again to address issue of generating from too large a possible
 -- range of intervals
--- instance Arbitrary (PairedInterval State Int) where
-   --    arbitrary = liftM2 makePairedInterval arbitrary (unSmall <$> arbitrary)
 instance Arbitrary (StateEvent Int) where
    arbitrary = liftM2 (\x y -> MkEvent $ makePairedInterval x y) arbitrary (unSmall <$> arbitrary)
 
