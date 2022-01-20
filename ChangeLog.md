@@ -1,9 +1,13 @@
 # Changelog for interval-algebra
 
-## 1.1.4
+## 1.3.0
+
+* Adds `NFData` and `Binary` instances for `Interval` and `PairedInterval`
+
+## 1.2.0
 
 * Derives `Generic` instances for `Interval` and `PairedInterval`.
-* Adds an `Arbitrary` instance for `PairedInterval`. 
+* Adds an `Arbitrary` instance for `PairedInterval`.
 
 ## 1.1.3
 
