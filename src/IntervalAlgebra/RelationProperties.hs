@@ -12,43 +12,52 @@ The notation below is that of the original paper.
 This module is useful if creating a new instance of interval types that you want to test.
 
 -}
-
+{- HLINT ignore -}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-module IntervalAlgebra.RelationProperties (
-   IntervalRelationProperties(..)
-) where
 
-import Test.QuickCheck            ( (===)
-                                  , (==>)
-                                  , Property
-                                  , Arbitrary (arbitrary) )
-import Data.Maybe                 ( fromJust, isJust, isNothing )
-import Data.Time as DT            ( Day
-                                  , UTCTime
-                                  , NominalDiffTime
-                                  )
-import Data.Set                   ( Set
-                                  , member
-                                  , disjointUnion
-                                  , fromList )
-import IntervalAlgebra.Core
-import IntervalAlgebra.Arbitrary
+module IntervalAlgebra.RelationProperties
+  ( IntervalRelationProperties(..)
+  ) where
 
-allIArelations:: (Ord a) => [ComparativePredicateOf1 (Interval a)]
-allIArelations =   [  equals
-                    , meets
-                    , metBy
-                    , before
-                    , after
-                    , starts
-                    , startedBy
-                    , finishes
-                    , finishedBy
-                    , overlaps
-                    , overlappedBy
-                    , during
-                    , contains ] 
+import           Data.Maybe                     ( fromJust
+                                                , isJust
+                                                , isNothing
+                                                )
+import           Data.Set                       ( Set
+                                                , disjointUnion
+                                                , fromList
+                                                , member
+                                                )
+import           Data.Time                     as DT
+                                                ( Day
+                                                , NominalDiffTime
+                                                , UTCTime
+                                                )
+import           IntervalAlgebra.Arbitrary
+import           IntervalAlgebra.Core
+import           Test.QuickCheck                ( (===)
+                                                , (==>)
+                                                , Arbitrary(arbitrary)
+                                                , Property
+                                                )
+
+allIArelations :: (Ord a) => [ComparativePredicateOf1 (Interval a)]
+allIArelations =
+  [ equals
+  , meets
+  , metBy
+  , before
+  , after
+  , starts
+  , startedBy
+  , finishes
+  , finishedBy
+  , overlaps
+  , overlappedBy
+  , during
+  , contains
+  ]
 
 -- | A collection of properties for the interval algebra. Some of these come from 
 --   figure 2 in  [Allen and Hayes (1987)](https://doi.org/10.1111/j.1467-8640.1989.tb00329.x).
@@ -63,12 +72,12 @@ class ( IntervalSizeable a b ) => IntervalRelationProperties a b where
     -- predicate between two interval is equivalent to the relation of two intervals 
     -- being in the set of relations.
     prop_predicate_unions :: Ord a =>
-          Set IntervalRelation 
+          Set IntervalRelation
         -> ComparativePredicateOf2 (Interval a) (Interval a)
-        -> Interval a 
+        -> Interval a
         -> Interval a
         -> Property
-    prop_predicate_unions s pred i0 i1 = 
+    prop_predicate_unions s pred i0 i1 =
       pred i0 i1 === (relate i0 i1 `elem` s)
 
     prop_IAbefore :: Interval a -> Interval a -> Property
@@ -104,44 +113,44 @@ class ( IntervalSizeable a b ) => IntervalRelationProperties a b where
         where k = beginerval (diff (begin i) (begin j)) (begin j)
               l = beginerval (diff (end j)   (end i))   (end i)
 
-    prop_disjoint_predicate :: (Ord a) =>        
-          Interval a 
+    prop_disjoint_predicate :: (Ord a) =>
+          Interval a
         -> Interval a
-        -> Property 
+        -> Property
     prop_disjoint_predicate = prop_predicate_unions disjointRelations disjoint
 
-    prop_notdisjoint_predicate :: (Ord a) =>        
-          Interval a 
+    prop_notdisjoint_predicate :: (Ord a) =>
+          Interval a
         -> Interval a
-        -> Property 
-    prop_notdisjoint_predicate = 
+        -> Property
+    prop_notdisjoint_predicate =
       prop_predicate_unions (complement disjointRelations) notDisjoint
 
-    prop_concur_predicate :: (Ord a) =>        
-          Interval a 
+    prop_concur_predicate :: (Ord a) =>
+          Interval a
         -> Interval a
-        -> Property 
-    prop_concur_predicate = 
-      prop_predicate_unions (complement disjointRelations) concur 
+        -> Property
+    prop_concur_predicate =
+      prop_predicate_unions (complement disjointRelations) concur
 
-    prop_within_predicate :: (Ord a) =>        
-          Interval a 
+    prop_within_predicate :: (Ord a) =>
+          Interval a
         -> Interval a
-        -> Property 
+        -> Property
     prop_within_predicate = prop_predicate_unions withinRelations within
 
-    prop_enclosedBy_predicate :: (Ord a) =>        
-          Interval a 
+    prop_enclosedBy_predicate :: (Ord a) =>
+          Interval a
         -> Interval a
-        -> Property 
+        -> Property
     prop_enclosedBy_predicate = prop_predicate_unions withinRelations enclosedBy
 
-    prop_enclose_predicate :: (Ord a) =>        
-          Interval a 
+    prop_enclose_predicate :: (Ord a) =>
+          Interval a
         -> Interval a
-        -> Property 
+        -> Property
     prop_enclose_predicate = prop_predicate_unions (converse withinRelations) enclose
 
 instance IntervalRelationProperties Int Int
 instance IntervalRelationProperties Day Integer
-instance IntervalRelationProperties UTCTime NominalDiffTime 
+instance IntervalRelationProperties UTCTime NominalDiffTime

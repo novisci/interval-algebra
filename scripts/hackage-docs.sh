@@ -8,4 +8,4 @@ trap 'rm -r "$dir"' EXIT
 cabal haddock --builddir="$dir" --haddock-for-hackage --enable-doc
 
 # cabal upload -d --publish $dir/*-docs.tar.gz
-cabal upload -d $dir/*-docs.tar.gz
+cabal upload -d "$dir"/*-docs.tar.gz

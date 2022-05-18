@@ -32,10 +32,19 @@ is-draft:
     reports:
       dotenv: draft.env 
 
+checks:
+  stage: prep
+  image: registry.novisci.com/nsstat/nsbuild/haskell:${GHC}
+  script:
+    - hlint --version
+    - ./ci/ci-lint.sh
+    - ./ci/ci-check-format.sh
+
 docker-build:
  stage : build
  image: docker:19.03.8
  needs:
+    - job: checks
     - job: build-vars
       artifacts: true
  script:
@@ -54,7 +63,8 @@ test:
   image: registry.novisci.com/nsstat/$PKG/$PKG-build:${VERSION}
   artifacts:
     paths:
-    - dist-newstyle/build/x86_64-linux/ghc-$GHC/$PKG-$VERSION/hpc/vanilla
+    - "**/*.tix"
+    - "**/*.mix"
   script:
     - ./ci/ci-cabal-test.sh
 

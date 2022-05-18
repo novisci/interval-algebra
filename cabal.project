@@ -1,0 +1,9 @@
+packages: interval-algebra.cabal
+
+package *
+  coverage: True
+  library-coverage: True
+
+package attoparsec
+  coverage: False
+  library-coverage: False

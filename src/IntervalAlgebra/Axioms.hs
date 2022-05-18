@@ -1,3 +1,4 @@
+{- HLINT ignore -}
 {-|
 Module      : Interval Algebra Axioms
 Description : Properties of Intervals
@@ -15,30 +16,38 @@ This module is useful if creating a new instance of interval types that you want
 
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-module IntervalAlgebra.Axioms (
-   IntervalAxioms(..)
-   , M1set(..)
-   , M2set(..)
-   , M5set(..)
-) where
 
-import Test.QuickCheck            ( (===)
-                                  , (==>)
-                                  , Property
-                                  , Arbitrary (arbitrary) )
-import Data.Either                ( isRight )
-import Data.Maybe                 ( fromJust, isJust, isNothing )
-import Data.Time as DT            ( Day(..)
-                                  , UTCTime(..)
-                                  , DiffTime
-                                  , NominalDiffTime
-                                  )
-import Data.Set                   ( Set
-                                  , member
-                                  , disjointUnion
-                                  , fromList )
-import IntervalAlgebra.Core
-import IntervalAlgebra.Arbitrary
+
+module IntervalAlgebra.Axioms
+  ( IntervalAxioms(..)
+  , M1set(..)
+  , M2set(..)
+  , M5set(..)
+  ) where
+
+import           Data.Either                    ( isRight )
+import           Data.Maybe                     ( fromJust
+                                                , isJust
+                                                , isNothing
+                                                )
+import           Data.Set                       ( Set
+                                                , disjointUnion
+                                                , fromList
+                                                , member
+                                                )
+import           Data.Time                     as DT
+                                                ( Day(..)
+                                                , DiffTime
+                                                , NominalDiffTime
+                                                , UTCTime(..)
+                                                )
+import           IntervalAlgebra.Arbitrary
+import           IntervalAlgebra.Core
+import           Test.QuickCheck                ( (===)
+                                                , (==>)
+                                                , Arbitrary(arbitrary)
+                                                , Property
+                                                )
 
 
 xor :: Bool -> Bool -> Bool
@@ -46,18 +55,18 @@ xor a b = a /= b
 
 -- | Internal function for converting a number to a strictly positive value.
 makePos :: (Ord b, Num b) => b -> b
-makePos x
-  | x == 0    = x + 1
-  | x <  0    = negate x
-  | otherwise = x
+makePos x | x == 0    = x + 1
+          | x < 0     = negate x
+          | otherwise = x
 
 -- | A set used for testing M1 defined so that the M1 condition is true.
-data M1set a = M1set {
-     m11 :: Interval a
-   , m12 :: Interval a
-   , m13 :: Interval a
-   , m14 :: Interval a }
-   deriving (Show)
+data M1set a = M1set
+  { m11 :: Interval a
+  , m12 :: Interval a
+  , m13 :: Interval a
+  , m14 :: Interval a
+  }
+  deriving Show
 
 instance Arbitrary (M1set Int) where
   arbitrary = do
@@ -82,12 +91,13 @@ instance Arbitrary (M1set DT.UTCTime) where
 
 
 -- | A set used for testing M2 defined so that the M2 condition is true.
-data M2set a = M2set {
-    m21 :: Interval a
+data M2set a = M2set
+  { m21 :: Interval a
   , m22 :: Interval a
   , m23 :: Interval a
-  , m24 :: Interval a }
-  deriving (Show)
+  , m24 :: Interval a
+  }
+  deriving Show
 
 instance Arbitrary (M2set Int) where
   arbitrary = do
@@ -111,10 +121,11 @@ instance Arbitrary (M2set DT.UTCTime) where
     m2set x a b <$> arbitrary
 
 -- | A set used for testing M5.
-data M5set a = M5set {
-     m51 :: Interval a
-   , m52 :: Interval a }
-   deriving (Show)
+data M5set a = M5set
+  { m51 :: Interval a
+  , m52 :: Interval a
+  }
+  deriving Show
 
 instance Arbitrary (M5set Int) where
   arbitrary = do
@@ -339,4 +350,4 @@ class ( IntervalSizeable a b ) => IntervalAxioms a b where
 
 instance IntervalAxioms Int Int
 instance IntervalAxioms Day Integer
-instance IntervalAxioms UTCTime NominalDiffTime 
+instance IntervalAxioms UTCTime NominalDiffTime

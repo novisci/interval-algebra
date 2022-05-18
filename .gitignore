@@ -12,3 +12,6 @@ builds*
 coverage*
 .stack-work/
 dist*
+
+# Test artifacts
+*.tix

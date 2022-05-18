@@ -17,12 +17,12 @@ going for most cases.
 -}
 
 {-# LANGUAGE Safe #-}
-module IntervalAlgebra( 
-      module IntervalAlgebra.Core
-    , module IntervalAlgebra.IntervalUtilities
-    , module IntervalAlgebra.PairedInterval
-) where
+module IntervalAlgebra
+  ( module IntervalAlgebra.Core
+  , module IntervalAlgebra.IntervalUtilities
+  , module IntervalAlgebra.PairedInterval
+  ) where
 
-import safe IntervalAlgebra.Core 
-import safe IntervalAlgebra.IntervalUtilities 
-import safe IntervalAlgebra.PairedInterval 
+import safe      IntervalAlgebra.Core
+import safe      IntervalAlgebra.IntervalUtilities
+import safe      IntervalAlgebra.PairedInterval

@@ -12,35 +12,66 @@ Stability   : experimental
 {-# LANGUAGE FlexibleContexts #-}
 
 
-module IntervalAlgebra.Arbitrary( arbitraryWithRelation ) where
+module IntervalAlgebra.Arbitrary
+  ( arbitraryWithRelation
+  ) where
 
-import           Control.Applicative (liftA2, (<$>))
-import           Control.Monad       (liftM2)
+import           Control.Applicative            ( (<$>)
+                                                , liftA2
+                                                )
+import           Control.Monad                  ( liftM2 )
 import           Data.Bool
 import           Data.Fixed
-import           Data.Function       (flip, ($), (.))
-import           Data.Maybe          (Maybe (Just, Nothing))
+import           Data.Function                  ( ($)
+                                                , (.)
+                                                , flip
+                                                )
+import           Data.Maybe                     ( Maybe(Just, Nothing) )
 import           Data.Ord
-import qualified Data.Set            (Set, difference, null, singleton)
-import           Data.Time           as DT (Day (ModifiedJulianDay), DiffTime,
-                                            NominalDiffTime, UTCTime (..),
-                                            picosecondsToDiffTime,
-                                            secondsToDiffTime,
-                                            secondsToNominalDiffTime,
-                                            toModifiedJulianDay)
+import qualified Data.Set                       ( Set
+                                                , difference
+                                                , null
+                                                , singleton
+                                                )
+import           Data.Time                     as DT
+                                                ( Day(ModifiedJulianDay)
+                                                , DiffTime
+                                                , NominalDiffTime
+                                                , UTCTime(..)
+                                                , picosecondsToDiffTime
+                                                , secondsToDiffTime
+                                                , secondsToNominalDiffTime
+                                                , toModifiedJulianDay
+                                                )
 import           GHC.Float
-import           GHC.Int             (Int)
+import           GHC.Int                        ( Int )
 import           GHC.Num
 import           GHC.Real
-import           IntervalAlgebra     (Interval, IntervalRelation (..),
-                                      PairedInterval, makePairedInterval,
-                                      IntervalSizeable, Intervallic, beginerval,
-                                      converse, duration, moment', predicate,
-                                      strictWithinRelations)
-import           Prelude             (Eq, (==))
-import           Test.QuickCheck     (Arbitrary (arbitrary, shrink), Gen,
-                                      NonNegative, arbitrarySizedNatural,
-                                      elements, resize, suchThat, sized)
+import           IntervalAlgebra                ( Interval
+                                                , IntervalRelation(..)
+                                                , IntervalSizeable
+                                                , Intervallic
+                                                , PairedInterval
+                                                , beginerval
+                                                , converse
+                                                , duration
+                                                , makePairedInterval
+                                                , moment'
+                                                , predicate
+                                                , strictWithinRelations
+                                                )
+import           Prelude                        ( (==)
+                                                , Eq
+                                                )
+import           Test.QuickCheck                ( Arbitrary(arbitrary, shrink)
+                                                , Gen
+                                                , NonNegative
+                                                , arbitrarySizedNatural
+                                                , elements
+                                                , resize
+                                                , sized
+                                                , suchThat
+                                                )
 
 -- NOTE: the default size for arbitrary :: Gen Int appears to be 30
 arbitrarySizedPositive :: Integral a => Gen a
@@ -55,18 +86,20 @@ instance Arbitrary (Interval Int) where
   arbitrary = liftM2 beginerval arbitrarySizedPositive arbitrary
 
 instance Arbitrary DT.Day where
-    arbitrary = sized (\s -> DT.ModifiedJulianDay <$> s `resize` arbitrary)
-    shrink    = (DT.ModifiedJulianDay <$>) . shrink . DT.toModifiedJulianDay
+  arbitrary = sized (\s -> DT.ModifiedJulianDay <$> s `resize` arbitrary)
+  shrink    = (DT.ModifiedJulianDay <$>) . shrink . DT.toModifiedJulianDay
 
 instance Arbitrary DT.NominalDiffTime where
-   arbitrary = sized (\s -> fromInteger <$> (min s maxDiffTime `resize` arbitrarySizedNatural))
+  arbitrary = sized
+    (\s -> fromInteger <$> (min s maxDiffTime `resize` arbitrarySizedNatural))
 
 instance Arbitrary DT.DiffTime where
-   arbitrary = sized (\s -> fromInteger <$> (min s maxDiffTime `resize` arbitrarySizedNatural))
+  arbitrary = sized
+    (\s -> fromInteger <$> (min s maxDiffTime `resize` arbitrarySizedNatural))
 
 instance Arbitrary DT.UTCTime  where
-    arbitrary = liftA2 UTCTime arbitrary arbitrary
-                  
+  arbitrary = liftA2 UTCTime arbitrary arbitrary
+
 instance Arbitrary (Interval DT.Day) where
   arbitrary = liftM2 beginerval arbitrary arbitrary
 
@@ -74,7 +107,7 @@ instance Arbitrary (Interval DT.UTCTime) where
   arbitrary = liftM2 beginerval arbitrary arbitrary
 
 instance (Arbitrary b, Arbitrary (Interval a)) => Arbitrary (PairedInterval b a) where
-  arbitrary = liftM2 makePairedInterval arbitrary arbitrary 
+  arbitrary = liftM2 makePairedInterval arbitrary arbitrary
 
 -- | Conditional generation of intervals relative to a reference.  If the
 -- reference `iv` is of 'moment' duration, it is not possible to generate
@@ -90,8 +123,9 @@ instance (Arbitrary b, Arbitrary (Interval a)) => Arbitrary (PairedInterval b a)
 -- Nothing
 -- >>> generate $ arbitraryWithRelation (beginerval 1 (0::Int)) (fromList [StartedBy, Before])
 -- Just (4, 13)
-arbitraryWithRelation :: (IntervalSizeable a b, Intervallic i a, Arbitrary (i a)) => 
-  i a -- ^ reference interval
+arbitraryWithRelation
+  :: (IntervalSizeable a b, Intervallic i a, Arbitrary (i a))
+  => i a -- ^ reference interval
   -> Data.Set.Set IntervalRelation -- ^ set of `IntervalRelation`s, of which at least one will hold for the generated interval relative to the reference
   -> Gen (Maybe (i a))
 arbitraryWithRelation iv rs
@@ -99,7 +133,7 @@ arbitraryWithRelation iv rs
   | isEnclose && isMom = elements [Nothing]
   | isMom = Just <$> arbitrary `suchThat` predicate notStrictEnclose iv
   | otherwise = Just <$> arbitrary `suchThat` predicate rs iv
-  where
-    notStrictEnclose = Data.Set.difference rs (converse strictWithinRelations)
-    isEnclose = Data.Set.null notStrictEnclose
-    isMom = duration iv == moment' iv
+ where
+  notStrictEnclose = Data.Set.difference rs (converse strictWithinRelations)
+  isEnclose        = Data.Set.null notStrictEnclose
+  isMom            = duration iv == moment' iv

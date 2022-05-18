@@ -1,7 +1,7 @@
 module Main where
 
-import Test.Hspec
-import RelationPropertiesSpec 
+import           RelationPropertiesSpec
+import           Test.Hspec
 
 main :: IO ()
 main = hspec spec
