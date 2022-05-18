@@ -9,11 +9,13 @@ echo "$DRAFT"
 if [[ $DRAFT ]]
  then 
 cabal test axioms \
-  --test-show-details=always \
-  --enable-coverage 
+  --test-show-details=always 
+  # \
+  # --enable-coverage 
 else
 cabal test \
   -j \
-  --test-show-details=always \
-  --enable-coverage
+  --test-show-details=always 
+  # \
+  # --enable-coverage
 fi

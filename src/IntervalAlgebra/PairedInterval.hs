@@ -12,42 +12,43 @@ Stability   : experimental
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-module IntervalAlgebra.PairedInterval (
-      PairedInterval
-    , Empty(..)
-    , makePairedInterval
-    , getPairData
-    , intervals
-    , equalPairData
-    , toTrivialPair
-    , trivialize
-) where
+module IntervalAlgebra.PairedInterval
+  ( PairedInterval
+  , Empty(..)
+  , makePairedInterval
+  , getPairData
+  , intervals
+  , equalPairData
+  , toTrivialPair
+  , trivialize
+  ) where
 
-import safe IntervalAlgebra.Core    ( Interval
-                                    , Intervallic(..)
-                                    , before
-                                    , IntervalCombinable(..)
-                                    , ComparativePredicateOf1
-                                    , extenterval )
-import safe Witherable              ( Filterable(filter) )
-import safe Data.Bifunctor          ( Bifunctor(bimap) )
-import safe GHC.Generics            ( Generic )
-import safe Data.Binary             ( Binary )
-import safe Control.DeepSeq         ( NFData )
+import safe      Control.DeepSeq                ( NFData )
+import safe      Data.Bifunctor                 ( Bifunctor(bimap) )
+import safe      Data.Binary                    ( Binary )
+import safe      GHC.Generics                   ( Generic )
+import safe      IntervalAlgebra.Core           ( ComparativePredicateOf1
+                                                , Interval
+                                                , IntervalCombinable(..)
+                                                , Intervallic(..)
+                                                , before
+                                                , extenterval
+                                                )
+import safe      Witherable                     ( Filterable(filter) )
 
 -- | An @Interval a@ paired with some other data of type @b@.
 newtype PairedInterval b a = PairedInterval (Interval a, b)
     deriving (Eq, Generic)
 
 instance (Ord a) => Intervallic (PairedInterval b) a where
-    getInterval (PairedInterval x)        = fst x
-    setInterval (PairedInterval (x, y)) i = PairedInterval (i, y)
+  getInterval (PairedInterval x) = fst x
+  setInterval (PairedInterval (x, y)) i = PairedInterval (i, y)
 
 instance Functor (PairedInterval b) where
-    fmap f (PairedInterval (x, y)) = PairedInterval (fmap f x, y)
+  fmap f (PairedInterval (x, y)) = PairedInterval (fmap f x, y)
 
 instance Bifunctor PairedInterval where
-    bimap f g (PairedInterval (x, y)) = PairedInterval (fmap g x, f y)
+  bimap f g (PairedInterval (x, y)) = PairedInterval (fmap g x, f y)
 
 instance (NFData a, NFData b) => NFData (PairedInterval b a)
 instance (Binary a, Binary b) => Binary (PairedInterval b a)
@@ -56,20 +57,19 @@ instance (Binary a, Binary b) => Binary (PairedInterval b a)
 --   part.
 instance (Eq a, Eq b, Ord a) => Ord (PairedInterval b a) where
   (<=) x y = getInterval x <= getInterval y
-  (<) x y  = getInterval x <  getInterval y
+  (<) x y = getInterval x < getInterval y
 
 instance (Show b, Show a, Ord a) => Show (PairedInterval b a) where
-    show x = "{" ++ show (getInterval x) ++ ", " ++ show (getPairData x) ++ "}"
+  show x = "{" ++ show (getInterval x) ++ ", " ++ show (getPairData x) ++ "}"
 
-instance (Ord a, Eq b, Monoid b) => 
+instance (Ord a, Eq b, Monoid b) =>
           IntervalCombinable (PairedInterval b) a where
-    (><) x y = fmap (makePairedInterval mempty) (getInterval x >< getInterval y)
+  (><) x y = fmap (makePairedInterval mempty) (getInterval x >< getInterval y)
 
-    (<+>) x y
-        | x `before` y = pure x <> pure y
-        | otherwise    = pure $
-            makePairedInterval (getPairData x <> getPairData y)
-                                (extenterval x y) 
+  (<+>) x y
+    | x `before` y = pure x <> pure y
+    | otherwise = pure
+    $ makePairedInterval (getPairData x <> getPairData y) (extenterval x y)
 
 -- | Make a paired interval. 
 makePairedInterval :: b -> Interval a -> PairedInterval b a
@@ -88,12 +88,13 @@ intervals :: (Ord a, Functor f) => f (PairedInterval b a) -> f (Interval a)
 intervals = fmap getInterval
 
 -- | Empty is used to trivially lift an @Interval a@ into a @PairedInterval@.
-data Empty = Empty deriving (Eq, Ord, Show)
-instance Semigroup Empty where 
-    x <> y = Empty
+data Empty = Empty
+  deriving (Eq, Ord, Show)
+instance Semigroup Empty where
+  x <> y = Empty
 instance Monoid Empty where
-    mempty = Empty
-    mappend x y = x <> y
+  mempty = Empty
+  mappend x y = x <> y
 
 -- | Lifts an @Interval a@ into a @PairedInterval Empty a@, where @Empty@ is a
 --   trivial type that contains no data.

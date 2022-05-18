@@ -1,5 +1,17 @@
 # Changelog for interval-algebra
 
+## 1.4.0
+
+* Adds the `safeInterval` function to `Core`,
+as a utility for creating intervals from a pair of endpoints.
+* Uses
+[PVP](https://pvp.haskell.org/)-style
+major upper bounds in cabal dependencies as described
+[here](https://cabal.readthedocs.io/en/3.4/cabal-package.html#build-information).
+* Adds the `IntervalDiagram` module which includes functions and types
+for printing diagrams of intervals as text.
+These functions are useful for documentation and examples.
+
 ## 1.3.0
 
 * Adds `NFData` and `Binary` instances for `Interval` and `PairedInterval`
