@@ -10,6 +10,8 @@ Stability   : experimental
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE Safe              #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 
 module IntervalAlgebra.Arbitrary
@@ -56,7 +58,7 @@ import           IntervalAlgebra                ( Interval
                                                 , converse
                                                 , duration
                                                 , makePairedInterval
-                                                , moment'
+                                                , moment
                                                 , predicate
                                                 , strictWithinRelations
                                                 )
@@ -82,9 +84,6 @@ arbitrarySizedPositive = (+ 1) <$> arbitrarySizedNatural
 maxDiffTime :: Int
 maxDiffTime = 86399
 
-instance Arbitrary (Interval Int) where
-  arbitrary = liftM2 beginerval arbitrarySizedPositive arbitrary
-
 instance Arbitrary DT.Day where
   arbitrary = sized (\s -> DT.ModifiedJulianDay <$> s `resize` arbitrary)
   shrink    = (DT.ModifiedJulianDay <$>) . shrink . DT.toModifiedJulianDay
@@ -100,31 +99,28 @@ instance Arbitrary DT.DiffTime where
 instance Arbitrary DT.UTCTime  where
   arbitrary = liftA2 UTCTime arbitrary arbitrary
 
-instance Arbitrary (Interval DT.Day) where
-  arbitrary = liftM2 beginerval arbitrary arbitrary
-
-instance Arbitrary (Interval DT.UTCTime) where
-  arbitrary = liftM2 beginerval arbitrary arbitrary
-
-instance (Arbitrary b, Arbitrary (Interval a)) => Arbitrary (PairedInterval b a) where
-  arbitrary = liftM2 makePairedInterval arbitrary arbitrary
-
 -- | Conditional generation of intervals relative to a reference.  If the
--- reference `iv` is of 'moment' duration, it is not possible to generate
+-- reference @iv@ is of 'moment' duration, it is not possible to generate
 -- intervals from the strict enclose relations StartedBy, Contains, FinishedBy.
--- If `iv` and `rs` are such that no possible relations can be generated, this
+-- If @iv@ and @rs@ are such that no possible relations can be generated, this
 -- function returns `Nothing`. Otherwise, it returns `Just` an interval that
--- satisfies at least one of the possible relations in `rs` relative to
--- `iv`.
+-- satisfies at least one of the possible relations in @rs@ relative to
+-- @iv@.
 --
--- >>> generate $ arbitraryWithRelation (beginerval 10 (0::Int)) (fromList [Before])
+-- @
+-- > import Test.QuickCheck (generate)
+-- > import Data.Set (fromList)
+-- > isJust $ generate $ arbitraryWithRelation (beginerval 10 (0::Int)) (fromList [Before])
 -- Just (20, 22)
--- >>> generate $ arbitraryWithRelation (beginerval 1 (0::Int)) (fromList [StartedBy])
+-- > generate $ arbitraryWithRelation (beginerval 1 (0::Int)) (fromList [StartedBy])
 -- Nothing
--- >>> generate $ arbitraryWithRelation (beginerval 1 (0::Int)) (fromList [StartedBy, Before])
+-- > generate $ arbitraryWithRelation (beginerval 1 (0::Int)) (fromList [StartedBy, Before])
 -- Just (4, 13)
+-- @
+--
 arbitraryWithRelation
-  :: (IntervalSizeable a b, Intervallic i a, Arbitrary (i a))
+  :: forall i a b
+   . (IntervalSizeable a b, Intervallic i a, Arbitrary (i a))
   => i a -- ^ reference interval
   -> Data.Set.Set IntervalRelation -- ^ set of `IntervalRelation`s, of which at least one will hold for the generated interval relative to the reference
   -> Gen (Maybe (i a))
@@ -136,4 +132,4 @@ arbitraryWithRelation iv rs
  where
   notStrictEnclose = Data.Set.difference rs (converse strictWithinRelations)
   isEnclose        = Data.Set.null notStrictEnclose
-  isMom            = duration iv == moment' iv
+  isMom            = duration iv == moment @a

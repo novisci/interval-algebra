@@ -103,11 +103,11 @@ spec = do
       `shouldBe` True
 
     it "beginervalMoment duration is moment"
-      $          moment' (beginervalMoment (-13 :: Int))
-      `shouldBe` (1 :: Int)
+      $          duration (beginervalMoment (-13 :: Int))
+      `shouldBe` (moment @Int)
     it "endervalMoment duration is moment"
-      $          moment' (endervalMoment (26 :: Int))
-      `shouldBe` (1 :: Int)
+      $          duration (endervalMoment (26 :: Int))
+      `shouldBe` (moment @Int)
 
     it "parsing fails on bad inputs" $ parseInterval 10 0 `shouldBe` Left
       (IA.ParseErrorInterval "0<=10")
@@ -203,7 +203,6 @@ spec = do
 
   describe "IntervalSizeable tests" $ do
     it "moment is 1" $ moment @Int `shouldBe` 1
-    it "moment' is 1" $ moment' (beginerval 1 (0 :: Int)) `shouldBe` 1
     it "expandl doesn't change end" $ property (prop_expandl_end @Int)
     it "expandr doesn't change begin" $ property (prop_expandr_begin @Int)
     it "expand 0 5 Interval (0, 1) should be Interval (0, 6)"
@@ -244,22 +243,22 @@ spec = do
       $          Right (enderval (-2 :: Int) 10)
       `shouldBe` parseInterval (9 :: Int) (10 :: Int)
 
-    it "diffFromBegin can convert Interval Int to Interval Int"
-      $          diffFromBegin (beginerval 2 (4 :: Int)) (beginerval 2 10)
+    it "shiftFromBegin can convert Interval Int to Interval Int"
+      $          shiftFromBegin (beginerval 2 (4 :: Int)) (beginerval 2 10)
       `shouldBe` beginerval 2 6 -- (6, 8)
 
-    it "diffFromEnd can convert Interval Int to Interval Int"
-      $          diffFromEnd (beginerval 2 (4 :: Int)) (beginerval 2 10)
+    it "shiftFromEnd can convert Interval Int to Interval Int"
+      $          shiftFromEnd (beginerval 2 (4 :: Int)) (beginerval 2 10)
       `shouldBe` beginerval 2 4 -- (4, 6)
 
-    it "diffFromBegin can convert Interval Day to Interval Integer"
-      $          diffFromBegin (beginerval 2 (fromGregorian 2001 1 1))
-                               (beginerval 2 (fromGregorian 2001 1 10))
+    it "shiftFromBegin can convert Interval Day to Interval Integer"
+      $          shiftFromBegin (beginerval 2 (fromGregorian 2001 1 1))
+                                (beginerval 2 (fromGregorian 2001 1 10))
       `shouldBe` beginerval 2 9 -- (9, 11)
 
-    it "diffFromEnd can convert Interval Day to Interval Integer"
-      $          diffFromEnd (beginerval 2 (fromGregorian 2001 1 1))
-                             (beginerval 2 (fromGregorian 2001 1 10))
+    it "shiftFromEnd can convert Interval Day to Interval Integer"
+      $          shiftFromEnd (beginerval 2 (fromGregorian 2001 1 1))
+                              (beginerval 2 (fromGregorian 2001 1 10))
       `shouldBe` beginerval 2 7 -- (7, 9)
 
     it "momentize works"

@@ -19,3 +19,6 @@ cabal test \
   # \
   # --enable-coverage
 fi
+
+# Run doctests
+cabal repl --with-ghc=doctest

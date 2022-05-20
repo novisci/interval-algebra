@@ -181,8 +181,8 @@ module IntervalAlgebra.Core
   , endervalFromBegin
   , beginervalMoment
   , endervalMoment
-  , diffFromBegin
-  , diffFromEnd
+  , shiftFromBegin
+  , shiftFromEnd
   , momentize
 
     -- ** Algebraic operations
@@ -202,7 +202,9 @@ module IntervalAlgebra.Core
   , IntervalSizeable(..)
   ) where
 
-import           Control.Applicative            ( Applicative(pure) )
+import           Control.Applicative            ( Applicative(pure)
+                                                , liftA2
+                                                )
 import           Control.DeepSeq                ( NFData )
 import           Data.Binary                    ( Binary )
 import           Data.Fixed                     ( Pico )
@@ -261,6 +263,7 @@ import           Prelude                        ( (!!)
                                                 , Show
                                                 , String
                                                 , any
+                                                , curry
                                                 , fromInteger
                                                 , fromRational
                                                 , map
@@ -273,6 +276,11 @@ import           Prelude                        ( (!!)
                                                 , toInteger
                                                 , toRational
                                                 )
+import           Test.QuickCheck                ( Arbitrary(..)
+                                                , resize
+                                                , sized
+                                                , suchThat
+                                                )
 
 {- | An @'Interval' a@ is a pair \( (x, y) \text{ such that } x < y\). To create
 intervals use the @'parseInterval'@, @'beginerval'@, or @'enderval'@ functions.
@@ -283,20 +291,24 @@ newtype Interval a = Interval (a, a) deriving (Eq, Generic)
 newtype ParseErrorInterval = ParseErrorInterval String
     deriving (Eq, Show)
 
+-- | Helper defining what a valid relation is between begin and end of an
+-- Interval.
+isValidBeginEnd :: (Ord a) => a -> a -> Bool
+isValidBeginEnd b e = b < e
+
 -- | Safely parse a pair of @a@s to create an @'Interval' a@.
 --
 -- >>> parseInterval 0 1
 -- Right (0, 1)
 -- 
 -- >>> parseInterval 1 0
--- Left "0<1"
+-- Left (ParseErrorInterval "0<=1")
 -- 
 parseInterval
   :: (Show a, Ord a) => a -> a -> Either ParseErrorInterval (Interval a)
 parseInterval x y
-  | x < y     = Right $ Interval (x, y)
-  | otherwise = Left $ ParseErrorInterval $ show y ++ "<=" ++ show x
-
+  | isValidBeginEnd x y = Right $ Interval (x, y)
+  | otherwise           = Left $ ParseErrorInterval $ show y ++ "<=" ++ show x
 -- | A synonym for `parseInterval`
 prsi :: (Show a, Ord a) => a -> a -> Either ParseErrorInterval (Interval a)
 prsi = parseInterval
@@ -630,12 +642,8 @@ The 'IntervalSizeable' typeclass provides functions to determine the size of an
 class (Ord a, Num b, Ord b) => IntervalSizeable a b | a -> b where
 
     -- | The smallest duration for an 'Interval a'.
-    moment :: b
+    moment :: forall a . b
     moment = 1
-
-    -- | Gives back a 'moment' based on the input's type.
-    moment' :: Intervallic i a => i a -> b
-    moment' x = moment @a
 
     -- | Determine the duration of an @'i a'@.
     duration :: Intervallic i a => i a -> b
@@ -659,15 +667,16 @@ class (Ord a, Num b, Ord b) => IntervalSizeable a b | a -> b where
 -- (-1, 3)
 --
 expand
-  :: (IntervalSizeable a b, Intervallic i a)
+  :: forall i a b
+   . (IntervalSizeable a b, Intervallic i a)
   => b -- ^ duration to subtract from the 'begin'
   -> b -- ^ duration to add to the 'end'
   -> i a
   -> i a
 expand l r p = setInterval p i
  where
-  s = if l < moment' p then 0 else negate l
-  e = if r < moment' p then 0 else r
+  s = if l < moment @a then 0 else negate l
+  e = if r < moment @a then 0 else r
   i = Interval (add s $ begin p, add e $ end p)
 
 -- | Expands an @i a@ to "left".
@@ -699,15 +708,17 @@ expandr = expand 0
 -- (0, 2)
 --
 beginerval
-  :: (IntervalSizeable a b)
+  :: forall a b
+   . (IntervalSizeable a b)
   => b -- ^ @dur@ation to add to the 'begin' 
   -> a -- ^ the 'begin' point of the 'Interval'
   -> Interval a
 beginerval dur x = Interval (x, y)
  where
   i = Interval (x, x)
-  d = max (moment' i) dur
+  d = max (moment @a) dur
   y = add d x
+{-# INLINABLE beginerval #-}
 
 -- | A synonym for `beginerval`
 bi
@@ -716,7 +727,7 @@ bi
   -> a -- ^ the 'begin' point of the 'Interval'
   -> Interval a
 bi = beginerval
-{-# INLINABLE beginerval #-}
+
 
 -- | Safely creates an 'Interval a' using @x@ as the 'end' and adding
 --   @negate max 'moment' dur@ to @x@ as the 'begin'.
@@ -731,12 +742,14 @@ bi = beginerval
 -- (-2, 0)
 --
 enderval
-  :: (IntervalSizeable a b)
+  :: forall a b
+   . (IntervalSizeable a b)
   => b -- ^ @dur@ation to subtract from the 'end' 
   -> a -- ^ the 'end' point of the 'Interval'
   -> Interval a
-enderval dur x = Interval (add (negate $ max (moment' i) dur) x, x)
+enderval dur x = Interval (add (negate $ max (moment @a) dur) x, x)
   where i = Interval (x, x)
+{-# INLINABLE enderval #-}
 
 -- | A synonym for `enderval`
 ei
@@ -745,7 +758,7 @@ ei
   -> a -- ^ the 'end' point of the 'Interval'
   -> Interval a
 ei = enderval
-{-# INLINABLE enderval #-}
+
 
 -- | Safely creates an @'Interval'@ from a pair of endpoints.
 -- IMPORTANT: This function uses 'beginerval', 
@@ -785,16 +798,16 @@ endervalFromBegin d i = enderval d (begin i)
 -- >>> beginervalMoment (10 :: Int)
 -- (10, 11)
 -- 
-beginervalMoment :: (IntervalSizeable a b) => a -> Interval a
-beginervalMoment x = beginerval (moment' i) x where i = Interval (x, x)
+beginervalMoment :: forall a b . (IntervalSizeable a b) => a -> Interval a
+beginervalMoment x = beginerval (moment @a) x where i = Interval (x, x)
 
 -- | Safely creates a new @Interval@ with 'moment' length with 'end' at @x@
 --
 -- >>> endervalMoment (10 :: Int)
 -- (9, 10)
 -- 
-endervalMoment :: (IntervalSizeable a b) => a -> Interval a
-endervalMoment x = enderval (moment' i) x where i = Interval (x, x)
+endervalMoment :: forall a b . (IntervalSizeable a b) => a -> Interval a
+endervalMoment x = enderval (moment @a) x where i = Interval (x, x)
 
 -- | Creates a new @Interval@ spanning the extent x and y.
 --
@@ -808,36 +821,34 @@ extenterval x y = Interval (s, e)
   e = max (end x) (end y)
 
 -- | Modifies the endpoints of second argument's interval by taking the difference
---   from the first's input's 'begin'.
--- 
--- >>> diffFromBegin (Interval ((5::Int), 6)) (Interval (10, 15))
+--   from the first's input's 'begin'. 
+-- >>> shiftFromBegin (Interval ((5::Int), 6)) (Interval (10, 15))
 -- (5, 10)
 --
--- >>> diffFromBegin (Interval ((1::Int), 2)) (Interval (3, 15))
+-- >>> shiftFromBegin (Interval ((1::Int), 2)) (Interval (3, 15))
 -- (2, 14)
 --
-diffFromBegin
+shiftFromBegin
   :: (IntervalSizeable a b, Functor i1, Intervallic i0 a)
   => i0 a
   -> i1 a
   -> i1 b
-diffFromBegin i = fmap (`diff` begin i)
+shiftFromBegin i = fmap (`diff` begin i)
 
 -- | Modifies the endpoints of second argument's interval by taking the difference
 --   from the first's input's 'end'.
---
--- >>> diffFromEnd (Interval ((5::Int), 6)) (Interval (10, 15))
+-- >>> shiftFromEnd (Interval ((5::Int), 6)) (Interval (10, 15))
 -- (4, 9)
 --
--- >>> diffFromEnd (Interval ((1::Int), 2)) (Interval (3, 15))
+-- >>> shiftFromEnd (Interval ((1::Int), 2)) (Interval (3, 15))
 -- (1, 13)
 --
-diffFromEnd
+shiftFromEnd
   :: (IntervalSizeable a b, Functor i1, Intervallic i0 a)
   => i0 a
   -> i1 a
   -> i1 b
-diffFromEnd i = fmap (`diff` end i)
+shiftFromEnd i = fmap (`diff` end i)
 
 -- | Changes the duration of an 'Intervallic' value to a moment starting at the 
 --   'begin' of the interval.
@@ -845,8 +856,9 @@ diffFromEnd i = fmap (`diff` end i)
 -- >>> momentize (Interval (6, 10))
 -- (6, 7)
 --
-momentize :: (IntervalSizeable a b, Intervallic i a) => i a -> i a
-momentize i = setInterval i (beginerval (moment' i) (begin i))
+momentize
+  :: forall i a b . (IntervalSizeable a b, Intervallic i a) => i a -> i a
+momentize i = setInterval i (beginerval (moment @a) (begin i))
 
 {- |
 The @'IntervalCombinable'@ typeclass provides methods for (possibly) combining
@@ -936,3 +948,13 @@ instance IntervalSizeable DT.UTCTime NominalDiffTime where
   moment = toEnum 1 :: NominalDiffTime
   add    = addUTCTime
   diff   = diffUTCTime
+
+-- Arbitrary instances
+instance (Ord a, Arbitrary a) => Arbitrary (Interval a) where
+  arbitrary =
+    sized
+        (\s -> liftA2 (curry Interval)
+                      (s `resize` arbitrary)
+                      (s `resize` arbitrary)
+        )
+      `suchThat` (\i -> isValidBeginEnd (intervalBegin i) (intervalEnd i))

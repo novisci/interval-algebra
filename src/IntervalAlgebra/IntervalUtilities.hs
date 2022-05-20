@@ -6,12 +6,12 @@ License     : BSD3
 Maintainer  : bsaul@novisci.com
 Stability   : experimental
 
-In the examples below, @iv@ is a synonym for 'beginerval' used to save space.
 -}
 
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TupleSections #-}
 
 module IntervalAlgebra.IntervalUtilities
   (
@@ -56,6 +56,16 @@ module IntervalAlgebra.IntervalUtilities
   , filterEnclose
   , filterEnclosedBy
 
+    -- * Functions for manipulating intervals
+  , lookback
+  , lookahead
+
+    -- * Gaps
+  , makeGapsWithinPredicate
+  , pairGaps
+  , anyGapsWithinAtLeastDuration
+  , allGapsWithinLessThanDuration
+
     -- * Misc utilities
   , relations
   , relationsL
@@ -70,7 +80,7 @@ import safe      Control.Applicative            ( (<*>)
 import qualified Control.Foldl                 as L
 import safe      Control.Monad                  ( Functor(fmap) )
 import safe      Data.Bool                      ( (&&)
-                                                , Bool
+                                                , Bool(..)
                                                 , not
                                                 , otherwise
                                                 , (||)
@@ -90,10 +100,15 @@ import safe      Data.Maybe                     ( Maybe(..)
                                                 , maybeToList
                                                 )
 import safe      Data.Monoid                    ( Monoid(mempty) )
-import safe      Data.Ord                       ( Ord(max, min) )
+import safe      Data.Ord                       ( (<)
+                                                , (>=)
+                                                , Ord(max, min)
+                                                )
 import safe      Data.Semigroup                 ( Semigroup((<>)) )
 import safe      Data.Traversable               ( Traversable(sequenceA) )
-import safe      Data.Tuple                     ( fst )
+import safe      Data.Tuple                     ( fst
+                                                , uncurry
+                                                )
 import safe      GHC.Int                        ( Int )
 import safe      GHC.Show                       ( Show )
 import safe      IntervalAlgebra.Core           ( (<|>)
@@ -155,7 +170,6 @@ import safe      Witherable                     ( Filterable(filter)
                                                 )
 
 
-
 -------------------------------------------------
 -- Unexported utilties used in functions below --
 -------------------------------------------------
@@ -174,6 +188,103 @@ makeFolder f = L.Fold step begin done
   step (fs, Just x ) y = (fs <> pure (f x y), Just y)
   done (fs, _) = fs
 
+-- | Create a predicate function that checks whether within a provided spanning
+--   interval, are there (e.g. any, all) gaps of (e.g. <, <=, >=, >) a specified
+--   duration among  the input intervals?
+makeGapsWithinPredicate
+  :: ( Monoid (t (Interval a))
+     , Monoid (t (Maybe (Interval a)))
+     , Applicative t
+     , Witherable.Witherable t
+     , IntervalSizeable a b
+     , Intervallic i0 a
+     , IntervalCombinable i1 a
+     )
+  => ((b -> Bool) -> t b -> Bool)
+  -> (b -> b -> Bool)
+  -> (b -> i0 a -> t (i1 a) -> Bool)
+makeGapsWithinPredicate f op gapDuration interval l =
+  maybe False (f (`op` gapDuration) . durations) (gapsWithin interval l)
+
+-- | Gets the durations of gaps (via 'IntervalAlgebra.(><)') between all pairs
+--   of the input.
+pairGaps
+  :: (Intervallic i a, IntervalSizeable a b, IntervalCombinable i a)
+  => [i a]
+  -> [Maybe b]
+pairGaps es = fmap (fmap duration . uncurry (><)) (pairs es)
+-- Generate all pair-wise combinations of a single list.
+-- pairs :: [a] -> [(a, a)]
+-- copied from the hgeometry library
+-- (https://hackage.haskell.org/package/hgeometry-0.12.0.4/docs/src/Data.Geometry.Arrangement.Internal.html#allPairs)
+ where
+  pairs = go
+   where
+    go []       = []
+    go (x : xs) = fmap (x, ) xs <> go xs
+
+-- | Creates a new @Interval@ of a provided lookback duration ending at the 
+--   'begin' of the input interval.
+--
+-- >>> lookback 4 (beginerval 10 (1 :: Int))
+-- (-3, 1)
+lookback
+  :: (Intervallic i a, IntervalSizeable a b)
+  => b   -- ^ lookback duration
+  -> i a
+  -> Interval a
+lookback d x = enderval d (begin x)
+
+-- | Creates a new @Interval@ of a provided lookahead duration beginning at the 
+--   'end' of the input interval.
+--
+-- >>> lookahead 4 (beginerval 1 (1 :: Int))
+-- (2, 6)
+lookahead
+  :: (Intervallic i a, IntervalSizeable a b)
+  => b   -- ^ lookahead duration
+  -> i a
+  -> Interval a
+lookahead d x = beginerval d (end x)
+
+-- | Within a provided spanning interval, are there any gaps of at least the
+--   specified duration among the input intervals?
+anyGapsWithinAtLeastDuration
+  :: ( IntervalSizeable a b
+     , Intervallic i0 a
+     , IntervalCombinable i1 a
+     , Monoid (t (Interval a))
+     , Monoid (t (Maybe (Interval a)))
+     , Applicative t
+     , Witherable.Witherable t
+     )
+  => b       -- ^ duration of gap
+  -> i0 a  -- ^ within this interval
+  -> t (i1 a)
+  -> Bool
+anyGapsWithinAtLeastDuration = makeGapsWithinPredicate any (>=)
+
+-- | Within a provided spanning interval, are all gaps less than the specified
+--   duration among the input intervals?
+--
+-- >>> allGapsWithinLessThanDuration 30 (beginerval 100 (0::Int)) [beginerval 5 (-1), beginerval 99 10]
+-- True
+allGapsWithinLessThanDuration
+  :: ( IntervalSizeable a b
+     , Intervallic i0 a
+     , IntervalCombinable i1 a
+     , Monoid (t (Interval a))
+     , Monoid (t (Maybe (Interval a)))
+     , Applicative t
+     , Witherable.Witherable t
+     )
+  => b       -- ^ duration of gap
+  -> i0 a  -- ^ within this interval
+  -> t (i1 a)
+  -> Bool
+allGapsWithinLessThanDuration = makeGapsWithinPredicate all (<)
+
+
 -- Used to combine two lists by combining the last element of @x@ and the first 
 -- element of @y@ by @f@. The combining function @f@ will generally return a 
 -- singleton list in the case that the last of x and head of y can be combined
@@ -191,14 +302,16 @@ listCombiner f x y = initSafe x <> f (lastMay x) (headMay y) <> tailSafe y
 --
 -- >>> relationsL [iv 1 0, iv 1 1] 
 -- [Meets]
+--
 relationsL :: (Foldable f, Intervallic i a) => f (i a) -> [IntervalRelation]
 relationsL = relations
 
 -- | A generic form of 'relations' which can output any 'Applicative' and 
 --   'Monoid' structure.
 --
--- >>> (relations [iv 1 0, iv 1 1]) :: [IntervalRelation (Interval Int)]
+-- >>> (relations [iv 1 0,iv 1 1]) :: [IntervalRelation]
 -- [Meets]
+--
 --
 relations
   :: (Foldable f, Applicative m, Intervallic i a, Monoid (m IntervalRelation))
@@ -239,6 +352,7 @@ gapsM = L.fold (makeFolder (\i j -> getInterval i >< getInterval j))
 --   sorted*. See 'gapsL' for a version that always returns a list.
 --
 -- >>> gaps [iv 4 1, iv 4 8, iv 3 11]
+-- Nothing
 --
 gaps
   :: ( IntervalCombinable i a
@@ -416,7 +530,7 @@ nothingIfNone = nothingIf (\f x -> (not . any f) x)
 
 -- | Returns 'Nothing' if *any* of the element of input satisfy the predicate condition.
 --
--- >>> nothingIfAny (starts (iv 2 3)) [iv 3 3, iv 1 5]
+-- >>> nothingIfAny (startedBy (iv 2 3)) [iv 3 3, iv 1 5]
 -- Just [(3, 6),(5, 6)]
 --
 -- >>> nothingIfAny (starts (iv 2 3)) [iv 3 3, iv 1 5]
