@@ -1,5 +1,14 @@
 # Changelog for interval-algebra
 
+## 2.0
+
+* Adds `Abitrary (Interval a)` instance generic over `Ord a, Arbitrary a`.
+* Removes the `moment'` function from the `IntervalSizeable` class.
+Use type application with `moment` instead, as in `moment @Int`, `moment @Day`, etc.
+* Adds the following utility functions:
+`lookback`, `lookahead`, `makeGapsWithinPredicate`,
+`pairGaps`, `anyGapsWithinAtLeastDuration`, `allGapsWithinLessThanDuration`
+
 ## 1.4.0
 
 * Adds the `safeInterval` function to `Core`,
@@ -59,7 +68,7 @@ These functions are useful for documentation and examples.
 
 ## 0.10.0
 
-* Adds `diffFromBegin` (`diffFromEnd`) functions (not totally satisfied with these names) which change the reference point of the interval in the second argument by the difference from the `begin` (`end`) of the interval in the first argument.
+* Adds `shiftFromBegin` (`shiftFromEnd`) functions (not totally satisfied with these names) which change the reference point of the interval in the second argument by the difference from the `begin` (`end`) of the interval in the first argument.
 * Adds a `Functor` instance for `PairedInterval b`s, which maps an `PairedInterval c a` to `PairedInterval c b`. That is, `fmap` acts on the interval type.
 
 ## 0.9.0

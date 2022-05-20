@@ -103,7 +103,7 @@ The @Interval a@ type needs to be an instance of @IntervalSizeable a b@;
 Moreover, the type @b@ should be castable to @Int@,
 using its @'Witch.From' b Int@  instance.
 
->>> import PrettyPrinter (pretty)
+>>> import Prettyprinter (pretty)
 >>> import IntervalAlgebra (beginerval)
 >>> pretty $ MkIntervalText '-' (beginerval 5 (0::Int))
 -----
@@ -144,8 +144,7 @@ containing a list of @IntervalText@.
 
 Values of this type should only be created
 through the 'parseIntervalTextLine' function,
-which checks that the inputs are parsed correctly and
-uses the 'makeIntervalLine' function to form intervals 
+which checks that the inputs are parsed correctly to form intervals 
 that will be pretty-printed correctly.
 
 >>> let i1 =  MkIntervalText '*' (beginerval 10 (5::Int))
@@ -249,7 +248,7 @@ parseIntervalTextLine labs l =
   makeIntervalLine
     :: NE.NonEmpty (IntervalText Int) -> NE.NonEmpty (IntervalText Int)
   makeIntervalLine x =
-    NE.head x NE.:| zipWith diffFromEnd (toList x) (NE.tail x)
+    NE.head x NE.:| zipWith shiftFromEnd (toList x) (NE.tail x)
 
   -- Creates all pairs of a list
   pairs = go
@@ -280,7 +279,8 @@ newtype AxisLabels = MkAxisLabels (NEM.NEIntMap Char)
   deriving (Eq, Show)
 
 {-|
-A type containing information about how to configure pretty of an @'Axis'@
+A type containing information on
+how to configure the axis of an 'IntervalDiagram'.
 -}
 data AxisConfig = MkAxisConfig
   { placement :: Maybe AxisPlacement
@@ -369,9 +369,9 @@ data AxisParseError =
   deriving (Eq, Show)
 
 {-|
-Safely create an @'Axis'@.
+Safely create an @Axis@.
 
-See @'Axis'@ for examples.
+See @Axis@ for examples.
 -}
 parseAxis
   :: [(Int, Char)]
@@ -496,7 +496,7 @@ data IntervalDiagramParseError =
   | PaddingWithNoAxis
   -- | Indicates that an error occurring when checking the document options.
   | OptionsError IntervalDiagramOptionsError
-  -- | Indicates something is wrong with the @'Axis'@.
+  -- | Indicates something is wrong with the @Axis@.
   | AxisError AxisParseError
   -- | Indicates that at least one error occurred when parsing the interval lines.
   | IntervalLineError IntervalTextLineParseError
@@ -560,14 +560,11 @@ Parse inputs into a pretty printable document.
 
 This function provides the most flexibility in producing interval diagrams.
 
-
-To create @'IntervalText'@ values use its @'From'@ instance, as in:
-
->>> let mkIntrvl c d b = into @(IntervalText Int) (c, bi d (b :: Int))
-
 Here's a basic diagram that shows
 how to put more than one interval interval on a line:
 
+>>> :set -XTypeApplications -XFlexibleContexts -XOverloadedStrings
+>>> let mkIntrvl c d b = into @(IntervalText Int) (c, bi d (b :: Int))
 >>> let x = mkIntrvl  '=' 20 0
 >>> let l1 = [ mkIntrvl '-' 1 4 ]
 >>> let l2 = [ mkIntrvl '*' 3 5, mkIntrvl '*' 5 10, mkIntrvl 'x' 1 17 ]
@@ -684,6 +681,7 @@ produces an 'IntervalDiagram' with one line per interval,
 using the 'defaultIntervalDiagramOptions'. 
 
 >>> import Data.Maybe (fromMaybe)
+>>> import IntervalAlgebra.IntervalUtilities (gapsWithin)
 >>> pretty $ simpleIntervalDiagram (bi 10 (0 :: Int)) (fmap (bi 1) [0..9])
 -
  -

@@ -1,9 +1,7 @@
-{- HLINT ignore -}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeApplications  #-}
-
-
+{- HLINT ignore -}
 module IntervalAlgebra.IntervalUtilitiesSpec
   ( spec
   ) where
@@ -35,7 +33,7 @@ import           IntervalAlgebra                ( Interval
                                                 , disjointRelations
                                                 , duration
                                                 , intervalRelations
-                                                , moment'
+                                                , moment
                                                 , predicate
                                                 , safeInterval
                                                 , starts
@@ -104,8 +102,6 @@ import           Test.QuickCheck                ( (===)
                                                 , suchThat
                                                 )
 import           Witherable                     ( Filterable )
-
-
 
 -- Types for testing
 
@@ -294,7 +290,7 @@ prop_withRelation_tautology ir
   rels  = refRelations ir
   isEnclose =
     Data.Set.null $ Data.Set.difference rels (converse strictWithinRelations)
-  isMom = duration refIv == moment' refIv
+  isMom = duration refIv == moment @Int
 
 
 -- Check that the only relation remaining after applying a function is Before

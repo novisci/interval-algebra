@@ -23,6 +23,7 @@ module IntervalAlgebra.PairedInterval
   , trivialize
   ) where
 
+import safe      Control.Applicative            ( liftA2 )
 import safe      Control.DeepSeq                ( NFData )
 import safe      Data.Bifunctor                 ( Bifunctor(bimap) )
 import safe      Data.Binary                    ( Binary )
@@ -34,6 +35,7 @@ import safe      IntervalAlgebra.Core           ( ComparativePredicateOf1
                                                 , before
                                                 , extenterval
                                                 )
+import safe      Test.QuickCheck                ( Arbitrary(..) )
 import safe      Witherable                     ( Filterable(filter) )
 
 -- | An @Interval a@ paired with some other data of type @b@.
@@ -105,3 +107,8 @@ toTrivialPair = makePairedInterval Empty
 --   @PairedInterval Empty a@(s).
 trivialize :: Functor f => f (Interval a) -> f (PairedInterval Empty a)
 trivialize = fmap toTrivialPair
+
+
+-- Arbitrary instance
+instance (Arbitrary b, Ord a, Arbitrary a) => Arbitrary (PairedInterval b a) where
+  arbitrary = liftA2 makePairedInterval arbitrary arbitrary
