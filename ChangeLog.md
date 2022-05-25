@@ -1,6 +1,12 @@
 # Changelog for interval-algebra
 
-## 2.0
+## 2.0.1
+
+* Relaxes cabal package bounds; notably:
+  * the `time` bounds gets a wider range
+  * the `text` bounds include `2.0`
+
+## 2.0.0
 
 * Adds `Abitrary (Interval a)` instance generic over `Ord a, Arbitrary a`.
 * Removes the `moment'` function from the `IntervalSizeable` class.
