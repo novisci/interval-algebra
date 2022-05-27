@@ -13,12 +13,14 @@ Stability   : experimental
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TupleSections #-}
 
+
 module IntervalAlgebra.IntervalUtilities
   (
 
     -- * Fold over sequential intervals
     combineIntervals
   , combineIntervalsL
+  , rangeInterval
   , gaps
   , gapsL
   , gapsWithin
@@ -74,8 +76,10 @@ module IntervalAlgebra.IntervalUtilities
   , durations
   ) where
 
-import safe      Control.Applicative            ( (<*>)
+import safe      Control.Applicative            ( (<$>)
+                                                , (<*>)
                                                 , Applicative(pure)
+                                                , liftA2
                                                 )
 import qualified Control.Foldl                 as L
 import safe      Control.Monad                  ( Functor(fmap) )
@@ -486,6 +490,21 @@ combineIntervalsL :: (Intervallic i a) => [i a] -> [Interval a]
 combineIntervalsL l = unBox $ foldl' (<>) (Box []) (packIntervalBoxes l)
 {-# INLINABLE combineIntervalsL #-}
 
+-- |
+-- Maybe form an @Interval a@ from @Control.Foldl t => t (Interval a)@ spanning
+-- the range of all intervals in the list, i.e.  whose @begin@ is the minimum
+-- of @begin@ across intervals in the list and whose @end@ is the maximum of
+-- @end@. 
+--
+-- >>> rangeInterval [beginerval 0 0, beginerval 0 (-1)]
+-- Just (-1, 1)
+-- >>> rangeInterval ([] :: [Interval Int])
+-- Nothing
+-- >>> rangeInterval (Just (beginerval 0 0))
+-- Just (0, 1)
+rangeInterval :: (Ord a, L.Foldable t) => t (Interval a) -> Maybe (Interval a)
+rangeInterval = L.fold (liftA2 extenterval <$> L.minimum <*> L.maximum)
+
 -- Internal function for combining maybe intervals in the 'combineIntervalsL' 
 -- function
 (<->) :: (IntervalCombinable i a) => Maybe (i a) -> Maybe (i a) -> [Interval a]
@@ -770,3 +789,4 @@ allMeet x = all (== Meets) (relationsL x)
 
 hasEqData :: (Eq b) => [PairedInterval b a] -> Bool
 hasEqData x = or (L.fold (makeFolder (==)) (fmap getPairData x) :: [Bool])
+

@@ -1,5 +1,9 @@
 # Changelog for interval-algebra
 
+## 2.0.2
+
+* Adds `rangeInterval`, which creates the smallest inverval containing all intervals in a `Foldable`.
+
 ## 2.0.1
 
 * Relaxes cabal package bounds; notably:

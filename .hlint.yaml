@@ -36,6 +36,9 @@
   - {name: Data.Text.init, within: []}
   - {name: Data.Text.last, within: []}
 
+  # these versions are not partial but hlint can't tell the difference
+  - {name: Control.Foldl.minimum, within: [IntervalAlgebra.IntervalUtilities]}
+  - {name: Control.Foldl.maximum, within: [IntervalAlgebra.IntervalUtilities]}
   - {name: minimum, within: []} # Partial
   - {name: minimumBy, within: []} # Partial
   - {name: maximum, within: []} # Partial

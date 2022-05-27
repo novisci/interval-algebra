@@ -35,6 +35,7 @@ import           IntervalAlgebra                ( Interval
                                                 , intervalRelations
                                                 , moment
                                                 , predicate
+                                                , rangeInterval
                                                 , safeInterval
                                                 , starts
                                                 , strictWithinRelations
@@ -620,7 +621,25 @@ spec = do
     it "intersection of (0, 3) (1, 2) should be Just (1, 2)"
       $          intersect (iv 3 0) (iv 1 1)
       `shouldBe` Just (iv 1 1)
-
+  describe "rangeInterval unit tests" $ do
+    it "range of empty list returns Nothing"
+      $          rangeInterval ([] :: [Interval Int])
+      `shouldBe` Nothing
+    it "rangeInterval returns the containing interval"
+      $          rangeInterval [beginerval 0 (1 :: Int), beginerval 3 (-1)]
+      `shouldBe` (Just $ beginerval 3 (-1))
+    it "disjoint intervals"
+      $          rangeInterval [beginerval 10 (1 :: Int), beginerval 1 (-1)]
+      `shouldBe` (Just $ beginerval 12 (-1))
+    it "order of list does not matter"
+      $          rangeInterval [beginerval 10 (1 :: Int), beginerval 1 (-1)]
+      `shouldBe` rangeInterval [beginerval 1 (-1), beginerval 10 (1 :: Int)]
+    it "works on Right"
+      $          rangeInterval (Right $ beginerval 10 (1 :: Int))
+      `shouldBe` (Just $ beginerval 10 (1 :: Int))
+    it "Left variant returns Nothing"
+      $          rangeInterval (Left $ beginerval 10 (1 :: Int))
+      `shouldBe` (Nothing :: Maybe (Interval Int))
   describe "combineIntervals unit tests" $ do
     it "noncontainmentInt combined into containmentInt"
       $          combineIntervals [containmentInt, noncontainmentInt]
