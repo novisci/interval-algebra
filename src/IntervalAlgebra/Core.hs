@@ -62,102 +62,18 @@ module IntervalAlgebra.Core
 
     -- ** Interval Relations and Predicates
   , IntervalRelation(..)
-
-    {- |
-    === Meets, Metby
-
-    > x `meets` y
-    > y `metBy` x
-
-    @ 
-    x: |-----|
-    y:       |-----| 
-    @
-    -}
   , meets
   , metBy
-
-    {- |
-    === Before, After
-
-    > x `before` y
-    > y `after` x
-
-    @ 
-    x: |-----|  
-    y:          |-----|
-    @
-    -}
   , before
   , after
-
-    {- |
-    === Overlaps, OverlappedBy
-
-    > x `overlaps` y
-    > y `overlappedBy` x
-
-    @ 
-    x: |-----|
-    y:     |-----|
-    @
-    -}
   , overlaps
   , overlappedBy
-
-    {- |
-    === Finishes, FinishedBy
-
-    > x `finishes` y
-    > y `finishedBy` x
-
-    @ 
-    x:   |---| 
-    y: |-----|
-    @
-    -}
   , finishedBy
   , finishes
-
-    {- |
-    === During, Contains
-
-    > x `during` y
-    > y `contains` x
-
-    @ 
-    x:   |-| 
-    y: |-----|
-    @
-    -}
   , contains
   , during
-
-    {- |
-    === Starts, StartedBy
-
-    > x `starts` y
-    > y `startedBy` x
-
-    @ 
-    x: |---| 
-    y: |-----|
-    @
-    -}
   , starts
   , startedBy
-
-    {- |
-    === Equal
-
-    > x `equal` y
-    > y `equal` x
-
-    @ 
-    x: |-----| 
-    y: |-----|
-    @
-    -}
   , equals
 
     -- ** Additional predicates and utilities
@@ -384,14 +300,92 @@ instance Bounded IntervalRelation where
 instance Ord IntervalRelation where
   compare x y = compare (fromEnum x) (fromEnum y)
 
--- | Does x `meets` y? Is x metBy y?
+{- not for Haddock
+    code to generate interval for Haddock
+    x = bi 5 0
+    y = bi 5 5
+    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
+-}
+
+{- | Does x `meets` y? Is x `metBy` y?
+
+Example data with corresponding diagram:
+
+>>> x = bi 5 0
+
+>>> y = bi 5 5
+
+@
+-----      <- [x]
+     ----- <- [y]
+==========
+@
+
+Examples: 
+
+>>> x `meets` y
+True
+
+>>> x `metBy` y
+False
+
+>>> y `meets` x
+False
+
+>>> y `metBy` x
+True
+
+-}
 meets, metBy
   :: (Intervallic i0 a, Intervallic i1 a)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 meets x y = end x == begin y
 metBy = flip meets
 
--- | Is x before y? Is x after y?
+{- not for Haddock
+    code to generate interval for Haddock
+    x = bi 3 0
+    y = bi 4 6
+    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
+-}
+
+{- | Is x `before` y? Does x `precedes` y? Is x `after` y? Is x `precededBy` y?
+
+Example data with corresponding diagram:
+
+>>> x = bi 3 0
+>>> y = bi 4 6
+
+@
+---        <- [x]
+      ---- <- [y]
+========== 
+@
+
+Examples:
+
+>>> x `before` y
+True
+>>> x `precedes` y
+True
+
+>>> x `after`y
+False
+>>> x `precededBy` y
+False
+
+>>> y `before` x
+False
+>>> y `precedes` x
+False
+
+>>> y `after` x
+True
+>>> y `precededBy` x
+True
+
+
+-}
 before, after, precedes, precededBy
   :: (Intervallic i0 a, Intervallic i1 a)
   => ComparativePredicateOf2 (i0 a) (i1 a)
@@ -399,35 +393,202 @@ before x y = end x < begin y
 after = flip before
 precedes = before
 precededBy = after
--- | Does x overlap y? Is x overlapped by y?
+
+{- not for Haddock
+    code to generate interval for Haddock
+    x = bi 6 0
+    y = bi 6 4
+    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
+-}
+
+
+{- | Does x `overlaps` y? Is x `overlappedBy` y?
+
+Example data with corresponding diagram:
+
+>>> x = bi 6 0
+>>> y = bi 6 4
+
+@
+------     <- [x]
+    ------ <- [y]
+==========
+@
+
+Examples:
+
+>>> x `overlaps` y
+True
+
+>>> x `overlappedBy` y
+False
+
+>>> y `overlaps` x
+False
+
+>>> y `overlappedBy` x
+True
+
+-}
 overlaps, overlappedBy
   :: (Intervallic i0 a, Intervallic i1 a)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 overlaps x y = begin x < begin y && end x < end y && end x > begin y
 overlappedBy = flip overlaps
 
--- | Does x start y? Is x started by y?
+{- not for Haddock
+    code to generate interval for Haddock
+    x = bi 3 4
+    y = bi 6 4
+    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
+-}
+
+{-| Does x `starts` y? Is x `startedBy` y?
+
+Example data with corresponding diagram:
+
+>>> x = bi 3 4
+>>> y = bi 6 4
+
+@
+    ---    <- [x]
+    ------ <- [y]
+==========
+@
+
+Examples:
+
+>>> x `starts` y
+True
+
+>>> x `startedBy` y
+False
+
+>>> y `starts` x
+False
+
+>>> y `startedBy` x
+True
+
+-}
 starts, startedBy
   :: (Intervallic i0 a, Intervallic i1 a)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 starts x y = begin x == begin y && end x < end y
 startedBy = flip starts
 
--- | Does x finish y? Is x finished by y?
+{- not for Haddock
+    code to generate interval for Haddock
+    x = bi 3 7
+    y = bi 6 4
+    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
+-}
+
+{- | Does x `finishes` y? Is x `finishedBy` y?
+
+Example data with corresponding diagram:
+
+>>> x = bi 3 7
+>>> y = bi 6 4
+
+@
+       --- <- [x]
+    ------ <- [y]
+==========
+@
+
+Examples:
+
+>>> x `finishes` y
+True
+
+>>> x `finishedBy` y
+False
+
+>>> y `finishes` x
+False
+
+>>> y `finishedBy` x
+True
+
+-}
 finishes, finishedBy
   :: (Intervallic i0 a, Intervallic i1 a)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 finishes x y = begin x > begin y && end x == end y
 finishedBy = flip finishes
 
--- | Is x during y? Does x contain y?
+{- not for Haddock
+    code to generate interval for Haddock
+    x = bi 3 5
+    y = bi 6 4
+    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
+-}
+
+{-| Is x `during` y? Does x `contains` y?
+
+Example data with corresponding diagram:
+
+>>> x = bi 3 5
+>>> y = bi 6 4
+
+@
+     ---   <- [x]
+    ------ <- [y]
+==========
+@
+
+Examples:
+
+>>> x `during` y
+True
+
+>>> x `contains` y
+False
+
+>>> y `during` x
+False
+
+>>> y `contains` x
+True
+
+-}
 during, contains
   :: (Intervallic i0 a, Intervallic i1 a)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 during x y = begin x > begin y && end x < end y
 contains = flip during
 
--- | Does x equal y?
+
+{- not for Haddock
+    code to generate interval for Haddock
+    x = bi 6 4
+    y = bi 6 4
+    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
+-}
+
+{- | Does x `equals` y?
+
+Example data with corresponding diagram:
+
+>>> x = bi 6 4
+>>> y = bi 6 4
+
+@
+    ------ <- [x]
+    ------ <- [y]
+==========
+@
+
+Examples:
+
+>>> x `equals` y
+True
+
+>>> y `equals` x
+True
+
+-}
 equals
   :: (Intervallic i0 a, Intervallic i1 a)
   => ComparativePredicateOf2 (i0 a) (i1 a)
@@ -453,29 +614,365 @@ withinRelations = toSet [Starts, During, Finishes, Equals]
 strictWithinRelations :: Data.Set.Set IntervalRelation
 strictWithinRelations = Data.Set.difference withinRelations (toSet [Equals])
 
--- | Are x and y disjoint ('before', 'after', 'meets', or 'metBy')?
+
+{- not for Haddock
+    code to generate interval for Haddock
+    x = bi 3 0
+    y = bi 3 5
+    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]    
+
+    x = bi 3 0
+    y = bi 3 3
+    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
+
+    x = bi 6 0
+    y = bi 3 3 
+    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
+-}
+
+{- | Are x and y `disjoint` ('before', 'after', 'meets', or 'metBy')?
+
+Example data with corresponding diagram:
+
+>>> x = bi 3 0
+>>> y = bi 3 5
+
+@
+---        <- [x]
+     ---   <- [y]
+==========
+@
+
+Examples:
+
+>>> x `disjoint` y
+True
+
+>>> y `disjoint` x
+True
+
+Example data with corresponding diagram:
+
+>>> x = bi 3 0
+>>> y = bi 3 3
+
+@
+---        <- [x]
+   ---     <- [y]
+==========
+@
+
+Examples:
+
+>>> x `disjoint` y
+True
+
+>>> y `disjoint` x
+True
+
+Example data with corresponding diagram:
+
+>>> x = bi 6 0
+>>> y = bi 3 3 
+
+@
+------     <- [x]
+   ---     <- [y]
+==========
+@
+
+Examples:
+
+>>> x `disjoint` y
+False
+
+>>> y `disjoint` x
+False
+
+-}
 disjoint
   :: (Intervallic i0 a, Intervallic i1 a)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 disjoint = predicate disjointRelations
 
--- | Are x and y not disjoint (concur); i.e. do they share any support? This is
---   the 'complement' of 'disjoint'.
+{- not for Haddock
+    code to generate interval for Haddock
+    x = bi 3 0
+    y = bi 3 4
+    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]    
+
+    x = bi 3 0
+    y = bi 3 3
+    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
+
+    x = bi 6 0
+    y = bi 3 3 
+    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]    
+-}
+
+{-| Does x `concur` with y? Is x `notDisjoint` with y?); This is
+the 'complement' of 'disjoint'.
+
+Example data with corresponding diagram:
+
+>>> x = bi 3 0
+>>> y = bi 3 4
+
+@
+---        <- [x]
+     ---   <- [y]
+==========
+@
+
+Examples:
+
+>>> x `notDisjoint` y
+False
+>>> y `concur` x
+False
+
+Example data with corresponding diagram:
+
+>>> x = bi 3 0
+>>> y = bi 3 3
+
+@
+---        <- [x]
+   ---     <- [y]
+==========
+@
+
+Examples:
+
+>>> x `notDisjoint` y
+False
+>>> y `concur` x
+False
+
+Example data with corresponding diagram:
+
+>>> x = bi 6 0
+>>> y = bi 3 3 
+
+@
+------     <- [x]
+   ---     <- [y]
+==========
+@
+
+Examples:
+
+>>> x `notDisjoint` y
+True
+>>> y `concur` x
+True
+
+-}
 notDisjoint, concur
   :: (Intervallic i0 a, Intervallic i1 a)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 notDisjoint = predicate (complement disjointRelations)
 concur = notDisjoint
 
--- | Is x entirely *within* (enclosed by) the endpoints of y? That is, 'during', 
---   'starts', 'finishes', or 'equals'?
+{- not for Haddock
+    code to generate interval for Haddock
+    x = bi 6 4
+    y = bi 6 4
+    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
+
+    x = bi 6 4
+    y = bi 5 4
+    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
+
+    x = bi 6 4
+    y = bi 4 5
+    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
+
+    x = bi 2 7
+    y = bi 1 5
+    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
+-}
+
+{- | Is x `within` (`enclosedBy`) y? That is, 'during', 
+     'starts', 'finishes', or 'equals'?
+
+Example data with corresponding diagram:
+
+>>> x = bi 6 4
+>>> y = bi 6 4
+
+@
+    ------ <- [x]
+    ------ <- [y]
+==========
+@
+
+Examples:
+
+>>> x `within` y
+True
+
+>>> y `enclosedBy` x
+True
+
+Example data with corresponding diagram:
+
+>>> x = bi 6 4
+>>> y = bi 5 4
+
+@
+    ------ <- [x]
+    -----  <- [y]
+==========
+@
+
+Examples:
+
+>>> x `within` y
+False
+
+>>> y `enclosedBy` x
+True
+
+Example data with corresponding diagram:
+
+>>> x = bi 6 4
+>>> y = bi 4 5
+
+@
+    ------ <- [x]
+     ----  <- [y]
+==========
+@
+
+Examples:
+
+>>> x `within` y
+False
+>>> y `enclosedBy` x
+True
+
+Example data with corresponding diagram:
+
+>>> x = bi 2 7
+>>> y = bi 1 5
+
+@
+       --  <- [x]
+ -----     <- [y]
+==========
+@
+
+Examples:
+
+>>> x `within` y
+False
+
+>>> y `enclosedBy` x
+False
+
+-}
 within, enclosedBy
   :: (Intervallic i0 a, Intervallic i1 a)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 within = predicate withinRelations
 enclosedBy = within
 
--- | Does x enclose y? That is, is y 'within' x?
+{- not for Haddock
+    code to generate interval for Haddock
+    x = bi 6 4
+    y = bi 6 4
+    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]    
+
+    x = bi 6 4
+    y = bi 5 4
+    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
+
+    x = bi 2 7
+    y = bi 1 5
+    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
+-}
+
+
+{- | Does x `enclose` y? That is, is y 'within' x?
+
+Example data with corresponding diagram:
+
+>>> x = bi 6 4
+>>> y = bi 6 4
+
+@
+    ------ <- [x]
+    ------ <- [y]
+==========
+@
+
+Examples:
+
+>>> x `enclose` y
+True
+
+>>> y `enclose` x
+True
+
+Example data with corresponding diagram:
+
+>>> x = bi 6 4
+>>> y = bi 5 4
+
+@
+    ------ <- [x]
+    -----  <- [y]
+==========
+@ 
+
+Examples:
+
+>>> x `enclose` y
+True
+
+>>> y `enclose` x
+False
+
+Example data with corresponding diagram:
+
+>>> x = bi 6 4
+>>> y = bi 4 5
+
+@
+    ------ <- [x]
+     ----  <- [y]
+==========
+@
+
+Examples:
+
+>>> x `enclose` y
+True
+
+>>> y `enclose` x
+False
+
+Example data with corresponding diagram:
+
+>>> x = bi 2 7
+>>> y = bi 1 5
+
+@
+       --  <- [x]
+ -----     <- [y]
+==========
+@
+
+Examples:
+
+>>> x `enclose` y
+False
+
+>>> y `enclose` x
+False
+
+-}
 enclose
   :: (Intervallic i0 a, Intervallic i1 a)
   => ComparativePredicateOf2 (i0 a) (i1 a)
@@ -797,6 +1294,7 @@ endervalFromBegin d i = enderval d (begin i)
 --
 -- >>> beginervalMoment (10 :: Int)
 -- (10, 11)
+
 -- 
 beginervalMoment :: forall a b . (IntervalSizeable a b) => a -> Interval a
 beginervalMoment x = beginerval (moment @a) x where i = Interval (x, x)
