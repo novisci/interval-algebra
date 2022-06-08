@@ -49,6 +49,7 @@ module IntervalAlgebra.IntervalDiagram
   -}
     parseIntervalDiagram
   , simpleIntervalDiagram
+  , labeledIntervalDiagram
 
   -- * Diagram options
   , IntervalDiagramOptions(..)
@@ -73,8 +74,12 @@ import qualified Data.List.NonEmpty            as NE
 import           Data.Maybe                     ( fromMaybe
                                                 , isNothing
                                                 )
-import           Data.Text                      ( Text )
+import           Data.Text                      ( Text
+                                                , pack
+                                                )
 import           IntervalAlgebra.Core
+import           IntervalAlgebra.IntervalUtilities
+                                                ( rangeInterval )
 import           Prettyprinter
 import           Witch                          ( From(..)
                                                 , into
@@ -111,7 +116,7 @@ using its @'Witch.From' b Int@  instance.
 **********
 -}
 -- NOTE: This type *could* be a PairedInterval,
--- but I didn't do that in order to reduce depeendencies.
+-- but I didn't do that in order to reduce dependencies.
 data IntervalText a = MkIntervalText Char (Interval a)
   deriving (Eq, Show)
 
@@ -721,3 +726,35 @@ simpleIntervalDiagram ref ivs = parseIntervalDiagram
   (Just Bottom)
   (MkIntervalText '=' (getInterval ref))
   (fmap (\x -> (pure $ MkIntervalText '-' $ getInterval x, [])) ivs)
+
+{- | 
+Given a list of tuples containing intervals and their label,
+creates an interval diagram with labels, and a reference range
+that spans all of the intervals.
+  
+>>> x = bi 5 5
+>>> y = bi 6 6
+
+>>> pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]
+-----   <- [x]
+ ------ <- [y]
+=======
+
+-}
+labeledIntervalDiagram
+  :: (Ord a, Enum b, IntervalSizeable a b)
+  => [(Interval a, String)]
+  -> Either IntervalDiagramParseError (IntervalDiagram a)
+labeledIntervalDiagram ivs = op ref
+ where
+  op Nothing     = Left IntervalsExtendBeyondAxis
+  op (Just ref') = parseIntervalDiagram
+    defaultIntervalDiagramOptions
+    []
+    (Just Bottom)
+    ref'
+    (fmap
+      (\x -> (pure $ MkIntervalText '-' $ getInterval (fst x), [pack (snd x)]))
+      ivs
+    )
+  ref = fmap (MkIntervalText '=') (rangeInterval (map (getInterval . fst) ivs))

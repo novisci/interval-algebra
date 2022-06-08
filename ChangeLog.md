@@ -1,4 +1,11 @@
 # Changelog for interval-algebra
+## 2.0.3
+
+* Adds `labeledIntervalDiagram`, which creates interval diagrams with labels and a `rangeInterval` reference interval.
+
+## 2.0.2
+
+* Adds `rangeInterval`, which creates the smallest inverval containing all intervals in a `Foldable`.
 
 ## 2.0.2
 
