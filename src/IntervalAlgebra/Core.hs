@@ -258,16 +258,16 @@ of a data structure. It also includes functions for getting the endpoints of the
 >>> end (Interval (0, 10))
 10
 -}
-class (Ord a) => Intervallic i a where
+class Intervallic i where
 
     -- | Get the interval from an @i a@.
     getInterval :: i a -> Interval a
 
     -- | Set the interval in an @i a@.
-    setInterval :: i a -> Interval a -> i a
+    setInterval :: i a -> Interval b -> i b
 
 -- | Access the endpoints of an @i a@ .
-begin, end :: Intervallic i a => i a -> a
+begin, end :: (Ord a, Intervallic i) => i a -> a
 begin = intervalBegin . getInterval
 end = intervalEnd . getInterval
 
@@ -337,7 +337,7 @@ True
 
 -}
 meets, metBy
-  :: (Intervallic i0 a, Intervallic i1 a)
+  :: (Ord a, Intervallic i0, Intervallic i1)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 meets x y = end x == begin y
 metBy = flip meets
@@ -387,7 +387,7 @@ True
 
 -}
 before, after, precedes, precededBy
-  :: (Intervallic i0 a, Intervallic i1 a)
+  :: (Ord a, Intervallic i0, Intervallic i1)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 before x y = end x < begin y
 after = flip before
@@ -431,7 +431,7 @@ True
 
 -}
 overlaps, overlappedBy
-  :: (Intervallic i0 a, Intervallic i1 a)
+  :: (Ord a, Intervallic i0, Intervallic i1)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 overlaps x y = begin x < begin y && end x < end y && end x > begin y
 overlappedBy = flip overlaps
@@ -472,7 +472,7 @@ True
 
 -}
 starts, startedBy
-  :: (Intervallic i0 a, Intervallic i1 a)
+  :: (Ord a, Intervallic i0, Intervallic i1)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 starts x y = begin x == begin y && end x < end y
 startedBy = flip starts
@@ -513,7 +513,7 @@ True
 
 -}
 finishes, finishedBy
-  :: (Intervallic i0 a, Intervallic i1 a)
+  :: (Ord a, Intervallic i0, Intervallic i1)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 finishes x y = begin x > begin y && end x == end y
 finishedBy = flip finishes
@@ -554,7 +554,7 @@ True
 
 -}
 during, contains
-  :: (Intervallic i0 a, Intervallic i1 a)
+  :: (Ord a, Intervallic i0, Intervallic i1)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 during x y = begin x > begin y && end x < end y
 contains = flip during
@@ -590,13 +590,13 @@ True
 
 -}
 equals
-  :: (Intervallic i0 a, Intervallic i1 a)
+  :: (Ord a, Intervallic i0, Intervallic i1)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 equals x y = begin x == begin y && end x == end y
 
 -- | Operator for composing the union of two predicates
 (<|>)
-  :: (Intervallic i0 a, Intervallic i1 a)
+  :: (Intervallic i0, Intervallic i1)
   => ComparativePredicateOf2 (i0 a) (i1 a)
   -> ComparativePredicateOf2 (i0 a) (i1 a)
   -> ComparativePredicateOf2 (i0 a) (i1 a)
@@ -691,7 +691,7 @@ False
 
 -}
 disjoint
-  :: (Intervallic i0 a, Intervallic i1 a)
+  :: (Ord a, Intervallic i0, Intervallic i1)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 disjoint = predicate disjointRelations
 
@@ -769,7 +769,7 @@ True
 
 -}
 notDisjoint, concur
-  :: (Intervallic i0 a, Intervallic i1 a)
+  :: (Ord a, Intervallic i0, Intervallic i1)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 notDisjoint = predicate (complement disjointRelations)
 concur = notDisjoint
@@ -873,7 +873,7 @@ False
 
 -}
 within, enclosedBy
-  :: (Intervallic i0 a, Intervallic i1 a)
+  :: (Ord a, Intervallic i0, Intervallic i1)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 within = predicate withinRelations
 enclosedBy = within
@@ -974,7 +974,7 @@ False
 
 -}
 enclose
-  :: (Intervallic i0 a, Intervallic i1 a)
+  :: (Ord a, Intervallic i0, Intervallic i1)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 enclose = flip enclosedBy
 
@@ -1000,7 +1000,7 @@ unionPredicates fs x y = any (\f -> f x y) fs
 
 -- | Maps an 'IntervalRelation' to its corresponding predicate function.
 toPredicate
-  :: (Intervallic i0 a, Intervallic i1 a)
+  :: (Ord a, Intervallic i0, Intervallic i1)
   => IntervalRelation
   -> ComparativePredicateOf2 (i0 a) (i1 a)
 toPredicate r = case r of
@@ -1021,14 +1021,14 @@ toPredicate r = case r of
 -- | Given a set of 'IntervalRelation's return a list of 'predicate' functions 
 --   corresponding to each relation.
 predicates
-  :: (Intervallic i0 a, Intervallic i1 a)
+  :: (Ord a, Intervallic i0, Intervallic i1)
   => Data.Set.Set IntervalRelation
   -> [ComparativePredicateOf2 (i0 a) (i1 a)]
 predicates x = Prelude.map toPredicate (Data.Set.toList x)
 
 -- | Forms a predicate function from the union of a set of 'IntervalRelation's.
 predicate
-  :: (Intervallic i0 a, Intervallic i1 a)
+  :: (Ord a, Intervallic i0, Intervallic i1)
   => Data.Set.Set IntervalRelation
   -> ComparativePredicateOf2 (i0 a) (i1 a)
 predicate = unionPredicates . predicates
@@ -1088,7 +1088,7 @@ composeRelationLookup =
 -- MetBy
 -- 
 relate
-  :: (Intervallic i0 a, Intervallic i1 a) => i0 a -> i1 a -> IntervalRelation
+  :: (Ord a, Intervallic i0, Intervallic i1) => i0 a -> i1 a -> IntervalRelation
 relate x y | x `before` y       = Before
            | x `after` y        = After
            | x `meets` y        = Meets
@@ -1143,7 +1143,7 @@ class (Ord a, Num b, Ord b) => IntervalSizeable a b | a -> b where
     moment = 1
 
     -- | Determine the duration of an @'i a'@.
-    duration :: Intervallic i a => i a -> b
+    duration :: (Intervallic i) => i a -> b
     duration x = diff (end x) (begin x)
 
     -- | Shifts an @a@. Most often, the @b@ will be the same type as @a@. 
@@ -1165,7 +1165,7 @@ class (Ord a, Num b, Ord b) => IntervalSizeable a b | a -> b where
 --
 expand
   :: forall i a b
-   . (IntervalSizeable a b, Intervallic i a)
+   . (IntervalSizeable a b, Intervallic i)
   => b -- ^ duration to subtract from the 'begin'
   -> b -- ^ duration to add to the 'end'
   -> i a
@@ -1181,7 +1181,7 @@ expand l r p = setInterval p i
 -- >>> expandl 2 (Interval (0::Int, 2::Int))
 -- (-2, 2)
 --
-expandl :: (IntervalSizeable a b, Intervallic i a) => b -> i a -> i a
+expandl :: (IntervalSizeable a b, Intervallic i) => b -> i a -> i a
 expandl i = expand i 0
 
 -- | Expands an @i a@ to "right".
@@ -1189,7 +1189,7 @@ expandl i = expand i 0
 -- >>> expandr 2 (Interval (0::Int, 2::Int))
 -- (0, 4)
 --
-expandr :: (IntervalSizeable a b, Intervallic i a) => b -> i a -> i a
+expandr :: (IntervalSizeable a b, Intervallic i) => b -> i a -> i a
 expandr = expand 0
 
 -- | Safely creates an 'Interval a' using @x@ as the 'begin' and adding 
@@ -1276,7 +1276,7 @@ si = safeInterval
 
 -- | Creates a new Interval from the 'end' of an @i a@.
 beginervalFromEnd
-  :: (IntervalSizeable a b, Intervallic i a)
+  :: (IntervalSizeable a b, Intervallic i)
   => b  -- ^ @dur@ation to add to the 'end' 
   -> i a -- ^ the @i a@ from which to get the 'end'
   -> Interval a
@@ -1284,7 +1284,7 @@ beginervalFromEnd d i = beginerval d (end i)
 
 -- | Creates a new Interval from the 'begin' of an @i a@.
 endervalFromBegin
-  :: (IntervalSizeable a b, Intervallic i a)
+  :: (IntervalSizeable a b, Intervallic i)
   => b -- ^ @dur@ation to subtract from the 'begin'  
   -> i a -- ^ the @i a@ from which to get the 'begin'
   -> Interval a
@@ -1312,7 +1312,7 @@ endervalMoment x = enderval (moment @a) x where i = Interval (x, x)
 -- >>> extenterval (Interval (0, 1)) (Interval (9, 10))
 -- (0, 10)
 --
-extenterval :: Intervallic i a => i a -> i a -> Interval a
+extenterval :: (Ord a, Intervallic i) => i a -> i a -> Interval a
 extenterval x y = Interval (s, e)
  where
   s = min (begin x) (begin y)
@@ -1327,10 +1327,7 @@ extenterval x y = Interval (s, e)
 -- (2, 14)
 --
 shiftFromBegin
-  :: (IntervalSizeable a b, Functor i1, Intervallic i0 a)
-  => i0 a
-  -> i1 a
-  -> i1 b
+  :: (IntervalSizeable a b, Functor i1, Intervallic i0) => i0 a -> i1 a -> i1 b
 shiftFromBegin i = fmap (`diff` begin i)
 
 -- | Modifies the endpoints of second argument's interval by taking the difference
@@ -1342,10 +1339,7 @@ shiftFromBegin i = fmap (`diff` begin i)
 -- (1, 13)
 --
 shiftFromEnd
-  :: (IntervalSizeable a b, Functor i1, Intervallic i0 a)
-  => i0 a
-  -> i1 a
-  -> i1 b
+  :: (IntervalSizeable a b, Functor i1, Intervallic i0) => i0 a -> i1 a -> i1 b
 shiftFromEnd i = fmap (`diff` end i)
 
 -- | Changes the duration of an 'Intervallic' value to a moment starting at the 
@@ -1355,7 +1349,7 @@ shiftFromEnd i = fmap (`diff` end i)
 -- (6, 7)
 --
 momentize
-  :: forall i a b . (IntervalSizeable a b, Intervallic i a) => i a -> i a
+  :: forall i a b . (IntervalSizeable a b, Intervallic i) => i a -> i a
 momentize i = setInterval i (beginerval (moment @a) (begin i))
 
 {- |
@@ -1363,7 +1357,7 @@ The @'IntervalCombinable'@ typeclass provides methods for (possibly) combining
 two @i a@s to form a @'Maybe' i a@, or in case of @><@, a possibly different 
 @Intervallic@ type.
 -}
-class (Intervallic i a) => IntervalCombinable i a where
+class (Ord a, Intervallic i) => IntervalCombinable i a where
 
     -- | Maybe form a new @i a@ by the union of two @i a@s that 'meets'.
     (.+.) ::  i a -> i a -> Maybe (i a)
@@ -1413,7 +1407,7 @@ instance (Ord a) => Ord (Interval a) where
           | begin x == begin y = end x < end y
           | otherwise          = False
 
-instance (Ord a) => Intervallic Interval a where
+instance Intervallic Interval where
   getInterval = id
   setInterval _ x = x
 

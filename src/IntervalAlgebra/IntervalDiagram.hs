@@ -120,7 +120,7 @@ using its @'Witch.From' b Int@  instance.
 data IntervalText a = MkIntervalText Char (Interval a)
   deriving (Eq, Show)
 
-instance (Ord a) => Intervallic IntervalText a where
+instance Intervallic IntervalText where
   getInterval (MkIntervalText _ x) = x
   setInterval (MkIntervalText c _) = MkIntervalText c
 
@@ -716,7 +716,7 @@ using the 'defaultIntervalDiagramOptions'.
 
 -}
 simpleIntervalDiagram
-  :: (Ord a, IntervalSizeable a b, Intervallic i a, Enum b)
+  :: (Ord a, IntervalSizeable a b, Intervallic i, Enum b)
   => i a -- ^ The axis interval
   -> [i a] -- ^ List of intervals to be printed one per line
   -> Either IntervalDiagramParseError (IntervalDiagram a)

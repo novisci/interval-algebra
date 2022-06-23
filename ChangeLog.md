@@ -1,4 +1,9 @@
 # Changelog for interval-algebra
+
+## 2.1
+
+* Refactors the `Intervallic` typeclass.
+
 ## 2.0.3
 
 * Adds `labeledIntervalDiagram`, which creates interval diagrams with labels and a `rangeInterval` reference interval.

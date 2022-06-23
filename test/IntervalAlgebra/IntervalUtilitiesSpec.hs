@@ -172,7 +172,7 @@ instance Arbitrary IntervalReferenced where
     pure $ IntervalReferenced refIv rels iv
 
 -- Testing functions
-checkSeqStates :: (Intervallic i Int) => [i Int] -> Bool
+checkSeqStates :: (Intervallic i) => [i Int] -> Bool
 checkSeqStates x = (length x > 1) || all (== Meets) (relationsL x)
 
 -- Creation functions

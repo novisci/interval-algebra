@@ -42,7 +42,7 @@ import safe      Witherable                     ( Filterable(filter) )
 newtype PairedInterval b a = PairedInterval (Interval a, b)
     deriving (Eq, Generic)
 
-instance (Ord a) => Intervallic (PairedInterval b) a where
+instance Intervallic (PairedInterval b) where
   getInterval (PairedInterval x) = fst x
   setInterval (PairedInterval (x, y)) i = PairedInterval (i, y)
 
