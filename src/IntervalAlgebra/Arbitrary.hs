@@ -120,7 +120,7 @@ instance Arbitrary DT.UTCTime  where
 --
 arbitraryWithRelation
   :: forall i a b
-   . (IntervalSizeable a b, Intervallic i a, Arbitrary (i a))
+   . (IntervalSizeable a b, Intervallic i, Arbitrary (i a))
   => i a -- ^ reference interval
   -> Data.Set.Set IntervalRelation -- ^ set of `IntervalRelation`s, of which at least one will hold for the generated interval relative to the reference
   -> Gen (Maybe (i a))
