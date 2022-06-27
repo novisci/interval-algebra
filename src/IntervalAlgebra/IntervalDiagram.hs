@@ -80,6 +80,10 @@ import           Data.Text                      ( Text
 import           IntervalAlgebra.Core
 import           IntervalAlgebra.IntervalUtilities
                                                 ( rangeInterval )
+import           IntervalAlgebra.PairedInterval ( PairedInterval
+                                                , getPairData
+                                                , makePairedInterval
+                                                )
 import           Prettyprinter
 import           Witch                          ( From(..)
                                                 , into
@@ -110,34 +114,38 @@ using its @'Witch.From' b Int@  instance.
 
 >>> import Prettyprinter (pretty)
 >>> import IntervalAlgebra (beginerval)
->>> pretty $ MkIntervalText '-' (beginerval 5 (0::Int))
+>>> pretty $ makeIntervalText '-' (beginerval 5 (0::Int))
 -----
->>> pretty $ MkIntervalText '*' (beginerval 10 (0::Int))
+>>> pretty $ makeIntervalText '*' (beginerval 10 (0::Int))
 **********
 -}
--- NOTE: This type *could* be a PairedInterval,
--- but I didn't do that in order to reduce dependencies.
-data IntervalText a = MkIntervalText Char (Interval a)
-  deriving (Eq, Show)
+
+newtype IntervalText a = MkIntervalText (PairedInterval Char a) deriving (Eq, Show)
+
+makeIntervalText :: Char -> Interval a -> IntervalText a
+makeIntervalText c = MkIntervalText . makePairedInterval c
 
 instance Intervallic IntervalText where
-  getInterval (MkIntervalText _ x) = x
-  setInterval (MkIntervalText c _) = MkIntervalText c
+  getInterval (MkIntervalText x) = getInterval x
+  setInterval (MkIntervalText x) i = MkIntervalText $ setInterval x i
 
 instance Functor IntervalText where
-  fmap f (MkIntervalText c i) = MkIntervalText c (fmap f i)
+  fmap f (MkIntervalText x) = MkIntervalText $ fmap f x
 
 instance (Enum b, IntervalSizeable a b) => Pretty (IntervalText a) where
-  pretty (MkIntervalText c i) = pretty $ replicate (fromEnum (duration i)) c
+  pretty (MkIntervalText x) = pretty $ replicate (fromEnum (duration i)) c
+   where
+    c = getPairData x
+    i = getInterval x
 
 instance From (Char, Interval a) (IntervalText a) where
-  from = uncurry MkIntervalText
+  from = uncurry makeIntervalText
 
 instance From (IntervalText a) Char where
-  from (MkIntervalText c _) = c
+  from (MkIntervalText x) = getPairData x
 
 instance From (IntervalText a) (Interval a) where
-  from (MkIntervalText _ i) = i
+  from = getInterval
 
 {-------------------------------------------------------------------------------
   IntervalTextLine
@@ -152,39 +160,39 @@ through the 'parseIntervalTextLine' function,
 which checks that the inputs are parsed correctly to form intervals 
 that will be pretty-printed correctly.
 
->>> let i1 =  MkIntervalText '*' (beginerval 10 (5::Int))
->>> let i2  = MkIntervalText '-' (beginerval 2 (1::Int))
+>>> let i1 =  makeIntervalText '*' (beginerval 10 (5::Int))
+>>> let i2  = makeIntervalText '-' (beginerval 2 (1::Int))
 >>> let x = parseIntervalTextLine [] [i1, i2] 
 >>> pretty x
 UnsortedIntervals
->>> let i1 =  MkIntervalText '*' (beginerval 10 (5::Int))
->>> let i2  = MkIntervalText '-' (beginerval 2 (10::Int))
+>>> let i1 =  makeIntervalText '*' (beginerval 10 (5::Int))
+>>> let i2  = makeIntervalText '-' (beginerval 2 (10::Int))
 >>> let x = parseIntervalTextLine [] [i1, i2] 
 >>> pretty x
 ConcurringIntervals
->>> let i1 =  MkIntervalText '*' (beginerval 10 ((-1)::Int))
->>> let i2  = MkIntervalText '-' (beginerval 2 (10::Int))
+>>> let i1 =  makeIntervalText '*' (beginerval 10 ((-1)::Int))
+>>> let i2  = makeIntervalText '-' (beginerval 2 (10::Int))
 >>> let x = parseIntervalTextLine []  [i1, i2] 
 >>> pretty x
 BeginsLessThanZero
->>> let i1 =  MkIntervalText '*' (beginerval  5 (0::Int))
->>> let i2  = MkIntervalText '-' (beginerval 2 (10::Int))
+>>> let i1 =  makeIntervalText '*' (beginerval  5 (0::Int))
+>>> let i2  = makeIntervalText '-' (beginerval 2 (10::Int))
 >>> let x = parseIntervalTextLine [] [i1, i2]
 >>> pretty x
 *****     --
->>> let i1 =  MkIntervalText '*' (beginerval  5 (5::Int))
->>> let i2  = MkIntervalText '-' (beginerval 2 (10::Int))
+>>> let i1 =  makeIntervalText '*' (beginerval  5 (5::Int))
+>>> let i2  = makeIntervalText '-' (beginerval 2 (10::Int))
 >>> let x = parseIntervalTextLine [] [i1, i2]
 >>> pretty x
      *****--
->>> let i1 =  MkIntervalText '*' (beginerval  1 (5::Int))
->>> let i2  = MkIntervalText '-' (beginerval 1 (7::Int))
+>>> let i1 =  makeIntervalText '*' (beginerval  1 (5::Int))
+>>> let i2  = makeIntervalText '-' (beginerval 1 (7::Int))
 >>> let x = parseIntervalTextLine [] [i1, i2]
 >>> pretty x
      * -
->>> let i1 =  MkIntervalText '*' (beginerval  3 (5::Int))
->>> let i2 = MkIntervalText '-' (beginerval 5 (10::Int))
->>> let i3 = MkIntervalText '#' (beginerval 1 17)
+>>> let i1 =  makeIntervalText '*' (beginerval  3 (5::Int))
+>>> let i2 = makeIntervalText '-' (beginerval 5 (10::Int))
+>>> let i3 = makeIntervalText '#' (beginerval 1 17)
 >>> pretty $ parseIntervalTextLine [] [i1, i2, i3]
      ***  -----  #
 -}
@@ -316,7 +324,7 @@ A type containing the data necessary to print an axis in an 'IntervalDiagram'.
 
 Use 'parseAxis' for construction.
 
->>> let ref = MkIntervalText '=' (beginerval 10 (0::Int))
+>>> let ref = makeIntervalText '=' (beginerval 10 (0::Int))
  
 
 >>> let b = parseAxis [] (Just Top) ref
@@ -724,8 +732,8 @@ simpleIntervalDiagram ref ivs = parseIntervalDiagram
   defaultIntervalDiagramOptions
   []
   (Just Bottom)
-  (MkIntervalText '=' (getInterval ref))
-  (fmap (\x -> (pure $ MkIntervalText '-' $ getInterval x, [])) ivs)
+  (makeIntervalText '=' (getInterval ref))
+  (fmap (\x -> (pure $ makeIntervalText '-' $ getInterval x, [])) ivs)
 
 {- | 
 Given a list of tuples containing intervals and their label,
@@ -754,7 +762,9 @@ labeledIntervalDiagram ivs = op ref
     (Just Bottom)
     ref'
     (fmap
-      (\x -> (pure $ MkIntervalText '-' $ getInterval (fst x), [pack (snd x)]))
+      (\x -> (pure $ makeIntervalText '-' $ getInterval (fst x), [pack (snd x)])
+      )
       ivs
     )
-  ref = fmap (MkIntervalText '=') (rangeInterval (map (getInterval . fst) ivs))
+  ref =
+    fmap (makeIntervalText '=') (rangeInterval (map (getInterval . fst) ivs))
