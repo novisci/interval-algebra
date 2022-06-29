@@ -8,4 +8,9 @@ if ! [ -x "$(command -v brittany)" ]; then
   echo 'Use the command '\''cabal install brittany'\'' to install the application'  >&2
   exit 1
 fi
-find . -name '*.hs' -not -path './dist-newstyle/*' -exec brittany --write-mode=inplace '{}' \;
+find . -name '*.hs'                           \
+  -not -path './dist-newstyle/*'              \
+  -not -path './docs-site/*'                  \
+  -not -path './docs/*'                       \
+  -not -path './tutorial/TutorialMain.hs'     \
+  -exec brittany --write-mode=inplace {} ';'
