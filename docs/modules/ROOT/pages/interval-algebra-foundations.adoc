@@ -1,0 +1,1023 @@
+// :source-highlighter: highlight.js
+// :highlightjs-languages: haskell
+:source-highlighter: rouge
+:rouge-style: gruvbox
+:stylesheet: dark.css  // download from https://github.com/darshandsoni/asciidoctor-skins/tree/gh-pages/css
+:stem: mathjax
+
+= interval-algebra foundations
+
+== Introduction
+
+=== Scope of this tutorial
+
+This tutorial covers the `IntervalAlgebra.Core` and `IntervalAlgebra.PairedInterval` modules.
+
+
+=== Theoretical background
+
+The `interval-algebra` package implements Allen's interval algebra as defined in
+https://doi.org/10.1145/182.358434[Allen (1983)] and axiomatized in
+https://doi.org/10.1111/j.1467-8640.1989.tb00329.x[Allen and Hayes (1987)].
+A good primer on Allen's algebra can be
+https://thomasalspaugh.org/pub/fnd/allen.html[found here].
+
+
+=== Imports used during examples
+
+The following import declarations are used for the examples provided in this documentation.
+[source,haskell]
+----
+include::example$TutorialMain.hs[tag=import-declarations]
+----
+
+
+== Intervals
+
+=== The Interval type
+
+An interval in time according to Allen's interval algebra is defined by a starting point and an ending point such that the start occurs before the end.
+In particular, the start and end *cannot* be the same moment in time.
+Intervals in interval-algebra are modeled using the `Interval` type shown below.
+
+Note that in order to ensure the starting point for an `Interval` always occurs before the ending point,
+interval-algebra does not export the constructor for `Interval`, and instead provides a collection of functions that can be used to create ``Interval``s that are guaranteed to maintain the invariant.
+
+[source,haskell]
+----
+data Interval a
+----
+
+
+=== Displaying Intervals using 'show'
+
+The `show` method displays the interval endpoints using the form `(<starting point>, <ending point>)`.
+We haven't actually described _how_ the following intervals were created yet; these particular variables are created in the <<_creating_intervals_using_safeinterval>> section.
+
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=interval-show-print]
+----
+
+
+=== Basic Interval instances
+
+The following are some of the basic instances implemented by `Interval`.
+
+[source,haskell]
+----
+Eq a => Eq (Interval a)
+Ord a => Ord (Interval a)
+instance (Show a, Ord a) => Show (Interval a)
+instance Functor Interval
+----
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=interval-basic-instances-print]
+----
+
+
+=== Creating Intervals
+
+The available functions are listed in the following table.
+The function name is listed in the first column, a short alias name is listed in the second column,
+and the return type is listed in the third column
+(note that there may be constraints imposed on the type `a` that are not shown here).
+
+The `parseInterval` construction function has the type constraint `Ord a` for the type parameter `a` in the return type.
+This is required since in order to ensure that a valid interval is being created we need to ensure that the starting point is less than the ending point in the sense of the `<` operator.
+
+The other `Interval` construction functions all implicitly require `Ord a` as well as another constraint that we won't describe at this time since we don't introduce the relevant type class until the <<_the_intervalsizeable_class>> section.
+For now, it suffices to know that the `Int`, `Integer`, `Data.Time.Day`,
+and `Data.Time.UTCTime` types all implement the necessary classes in order to create an `Interval` using any of the functions described in this section.
+
+.Constructing new intervals
+[cols="1,1,3"]
+|===
+| Name | Alias | Return Type
+
+| `parseInterval`
+| `prsi`
+| `Either ParseErrorInterval (Interval a)`
+
+| `beginerval`
+| `bi`
+| `Interval a`
+
+| `enderval`
+| `ei`
+| `Interval a`
+
+| `safeInterval`
+| `si`
+| `Interval a`
+
+| `beginervalMoment`
+|
+| `Interval a`
+
+| `endervalMoment`
+|
+| `Interval a`
+|===
+
+
+==== Creating Maybe Intervals using 'parseInterval'
+
+For the `parseInterval` function we provide a left endpoint and a right endpoint as inputs.
+If the left endpoint is strictly less than the right endpoint then we get a `Right (Interval a)`,
+otherwise we get a `Left ParseErrorInterval`.
+
+[source,haskell]
+----
+include::example$TutorialMain.hs[tag=parseinterval-examples]
+----
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=parseinterval-print]
+----
+
+
+==== Creating Intervals using 'safeInterval'
+
+For the `safeInterval` function we provide a pair with a starting point and ending point as the input.
+If the ending point is no greater than the starting point then the ending point is adjusted so that the duration is the minimal allowed amount for the endpoint type as defined by the `moment` method for the IntervalSizeable class
+(see <<_the_intervalsizeable_class>> section for details),
+while the starting point is left unchanged.
+This mechanism ensures that an `Interval` is created where the starting point is strictly less than the ending point.
+
+For example, the minimum duration allowed for an `Interval Integer` is 1.
+In one of the examples below, the duration provided for `ivMinDurInteger` is less than 1 so consequently the ending point for the resulting `Interval` is adjusted to be 1 more than the starting point.
+
+[source,haskell]
+----
+include::example$TutorialMain.hs[tag=safeinterval-examples]
+----
+
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=safeinterval-print]
+----
+
+
+==== Creating Intervals using 'beginerval' and 'enderval'
+
+The `beginerval` and `enderval` functions offer alternatives to the `safeInterval` function for creating ``Interval``s.
+The `beginerval` function takes a duration and a starting point as inputs,
+while the `enderval` function takes a duration and an ending point as inputs.
+Similar to how the `safeInterval` function operates,
+if the duration is smaller than the minimal allowed amount for the endpoint type as defined by the `moment` method for the `IntervalSizeable` class,
+then the duration is adjusted to take the value of the minimum duration.
+
+In the following examples, we see two instances where the input duration is smaller than 1, which is the minimal allowed amount for an `Interval Integer`. Note that the expression type signatures are needed to prevent an ambiguous type variable error.
+
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=beginerval-enderval-print]
+----
+
+
+==== Creating Intervals using 'beginervalMoment' and 'endervalMoment'
+
+The `beginervalMoment` and `endervalMoment` functions create ``Interval``s with the minimum duration as defined by the corresponding `IntervalSizeable` instance.
+In the case of `beginervalMoment` the starting point is specified by the function's input value,
+while for the case of `endervalMoment` the ending point is specified by the function's input value.
+
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=creating-moments-print]
+----
+
+
+=== Additional Interval data
+
+The following data will be used in various places in the study.
+The naming convention used for the variables is as follows:
+each has type `Interval Integer`,
+and a given variable with a name like e.g. `iv6to8` has a starting point of 6 and an ending point of 8.
+
+[source,haskell]
+----
+include::example$TutorialMain.hs[tag=ivXtoY-examples]
+----
+
+
+== PairedIntervals
+
+Allen's interval algebra provides the theoretical underpinnings of the interval-algebra library,
+and is defined exclusively with regards to intervals.
+However, applications typically aren't solely interested in the relationships between abstract intervals in time,
+and instead usually care about _what_ happened as well as _when_ it happened.
+For example:
+
+* What was the first event with starting point no earlier than January 1, 2000 at 00:00:00?
+* What were the events that occurred with starting point no earlier than 0 and ending point no later than 455?
+
+To support these kinds of needs interval-algebra provides the `PairedInterval` type.
+
+
+=== The PairedInterval type
+
+The `PairedInterval` type is defined as follows. The constructor is not exported.
+
+[source,haskell]
+----
+data PairedInterval b a
+----
+
+You can create a `PairedInterval` using the `makePairedInterval` function which has the following type signature.
+
+[source,haskell]
+----
+makePairedInterval :: b -> Interval a -> PairedInterval b a
+----
+
+The following are some examples of creating ``PairedInterval``s.
+The `show` method displays ``PairedInterval``s using the form `{<interval>, <data>}`.
+
+[source,haskell]
+----
+include::example$TutorialMain.hs[tag=creating-pairedinterval-examples]
+----
+
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=creating-pairedinterval-print]
+----
+
+
+=== Basic PairedInterval instances
+
+The following are some of the basic instances implemented by `PairedInterval`.
+// We will later see some other important instances of
+
+[source,haskell]
+----
+(Eq a, Eq b) => Eq (PairedInterval b a)
+(Eq a, Eq b, Ord a) => Ord (PairedInterval b a)
+(Show b, Show a, Ord a) => Show (PairedInterval b a)
+Functor (PairedInterval b)
+Bifunctor PairedInterval
+----
+
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=pairedinterval-basic-instances-print]
+----
+
+
+=== Getting and setting the elements of a PairedInterval
+
+==== Getting and setting the interval portion of a PairedInterval
+
+The ability to get and set the `Interval` portion of a `PairedInterval` is provided by `getInterval` and `setInterval` methods of the `Intervallic` class along with the associated helper functions `begin` and `end`.
+You can also use the `intervals` convenience function for extracting the intervals out of a `Functor` of `PairedIntervals`.
+See the <<_the_pairedinterval_instance_of_intervallic>> section for more details regarding the type class and instance.
+
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=pairedinterval-getset-intervals-print]
+----
+
+
+==== Getting and setting the data portion of a PairedInterval
+
+To get the data (i.e. the non-interval) portion out of a `PairedInterval` value you can use the `getPairData` function.
+To set the data you have to create a new `PairedInterval` with the updated data.
+
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=pairedinterval-getset-data-print]
+----
+
+
+== Interfaces for embedding Intervals
+
+interval-algebra is built around three typeclasses designed to separate concerns of constructing,
+relating, and combining types that contain ``Interval``s:
+
+. `Intervallic` provides an interface to the data structures which contain an `Interval`.
+. `IntervalCombinable` provides an interface to methods of combining two ``Interval``s.
+. `IntervalSizeable` provides methods for measuring and modifying the size of an interval.
+
+An advantage of nested typeclass design is that users can define a types with embedded ``Interval``s with just the amount of structure that they need.
+
+
+=== The Intervallic class
+
+The `Intervallic` class is defined as
+
+[source,haskell]
+----
+class Intervallic i where
+----
+
+with methods
+
+[source,haskell]
+----
+getInterval :: i a -> Interval a
+setInterval :: i a -> Interval b -> i b
+----
+
+and accompanying helper functions for getting the starting point and ending point out of an `Interallic` value:
+
+[source,haskell]
+----
+begin :: Intervallic i => i a -> a
+end :: Intervallic i => i a -> a
+----
+
+These methods provide an interface for classes to define a way to get an `Interval a` out of an `i a`,
+and to change the value of an `Interval a` contained in an `i a`.
+
+
+==== The Interval instance of Intervallic
+
+The following instance is provided for `Intervallic`:
+
+[source,haskell]
+----
+instance Intervallic Interval
+----
+
+and the methods specialize to
+
+[source,haskell]
+----
+getInterval :: Interval a -> Interval a
+setInterval :: Interval a -> Interval b -> Interval b
+----
+
+For the case of `getInterval` the `Interval` provided as the input is returned unchanged,
+while for the case of `setInterval` the replacement `Interval` (i.e. the second input) is returned unchanged.
+
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=intervallic-interval-instance-print]
+----
+
+Obviously this is not very useful for `Interval` values.
+Where `Intervallic` comes in handy is for embedding ``Interval``s in other types --
+as long as we know how to extract and to replace the embedded interval we can do all of the usual interval-algebra operations that we would do to regular ``Interval``s.
+
+
+==== The PairedInterval instance of Intervallic
+
+The following instance is provided for `Intervallic`:
+
+[source,haskell]
+----
+instance Intervallic (PairedInterval b)
+----
+
+and the methods specialize to
+
+[source,haskell]
+----
+getInterval :: PairedInterval b a -> Interval a
+setInterval :: PairedInterval b a -> Interval c -> PairedInterval b c
+----
+
+See the <<_getting_and_setting_the_interval_portion_of_a_pairedinterval>> section for example usages of `Intervallic` methods.
+
+
+=== The IntervalSizeable class
+
+The `IntervalSizeable` class is defined as
+
+[source,haskell]
+----
+class (Ord a, Num b, Ord b) => IntervalSizeable a b | a -> b
+----
+
+with methods
+
+[source,haskell]
+----
+moment :: forall a . b
+duration :: Intervallic i => i a -> b
+add :: b -> a -> a
+diff :: a -> a -> b
+----
+
+In general, for a pair of types `a` and `b`, the `IntervalSizeable` class provides an interface for operations related to calculating the duration of an existing `Intervallic` and other size-related concerns.
+For the important special case of the `Interval` instance of `Intervallic`, the `a` type represents the type used for the starting and ending points of the `Interval`,
+while the `b` type for the interval-algebra defined instances of `IntervalSizeable` represents the type obtained by calculating the "difference" between the starting and ending points,
+as defined by `diff`.
+User-defined instances of `Intervallic` need not maintain this interpretation.
+
+
+==== IntervalSizeable instances
+
+The following instances are provided for `IntervalSizeable`.
+
+[source,haskell]
+----
+IntervalSizeable Int Int
+IntervalSizeable Integer Integer
+IntervalSizeable Day Integer
+IntervalSizeable UTCTime NominalDiffTime
+----
+
+As an example, consider the `IntervalSizeable Day Integer` instance with the following methods.
+
+[source,haskell]
+----
+moment :: forall a. Integer
+duration :: Intervallic i Day => i Day -> Integer
+add :: Integer -> Day -> Day
+diff :: Day -> Day -> Integer
+----
+
+In the event that we apply `duration` to an `Interval Day` then we get a further specialization of `duration` to the following type.
+[source,haskell]
+----
+duration :: Interval Day -> Integer
+----
+
+The following are some example uses of `IntervalSizeable` methods.
+
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=intervalsizeable-instance-print]
+----
+
+
+=== The IntervalCombinable class
+
+The `IntervalCombinable` class is defined as
+
+[source,haskell]
+----
+class Intervallic i => IntervalCombinable i a
+----
+
+with methods
+
+[source,haskell]
+----
+(.+.) :: i a -> i a -> Maybe (i a)
+(><) :: i a -> i a -> Maybe (i a)
+(<+>) :: (Semigroup (f (i a)), Applicative f) => i a -> i a -> f (i a)
+----
+
+
+==== The Interval instance of IntervalCombinable
+
+===== Method types
+
+The following instance (among others) is provided for `IntervalCombinable`:
+
+[source,haskell]
+----
+Ord a => IntervalCombinable Interval a
+----
+
+and the methods specialize to
+
+[source,haskell]
+----
+(.+.) :: Ord a => Interval a -> Interval a -> Maybe (Interval a)
+(><) :: Ord a => Interval a -> Interval a -> Maybe (Interval a)
+(<+>) :: (Ord a, Semigroup (f (Interval a)), Applicative f) =>
+  Interval a -> Interval a -> f (Interval a)
+----
+
+
+===== A brief introduction to 'meets' and 'before'
+
+We don't properly introduce the `meets` and `before` functions that are used by the `IntervalCombinable` methods until the upcoming <<_the_intervalrelation_type_and_associated_predicates>> section.
+But for now it suffices to know that for two ``Interval``s `x` and `y`:
+
+* The result of evaluating `pass:[x `meets` y]` is `True` if the ending point of `x` is equal to the starting point of `y`,
+and `False` otherwise.
+* The result of evaluating `pass:[x `before` y]` is `True` if the ending point of `x` is less than the starting point of `y`,
+and `False` otherwise.
+
+
+===== IntervalCombinable methods for Interval
+
+* The `.+.` method returns a `Just` value if the first input `meets` the second, and `Nothing` otherwise.
+In the case that the value is a `Just` then it contains the `Interval` created by combining the two inputs,
+or more precisely stated it contains the `Interval` with the starting point given by the starting point of the first input,
+and the ending point given by the ending point of the second input.
+* The `><` method returns a `Just` value if the first input is `before` the second, and `Nothing` otherwise.
+In the case that the value is a `Just` then it contains the `Interval` created by spanning the two inputs,
+or more precisely stated it contains the `Interval` with the starting point given by the ending point of the first input,
+and the ending point given by the starting point of the second input.
+* The `<+>` method is a little bit more complicated to reason about since its behavior differs depending on the return type.
+** If we have two inputs where the first input is `before` the second,
+then it lifts the inputs to the return type and combines them by using the `<>` method.
+** If we have two inputs where the first input is _not_ `before` the second,
+then it creates a lifted version of an `Interval` with regards to the output type,
+and where the starting point is the earlier of the two starting points and the ending point is the later of the two ending points.
+
+The following are some example usages of these methods.
+Recall from the <<_additional_interval_data>> section that a variable with a name like e.g. `iv2to5` has a starting point of 2 and an ending point of 5.
+
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=intervalcombinable-interval-print]
+----
+
+
+==== The PairedInterval instance of IntervalCombinable
+
+The following instance (among others) is provided for `IntervalCombinable`:
+
+[source,haskell]
+----
+instance (Ord a, Eq b, Monoid b) => IntervalCombinable (PairedInterval b) a
+----
+
+and the methods specialize to
+
+[source,haskell]
+----
+(.+.) :: (Ord a, Eq b, Monoid b) =>
+  PairedInterval b a -> PairedInterval b a -> Maybe (PairedInterval b a)
+(><) :: (Ord a, Eq b, Monoid b) =>
+  PairedInterval b a -> PairedInterval b a -> Maybe (PairedInterval b a)
+(<+>) :: ((Ord a, Eq b, Monoid b), Semigroup (f (PairedInterval b a)), Applicative f) =>
+  PairedInterval b a -> PairedInterval b a -> f (PairedInterval b a)
+----
+
+In what follows we describe the `IntervalCombinable` methods for `PairedInterval` and provide some examples.
+Note that we don't properly introduce the `meets` and `before` functions that are used by the `IntervalCombinable` methods until the upcoming <<_the_intervalrelation_type_and_associated_predicates>> section,
+but for a short introduction see the <<_a_brief_introduction_to_meets_and_before>> section.
+
+* The `.+.` method returns a `Just` value if the first input `meets` the second, and `Nothing` otherwise.
+In the case that the value is a `Just` then it contains a `PairedInterval` with the data portion given by the data in the second argument to `.+.`,
+and the `Interval` portion obtained by combining the two inputs
+(more precisely stated it contains the `Interval` with the starting point given by the starting point of the first input,
+and the ending point given by the ending point of the second input).
+* The `><` method returns a `Just` value if the first input is `before` the second, and `Nothing` otherwise.
+In the case that the value is a `Just` then it contains the `PairedInterval` with the data portion given by the `mempty` method for the `Monoid` instance of the data type of ``PairedInterval``s,
+and the `Interval` portion obtained by spanning the two inputs
+(or more precisely stated it contains the `Interval` with the starting point given by the ending point of the first input,
+and the ending point given by the starting point of the second input).
+* The `<+>` method is a little bit more complicated to reason about since its behavior differs depending on the return type.
+** If we have two inputs where the first input is `before` the second,
+then it lifts the inputs to the return type and combines them by using the `<>` method.
+** If we have two inputs where the first input is _not_ `before` the second,
+then it creates a lifted version of a `PairedInterval` with regards to the output type,
+where the data is the result of applying `<>` to the data portions of the two inputs,
+and where the `Interval` is such that the starting point is the earlier of the two starting points of the embedded ``Interval``s and the ending point is the later of the two ending points of the embedded ``Interval``s.
+
+The following are some example usages of these methods.
+Recall from the <<_additional_interval_data>> section that a variable with a name like e.g. `iv2to5` has a starting point of 2 and an ending point of 5.
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=intervalcombinable-pairedinterval-print]
+----
+
+
+== Updating intervals
+
+=== Expanding Intervallic endpoints
+
+Interval-algebra provides a collection of functions for expanding one or more `Intervallic` endpoints,
+and where in this context "expanding" means that the endpoints can only be updated in a direction that makes the duration of the `Intervallic` larger.
+
+* `expandl` moves an ``Intervallic``'s starting point "to the left." The inputs are a duration and an `Intervallic` value.
+* `expandr` moves an ``Intervallic``'s ending point "to the right." The inputs are a duration and an `Intervallic` value.
+* `expand` moves an ``Intervallic``'s starting point "to the left" and ending point "to the right." The inputs are two durations and an `Intervallic` value.
+
+If the provided value by which to move either the starting or ending points is less than the minimal amount,
+as defined by the `moment` method for the corresponding `IntervalSizeable` class,
+then the corresponding point is left unchanged.
+This has the effect of ensuring that these methods cannot decrease the duration of the `Interval`,
+as all sensible `IntervalSizeable` instances will have a positive `moment`.
+
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=expanding-intervals-print]
+----
+
+
+=== Creating intervals that share an endpoint with an Intervallic
+
+The following functions can be used to create an `Interval` that shares an endpoint with an `Intervallic`.
+
+* `beginervalFromEnd` creates an interval that has the same starting endpoint as the ending point of an input `Intervallic` value. The inputs are a duration and an `Intervallic` value.
+* `endervalFromBegin` creates an interval that has the same ending point as the starting point of an input `Intervallic` value. The inputs are a duration and an `Intervallic` value.
+* `momentize` creates an interval with the minimum duration for the corresponding `IntervalSizeable` instance that has the same starting point as the starting point of an input `Intervallic` value. The input is an `Intervallic` value.
+
+In the event that any of the provided durations are less than the minimal allowed amount for the endpoint type as defined by the `moment` method for the corresponding `IntervalSizeable` class then the duration is adjusted to be the mimimum duration.
+
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=sharing-endpoint-interval-print]
+----
+
+
+=== Shifting intervals
+
+The `shiftFromBegin` and `shiftFromEnd` functions have the following type signatures.
+
+[source,haskell]
+----
+shiftFromBegin
+  :: (IntervalSizeable a b, Functor i1, Intervallic i0 a)
+  => i0 a -> i1 a -> i1 b
+
+shiftFromEnd
+  :: (IntervalSizeable a b, Functor i1, Intervallic i0 a)
+  => i0 a -> i1 a -> i1 b
+----
+
+For each function, you're creating a new interval with starting and ending points given in units relative to the starting point (in the case of ``ShiftFromBegin``) or ending point (in the case of ``ShiftFromEnd``) of another Intervallic.
+This can be useful when you don't care about the abolute time of when something happened, but rather when it happened relative to some other event.
+In more detail, `shiftFromBegin` and `shiftFromEnd` have the following behavior:
+
+* `shiftfromBegin` ``fmap``s the `diff` of its second input with the *starting* point of its first input.
+When the second input is an `Intervallic` then this corresponds to ``diff``ing the starting point from the first input from both the starting and ending point of the second input.
+* `shiftfromEnd` is similar to `shiftfromBegin` except that it ``fmap``s the `diff` of its second input with the *ending* point of its first input.
+
+In the examples below we see various combinations of types that can be provided as inputs for `shiftFromBegin` and `shiftFromEnd`.
+Recall from the <<_additional_interval_data>> section that a variable with a name like e.g. `iv2to4` has a starting point of 2 and an ending point of 4.
+Also note that the return type need not be the same as the input types, as is the case when the inputs are ``Interval Day``s.
+
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=shifting-intervals-print]
+----
+
+
+== Interval relations
+
+=== The ComparativePredicateOf1 and ComparativePredicateOf2 types
+
+The following are the type declarations for ``ComparativePredicateOf1`` and ``ComparativePredicateOf2``;
+these will be needed for the upcoming <<_the_intervalrelation_type_and_associated_predicates>> section.
+
+[source,haskell]
+----
+type ComparativePredicateOf1 a = (a -> a -> Bool)
+type ComparativePredicateOf2 a b = (a -> b -> Bool)
+----
+
+
+=== The IntervalRelation type and associated predicates
+
+See https://thomasalspaugh.org/pub/fnd/allen.html#BasicRelations[Thirteen basic relations]
+for a figure corresponding to each of the possible interval relations.
+
+The following type enumerates each of the possible relationships that a pair of `Intervallic` values can have.
+The name in the comment to the right of each type is a predicate function corresponding to the particular variant through the `relate` function,
+in the sense that if the value returned by `pass:[x `relate` y]` is e.g. `Starts`,
+then `pass:[x `starts` y]` evaluates to `True`.
+
+[source,haskell]
+----
+data IntervalRelation =
+    Before        -- before/precedes
+  | Meets         -- meets
+  | Overlaps      -- overlaps
+  | FinishedBy    -- finishedBy
+  | Contains      -- contains
+  | Starts        -- starts
+  | Equals        -- equals
+  | StartedBy     -- startedBy
+  | During        -- during
+  | Finishes      -- finishes
+  | OverlappedBy  -- overlappedBy
+  | MetBy         -- metBy
+  | After         -- after/precededBy
+----
+
+Next, consider the following diagram providing a visual representation of some example data.
+This diagram is created using the `parseIntervalDiagram`,
+however in order to save space we do not provide the definition used to create the diagram.
+Each row shows an interval represented using hyphens and corresponding to a variable with the name displayed on the right-hand side of the row.
+Recall from the <<_additional_interval_data>> section that a variable with a name like e.g. `iv2to5` has a starting point of 2 and an ending point of 5.
+The hyphens in the diagram corresponding to e.g. `iv2to5` start after the second character and end after the fifth character.
+
+[source]
+----
+include::example$TutorialMain.out[tag=relations-variables-diagram-print]
+----
+
+The following table describes the 13 predicates corresponding to the 13 Interval Algebra relations.
+Each of the predicates has the following type signature.
+
+[source,haskell]
+----
+(Intervallic i0 a, Intervallic i1 a) => ComparativePredicateOf2 (i0 a) (i1 a)
+----
+
+.Predicates of interval relations
+[cols="2,6,3"]
+|===
+| Name | Definition | Example
+
+| `meets`
+| `end x == begin y`
+| `pass:[iv0to2 `meets` iv2to5]`
+
+| `metBy`
+| `end y == begin x`
+| `pass:[iv2to5 `metBy` iv0to2]`
+
+| `precedes`
+| `end x < begin y`
+| `pass:[iv0to2 `precedes` iv5to8]`
+
+| `precededBy`
+| `end y < begin x`
+| `pass:[iv5to8 `precededBy` iv0to2]`
+
+| `overlaps`
+| `begin x < begin y && end x < end y && end x > begin y`
+| `pass:[iv3to6 `overlaps` iv5to8]`
+
+| `overlappedBy`
+| `begin y < begin x && end y < end x && end y > begin x`
+| `pass:[iv5to8 `overlaps` iv3to6]`
+
+| `finishes`
+| `begin x > begin y && end x == end y`
+| `pass:[iv6to8 `finishes` iv5to8]`
+
+| `finishedBy`
+| `begin y > begin x && end y == end x`
+| `pass:[iv5to8 `finishedBy` iv6to8]`
+
+| `contains`
+| `begin y > begin x && end y < end x`
+| `pass:[iv3to6 `contains` iv4to5]`
+
+| `during`
+| `begin x > begin y && end x < end y`
+| `pass:[iv4to5 `during` iv3to6]`
+
+| `starts`
+| `begin x == begin y && end x < end y`
+| `pass:[iv2to4 `starts` iv2to5]`
+
+| `startedBy`
+| `begin y == begin x && end y < end x`
+| `pass:[iv2to5 `startedBy` iv2to4]`
+
+|===
+
+Also note that there are functions `before` and `after` which are synonyms for `precedes` and `precededBy`,
+respectively.
+
+
+=== Composite relations and predicates
+
+The fundamental interval algebra relations are rather fine-grained,
+and often the relationships we would like to use to describe pairs of intervals are compositions of the fundamental relations.
+For this reason, interval-algebra provides some built-in relations composed of multiple fundamental relations,
+as well as facilities for defining your own composite relations.
+
+
+==== Built-in composite relations
+
+The variables in the following table each have the type ``Set IntervalRelation``.
+
+.Built-in composite relations
+[cols="2,4"]
+|===
+| Name | Relations
+
+| `disjointRelations`
+| `Before`, `After`, `Meets`, `MetBy`
+
+| `withinRelations`
+| `Starts`, `During`, `Finishes`, `Equals`
+
+| `StrictWithinRelations`
+| `Starts`, `During`, `Finishes`
+
+| `intervalRelations`
+| Every fundamental relation
+
+|===
+
+Additional points of note:
+
+* `disjointRelations` corresponds to the `disjoint` predicate
+* `withinRelations` corresponds to the `enclosedBy`/`within` predicates
+* `strictWithinRelations` doesn't currently correspond to any built-in predicates
+* `intervalRelations` is useful if you want to create a large composite relation by removing a few relations
+(but also see `complement`)
+
+
+==== Built-in composite predicates
+
+.Built-in composite predicates
+[cols="2,6"]
+|===
+| Name | Definition
+
+| `disjoint`
+| Does *one* of the relations hold: `Before`, `After`, `Meets`, `MetBy`?
+
+| `notDisjoint` (a synonym of `concur`)
+| Do *none* of the relations hold: `Before`, `After`, `Meets`, `MetBy`?
+
+| `concur` (a synonym of `notDisjoint`)
+| Do *none* of the relations hold: `Before`, `After`, `Meets`, `MetBy`?
+
+| `enclose`
+| Does *one* of the relations hold: `StartedBy`, `Contains`, `FinishedBy`, `Equals`?
+
+| `enclosedby` (a synonym of `within`)
+| Does *one* of the relations hold: `Starts`, `During`, `Finishes`, `Equals`?
+
+| `within` (a synonym of `enclosedby`)
+| Does *one* of the relations hold: `Starts`, `During`, `Finishes`, `Equals`?
+
+|===
+
+Additional points of note:
+
+* The `disjoint` and ``notDisjoint``/``concur`` predicates are complements of each other in the sense that `pass:[x `disjoint` y]`
+and `pass:[not (x `notDisjoint` y)]` evalute to the same value for any pair of `x` and `y`.
+* The `enclose` and `enclosedBy`/`within` predicates are duals of each other in the sense that `pass:[x `enclose` y]`
+and `pass:[y `enclosedBy` x]` evalute to the same value for any pair of `x` and `y`.
+
+
+==== Constructing custom composite relations
+
+The following examples demonstrate some approaches for constructing ``Set IntervalRelation``s.
+
+[source,haskell]
+----
+include::example$TutorialMain.hs[tag=composing-relations-examples]
+----
+
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=composing-relations-print]
+----
+
+
+==== Constructing custom composite predicates
+
+The following examples demonstrate some approaches for constructing predicate functions.
+
+[source,haskell]
+----
+include::example$TutorialMain.hs[tag=composing-predicates-examples]
+----
+
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=composing-predicates-1-print]
+----
+
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=composing-predicates-2-print]
+----
+
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=composing-predicates-3-print]
+----
+
+
+== An example interval-algebra application
+
+=== Problem description
+
+In this section we present an example application taken from the domain of epidemiological studies.
+For this example, we want to compare the difference, if any, between an industry standard vaccine and a new-to-market vaccine in preventing a person from contracting influenza (flu).
+The primary information that we wish to obtain is how long it takes people to contract flu after taking a vaccine;
+however we only observe a given person for a finite amount of time and they might not get a vaccine or they might not contract flu (or neither) during the time while they are under observation.
+
+
+==== Input data
+
+In order to study our research question, we collect data for multiple subjects.
+For a given subject, we can have data that includes the following types of health care events and subject metadata.
+Our interest is in a flu diagnosis.
+
+* *Enrollment:* a period in time when a subject was under observation for the study.
+Subjects may drop out of the study at any time,
+and may have gaps of time where they were not observed in the study.
+If there are gaps between enrollment periods,
+there is an allowed grace period during which if the subject re-enters observation then they will still be considered eligible for the study.
+If however, the grace period expires and the subject comes back under observation then any data after that will be considered inadmissible.
+For this example, we will consider the grace period to be 8 (see the note below about the unit of time).
+* *Treatment:* Either the standard vaccine or the alternative vaccine.
+* *Diagnosis:* One of several possible diagnoses.
+
+For simplicity the `Interval` endpoints are provided as ``Integer``s (and hence the corresponding durations are also ``Integer``s),
+however in a more realistic setting the endpoints would more likely be something like a `Data.Time.Day`.
+
+
+==== Target processed data results
+
+The information that we would like to extract from the input data is the following.
+We will see in the upcoming <<_data_model>> section that additional information is included in the output data type,
+but this is only supplemental data included for the reader's understanding.
+
+* The treatment type of the first vaccination treatment, if applicable.
+* The amount of time between the end of the treatment vaccination period and the start of the first flu diagnosis period, if applicable.
+* The amount of time between the end of the treatment vaccination period and the end of the overall eligibility period, if applicable.
+
+=== Data model
+
+The types that we will use to model our problem domain are the following:
+
+* `StudyEvent` is the basic unit of observation.
+* `SubjEvents` is a list of ``StudyEvent``s that are assumed to all correspond to a given subject,
+and to be complete in the sense that there are no other ``StudyEvent``s for that particular subject that are not included in the list.
+* `ProcessedSubj` is the type of the target output information for a given subject.
+
+[source,haskell]
+----
+include::example$TutorialMain.hs[tag=extended-example-1-types]
+----
+
+
+=== Example data
+
+Some example data is constructed below.
+In all, there are four subjects, with data collected in the variables `id1Events`,
+`id2Events`, `id3Events`, and `id4Events`.
+To skip ahead and see the results produced by our data processing functions (introduced later) see the <<_calculate_results>> section.
+
+It is important to note that the data is sorted chronologically within a given subject;
+some of the routines that we will see later depend on this being the case.
+
+
+==== Example data subject 1
+
+* For the "id1" subject we see an example where all of the enrollment periods fall within the allotted grace period of 8 days, so the overall study period has a starting point of 6 and an ending point of 430 (i.e. 8 days after the ending point of the last enrollment period).
+* The `Diagnosis RightAsRain` and `Diagnosis CommonCold` entries are not relevant to the study definition and should effectively be ignored.
+* The treatment type is `NewVaccine` with an ending point of 23, and we don't see any flu occurrence.
+* The time to the end of enrollment is the difference between the end of the first treatment period and the end of the overall study period, which for this example is 407 (i.e. 430 - 23).
+
+[source,haskell]
+----
+include::example$TutorialMain.hs[tag=extended-example-1-study-data-subj-1]
+----
+
+
+==== Example data subject 2
+
+* For the "id2" subject we see an example where the start of the second enrollment period does not fall within the allotted grace period of 8 days after the first enrollment period, so the overall study period has a starting point of 2 and an ending point of 214 (i.e. 8 days after the ending point of the first enrollment period).
+* The `Diagnosis RightAsRain`, `Diagnosis CommonCold` and `Diagnosis UpsetTummy` entries are not relevant to the study definition and should effectively be ignored.
+* The treatment type is `StandardVaccine` with an ending point of 99, and although we do see a flu occurrence, it happens outside of the overall study period and should effectively be ignored.
+* The time to the end of enrollment is the difference between the end of the first treatment period and the end of the overall study period, which for this example is 115 (i.e. 214 - 99).
+
+[source,haskell]
+----
+include::example$TutorialMain.hs[tag=extended-example-1-study-data-subj-2]
+----
+
+
+==== Example data subject 3
+
+* For the "id3" subject we see an example where we have just one enrollment period, so the overall study period has a starting point of 7 and an ending point of 205 (i.e. 8 days after the ending point of the enrollment period).
+* The treatment type is `StandardVaccine` with an ending point of 20, and we see a flu occurrence with a starting point of 180.
+Thus, the time to first (and only) flu diagnosis is 160 (i.e. 180 - 20)
+* The time to the end of enrollment is the difference between the end of the first treatment period and the end of the overall study period, which for this example is 185 (i.e. 205 - 20).
+
+[source,haskell]
+----
+include::example$TutorialMain.hs[tag=extended-example-1-study-data-subj-3]
+----
+
+
+==== Example data subject 4
+
+* For the "id4" subject we see an example where we have just one enrollment period, so the overall study period has a starting point of 3 and an ending point of 97 (i.e. 8 days after the ending point of the enrollment period).
+* The `Diagnosis RightAsRain` entry is not relevant to the study definition and should effectively be ignored.
+* Since there is no treatment event and no flu event there is no time to flu occurrence and no time to the end of enrollment.
+
+[source,haskell]
+----
+include::example$TutorialMain.hs[tag=extended-example-1-study-data-subj-4]
+----
+
+
+=== Data processing functions
+
+In this section we provide the data processing functions that we can use to calculate the desired output as described in the previous sections.
+
+[source,haskell]
+----
+include::example$TutorialMain.hs[tag=extended-example-1-processing-functions]
+----
+
+
+=== Calculate results
+
+Here we calculate and print the results of the data processing.
+
+[source,haskell]
+----
+include::example$TutorialMain.hs[tag=extended-example-1-calculate-results]
+----
+
+[source,haskell]
+----
+include::example$TutorialMain.out[tag=extended-example-1-print]
+----

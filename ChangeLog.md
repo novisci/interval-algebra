@@ -3,6 +3,8 @@
 ## 2.1
 
 * Refactors the `Intervallic` typeclass.
+* Adds a package component `tutorial` used to provide data for a tutorial document.
+* Adds a tutorial document: _interval-algebra foundations_.
 
 ## 2.0.3
 
@@ -25,6 +27,14 @@
 ## 2.0.0
 
 * Adds `Abitrary (Interval a)` instance generic over `Ord a, Arbitrary a`.
+* Removes the `moment'` function from the `IntervalSizeable` class.
+Use type application with `moment` instead, as in `moment @Int`, `moment @Day`, etc.
+* Adds the following utility functions:
+`lookback`, `lookahead`, `makeGapsWithinPredicate`,
+`pairGaps`, `anyGapsWithinAtLeastDuration`, `allGapsWithinLessThanDuration`
+
+## 2.0
+
 * Removes the `moment'` function from the `IntervalSizeable` class.
 Use type application with `moment` instead, as in `moment @Int`, `moment @Day`, etc.
 * Adds the following utility functions:

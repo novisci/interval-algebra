@@ -13,7 +13,6 @@ Stability   : experimental
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TupleSections #-}
 
-
 module IntervalAlgebra.IntervalUtilities
   (
 

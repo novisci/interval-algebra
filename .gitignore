@@ -13,5 +13,9 @@ coverage*
 .stack-work/
 dist*
 
+# Antora builds
+docs-site/
+tutorial/TutorialMain.out
+
 # Test artifacts
 *.tix
