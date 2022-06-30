@@ -332,4 +332,3 @@ spec = do
     it "concur matches notDisjoint"
       $          concur (beginerval 1 0) (beginerval 10 (0 :: Int))
       `shouldBe` notDisjoint (beginerval 1 0) (beginerval 10 (0 :: Int))
-
