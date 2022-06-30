@@ -1,5 +1,5 @@
 # See: https://docs.antora.org/antora/latest/component-version-descriptor/#provide-metadata-with-antora-yml
 # for information on what antora.yml and what it may contain
 name: interval-algebra
-version: '2.1.0
+version: 2.1.0
 start_page: interval-algebra-foundations.adoc
