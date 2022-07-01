@@ -11,7 +11,6 @@ For example,
                 ------        
 ==============================
 
->>> import Data.Time
 >>> let ref = bi 30 (fromGregorian 2022 5 6)
 >>> let ivs = [ bi 2 (fromGregorian 2022 5 6), bi 5 (fromGregorian 2022 5 10)]
 >>> pretty $ simpleIntervalDiagram ref ivs 
@@ -89,6 +88,11 @@ import           Witch                          ( From(..)
                                                 , into
                                                 )
 
+-- $setup
+-- >>> :set -XTypeApplications -XFlexibleContexts -XOverloadedStrings
+-- >>> import IntervalAlgebra.IntervalUtilities (gapsWithin)
+-- >>> import Data.Time
+
 {-
 The key Type in this module is the IntervalDiagram,
 which has several components.
@@ -112,8 +116,6 @@ The @Interval a@ type needs to be an instance of @IntervalSizeable a b@;
 Moreover, the type @b@ should be castable to @Int@,
 using its @'Witch.From' b Int@  instance.
 
->>> import Prettyprinter (pretty)
->>> import IntervalAlgebra (beginerval)
 >>> pretty $ makeIntervalText '-' (beginerval 5 (0::Int))
 -----
 >>> pretty $ makeIntervalText '*' (beginerval 10 (0::Int))
@@ -576,7 +578,6 @@ This function provides the most flexibility in producing interval diagrams.
 Here's a basic diagram that shows
 how to put more than one interval interval on a line:
 
->>> :set -XTypeApplications -XFlexibleContexts -XOverloadedStrings
 >>> let mkIntrvl c d b = into @(IntervalText Int) (c, bi d (b :: Int))
 >>> let x = mkIntrvl  '=' 20 0
 >>> let l1 = [ mkIntrvl '-' 1 4 ]
@@ -588,6 +589,7 @@ how to put more than one interval interval on a line:
                   ##
 ====================
 
+
 We can put the axis on the top:
 
 >>> pretty $ parseIntervalDiagram defaultIntervalDiagramOptions [] (Just Top) x [ (l1, []), (l2, []), (l3, []) ]
@@ -595,7 +597,6 @@ We can put the axis on the top:
     -               
      ***  *****  x  
                   ##
-
 
 
 We can annotate the axis:
@@ -693,8 +694,6 @@ Given a reference interval and a list of intervals,
 produces an 'IntervalDiagram' with one line per interval,
 using the 'defaultIntervalDiagramOptions'. 
 
->>> import Data.Maybe (fromMaybe)
->>> import IntervalAlgebra.IntervalUtilities (gapsWithin)
 >>> pretty $ simpleIntervalDiagram (bi 10 (0 :: Int)) (fmap (bi 1) [0..9])
 -
  -
