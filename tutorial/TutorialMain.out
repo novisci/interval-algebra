@@ -26,9 +26,6 @@ print $ ivDay < ivDay
 
 print $ show ivInteger
 ---> "(2, 6)"
-
-print $ fmap (+2) ivInteger
----> (4, 8)
 -- end::interval-basic-instances-print[]
 -- tag::parseinterval-print[]
 
@@ -101,12 +98,6 @@ print $ pairListstringInteger < pairListstringInteger
 
 print $ show pairStringDay
 ---> "{(1967-01-18, 1967-01-24), \"vacation\"}"
-
-print $ fmap (addDays 2) pairStringDay
----> {(1967-01-20, 1967-01-26), "vacation"}
-
-print $ bimap (++ " in summer") (addDays 180) pairStringDay
----> {(1967-07-17, 1967-07-23), "vacation in summer"}
 -- end::pairedinterval-basic-instances-print[]
 -- tag::pairedinterval-getset-intervals-print[]
 
@@ -330,17 +321,11 @@ print [iv2to4, iv5to8]
 print ivDay
 ---> (1967-01-18, 1967-01-24)
 
-print $ shiftFromBegin iv2to4 (Just 9)
----> Just 7
-
 print $ shiftFromBegin iv2to4 iv5to8
 ---> (3, 6)
 
 print $ shiftFromBegin ivDay ivDay
 ---> (0, 6)
-
-print $ shiftFromEnd iv2to4 (Just 9)
----> Just 5
 
 print $ shiftFromEnd iv2to4 iv5to8
 ---> (1, 4)

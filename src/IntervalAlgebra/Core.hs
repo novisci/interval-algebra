@@ -53,7 +53,7 @@ module IntervalAlgebra.Core
   , safeInterval
   , si
 
-    -- ** Modify intervals  
+    -- ** Modify intervals
   , expand
   , expandl
   , expandr
@@ -100,6 +100,8 @@ module IntervalAlgebra.Core
   , shiftFromBegin
   , shiftFromEnd
   , momentize
+  , toEnumInterval
+  , fromEnumInterval
 
     -- ** Algebraic operations
   , intervalRelations
@@ -129,7 +131,6 @@ import           Data.Function                  ( ($)
                                                 , flip
                                                 , id
                                                 )
-import           Data.Functor                   ( Functor(fmap) )
 import           Data.Ord                       ( Ord(..)
                                                 , Ordering(..)
                                                 , max
@@ -235,9 +236,6 @@ intervalBegin (Interval x) = fst x
 intervalEnd :: (Ord a) => Interval a -> a
 intervalEnd (Interval x) = snd x
 
-instance Functor Interval where
-  fmap f (Interval (x, y)) = Interval (f x, f y)
-
 instance (Show a, Ord a) => Show (Interval a) where
   show x = "(" ++ show (begin x) ++ ", " ++ show (end x) ++ ")"
 
@@ -270,6 +268,12 @@ class Intervallic i where
 begin, end :: (Ord a, Intervallic i) => i a -> a
 begin = intervalBegin . getInterval
 end = intervalEnd . getInterval
+
+-- | This *unexported* function is an internal convenience function for cases
+-- in which @f@ is known to be strictly monotone.
+imapStrictMonotone :: (Intervallic i) => (a -> b) -> i a -> i b
+imapStrictMonotone f i = setInterval i (op f (getInterval i))
+  where op f (Interval (b, e)) = Interval (f b, f e)
 
 {- | 
 The 'IntervalRelation' type and the associated predicate functions enumerate
@@ -1327,8 +1331,11 @@ extenterval x y = Interval (s, e)
 -- (2, 14)
 --
 shiftFromBegin
-  :: (IntervalSizeable a b, Functor i1, Intervallic i0) => i0 a -> i1 a -> i1 b
-shiftFromBegin i = fmap (`diff` begin i)
+  :: (IntervalSizeable a b, Intervallic i1, Intervallic i0)
+  => i0 a
+  -> i1 a
+  -> i1 b
+shiftFromBegin i = imapStrictMonotone (`diff` begin i)
 
 -- | Modifies the endpoints of second argument's interval by taking the difference
 --   from the first's input's 'end'.
@@ -1339,8 +1346,27 @@ shiftFromBegin i = fmap (`diff` begin i)
 -- (1, 13)
 --
 shiftFromEnd
-  :: (IntervalSizeable a b, Functor i1, Intervallic i0) => i0 a -> i1 a -> i1 b
-shiftFromEnd i = fmap (`diff` end i)
+  :: (IntervalSizeable a b, Intervallic i1, Intervallic i0)
+  => i0 a
+  -> i1 a
+  -> i1 b
+shiftFromEnd i = imapStrictMonotone (`diff` end i)
+
+-- | Converts an @i a@ to an @i Int@ via @fromEnum@.  This assumes the provided
+-- @fromEnum@ method is strictly monotone increasing: For @a@ types that are
+-- @Ord@ with values @x, y@, then @x < y@ implies @fromEnum x < fromEnum y@, so
+-- long as the latter is well-defined.
+fromEnumInterval :: (Enum a, Intervallic i) => i a -> i Int
+fromEnumInterval = imapStrictMonotone fromEnum
+
+-- | Converts an @i Int@ to an @i a@ via @toEnum@.  This assumes the provided
+-- @toEnum@ method is strictly monotone increasing: For @a@ types that are
+-- @Ord@, then for @Int@ values @x, y@ it holds that @x < y@ implies @toEnum x
+-- < toEnum y@.
+toEnumInterval :: (Enum a, Intervallic i) => i Int -> i a
+toEnumInterval = imapStrictMonotone toEnum
+
+
 
 -- | Changes the duration of an 'Intervallic' value to a moment starting at the 
 --   'begin' of the interval.

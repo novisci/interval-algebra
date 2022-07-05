@@ -69,7 +69,6 @@ The following are some of the basic instances implemented by `Interval`.
 Eq a => Eq (Interval a)
 Ord a => Ord (Interval a)
 instance (Show a, Ord a) => Show (Interval a)
-instance Functor Interval
 ----
 [source,haskell]
 ----
@@ -256,8 +255,6 @@ The following are some of the basic instances implemented by `PairedInterval`.
 (Eq a, Eq b) => Eq (PairedInterval b a)
 (Eq a, Eq b, Ord a) => Ord (PairedInterval b a)
 (Show b, Show a, Ord a) => Show (PairedInterval b a)
-Functor (PairedInterval b)
-Bifunctor PairedInterval
 ----
 
 [source,haskell]
@@ -619,11 +616,11 @@ The `shiftFromBegin` and `shiftFromEnd` functions have the following type signat
 [source,haskell]
 ----
 shiftFromBegin
-  :: (IntervalSizeable a b, Functor i1, Intervallic i0 a)
+  :: (IntervalSizeable a b, Intervallic i0 a)
   => i0 a -> i1 a -> i1 b
 
 shiftFromEnd
-  :: (IntervalSizeable a b, Functor i1, Intervallic i0 a)
+  :: (IntervalSizeable a b, Intervallic i0 a)
   => i0 a -> i1 a -> i1 b
 ----
 
@@ -631,9 +628,8 @@ For each function, you're creating a new interval with starting and ending point
 This can be useful when you don't care about the abolute time of when something happened, but rather when it happened relative to some other event.
 In more detail, `shiftFromBegin` and `shiftFromEnd` have the following behavior:
 
-* `shiftfromBegin` ``fmap``s the `diff` of its second input with the *starting* point of its first input.
-When the second input is an `Intervallic` then this corresponds to ``diff``ing the starting point from the first input from both the starting and ending point of the second input.
-* `shiftfromEnd` is similar to `shiftfromBegin` except that it ``fmap``s the `diff` of its second input with the *ending* point of its first input.
+* `shiftfromBegin` ``diff``s the starting point from the first input from both the starting and ending point of the second input.
+* `shiftfromEnd` is similar to `shiftfromBegin` except that it applies the `diff` to the *ending* point of its first input.
 
 In the examples below we see various combinations of types that can be provided as inputs for `shiftFromBegin` and `shiftFromEnd`.
 Recall from the <<_additional_interval_data>> section that a variable with a name like e.g. `iv2to4` has a starting point of 2 and an ending point of 4.
