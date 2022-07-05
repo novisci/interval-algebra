@@ -131,9 +131,6 @@ instance Intervallic IntervalText where
   getInterval (MkIntervalText x) = getInterval x
   setInterval (MkIntervalText x) i = MkIntervalText $ setInterval x i
 
-instance Functor IntervalText where
-  fmap f (MkIntervalText x) = MkIntervalText $ fmap f x
-
 instance (Enum b, IntervalSizeable a b) => Pretty (IntervalText a) where
   pretty (MkIntervalText x) = pretty $ replicate (fromEnum (duration i)) c
    where
@@ -686,7 +683,7 @@ parseIntervalDiagram opts labels placement ref ivs =
     Shifts the endpoints of an interval to be referenced from another interval,
     so that the 'begin' of the reference interval acts as the "zero" point.
   -}
-  rereference x = fmap (fromEnum . (`diff` begin x))
+  rereference x = fromEnumInterval . shiftFromBegin x
   rereferenceL x = fmap (rereference x)
 
 {-|

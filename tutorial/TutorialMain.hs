@@ -59,9 +59,6 @@ main = do
   putStr "\nprint $ show ivInteger\n---> "
   print $ show ivInteger
 
-  putStr "\nprint $ fmap (+2) ivInteger\n---> "
-  print $ fmap (+ 2) ivInteger
-
   putStrLn "-- end::interval-basic-instances-print[]"
 
 
@@ -163,12 +160,6 @@ main = do
 
   putStr "\nprint $ show pairStringDay\n---> "
   print $ show pairStringDay
-
-  putStr "\nprint $ fmap (addDays 2) pairStringDay\n---> "
-  print $ fmap (addDays 2) pairStringDay
-
-  putStr "\nprint $ bimap (++ \" in summer\") (addDays 180) pairStringDay\n---> "
-  print $ bimap (++ " in summer") (addDays 180) pairStringDay
 
   putStrLn "-- end::pairedinterval-basic-instances-print[]"
 
@@ -426,17 +417,11 @@ main = do
   putStr "\nprint ivDay\n---> "
   print ivDay
 
-  putStr "\nprint $ shiftFromBegin iv2to4 (Just 9)\n---> "
-  print $ shiftFromBegin iv2to4 (Just 9)
-
   putStr "\nprint $ shiftFromBegin iv2to4 iv5to8\n---> "
   print $ shiftFromBegin iv2to4 iv5to8
 
   putStr "\nprint $ shiftFromBegin ivDay ivDay\n---> "
   print $ shiftFromBegin ivDay ivDay
-
-  putStr "\nprint $ shiftFromEnd iv2to4 (Just 9)\n---> "
-  print $ shiftFromEnd iv2to4 (Just 9)
 
   putStr "\nprint $ shiftFromEnd iv2to4 iv5to8\n---> "
   print $ shiftFromEnd iv2to4 iv5to8

@@ -25,12 +25,12 @@ module IntervalAlgebra.PairedInterval
 
 import safe      Control.Applicative            ( liftA2 )
 import safe      Control.DeepSeq                ( NFData )
-import safe      Data.Bifunctor                 ( Bifunctor(bimap) )
 import safe      Data.Binary                    ( Binary )
 import safe      GHC.Generics                   ( Generic )
 import safe      IntervalAlgebra.Core           ( ComparativePredicateOf1
                                                 , Interval
                                                 , IntervalCombinable(..)
+                                                , IntervalSizeable
                                                 , Intervallic(..)
                                                 , before
                                                 , extenterval
@@ -45,12 +45,6 @@ newtype PairedInterval b a = PairedInterval (Interval a, b)
 instance Intervallic (PairedInterval b) where
   getInterval (PairedInterval x) = fst x
   setInterval (PairedInterval (x, y)) i = PairedInterval (i, y)
-
-instance Functor (PairedInterval b) where
-  fmap f (PairedInterval (x, y)) = PairedInterval (fmap f x, y)
-
-instance Bifunctor PairedInterval where
-  bimap f g (PairedInterval (x, y)) = PairedInterval (fmap g x, f y)
 
 instance (NFData a, NFData b) => NFData (PairedInterval b a)
 instance (Binary a, Binary b) => Binary (PairedInterval b a)

@@ -120,9 +120,12 @@ spec = do
       $          show (beginerval 10 (0 :: Int))
       `shouldBe` "(0, 10)"
 
-    it "fmap can convert Interval Integer to Interval Day"
-      $          fmap ModifiedJulianDay (beginerval 1 0)
-      `shouldBe` beginerval 1 (fromGregorian 1858 11 17)
+    -- NOTE toEnum (fromGregorian 1858 11 17) is 0,
+    -- since that date is the origin in the modified
+    -- Julian calendar.
+    it "fromEnumInterval converts Interval Day"
+      $          fromEnumInterval (beginerval 0 (fromGregorian 1858 11 17))
+      `shouldBe` beginerval 0 0
 
     it "(0, 2) <= (1, 3) is True"
       $          beginerval 2 (0 :: Int)
