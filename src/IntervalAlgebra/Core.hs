@@ -1407,7 +1407,7 @@ class (Ord a, Intervallic i) => IntervalCombinable i a where
                i a
             -> i a
             -> f (i a)
-
+{-# DEPRECATED (<+>) "A specialized function without clear use-cases." #-}
 
 {-
 Misc
