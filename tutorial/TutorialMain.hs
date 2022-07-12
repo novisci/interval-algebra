@@ -269,31 +269,6 @@ main = do
   putStr "print $ iv0to2 >< iv2to5\n---> "
   print $ iv0to2 >< iv2to5
 
-  putStrLn "\n-- A list with iv0to2 and iv3to6, since:"
-  putStrLn "--     * iv0to2 is `before` iv3to6"
-  putStrLn "--     * We have specified a list as the return type"
-  putStrLn "--     * Lifting a value to a list returns a list with the input as the sole"
-  putStrLn "--       element"
-  putStrLn "--     * `<>` for lists concatenates the lists"
-  putStr "print (iv0to2 <+> iv3to6 :: [Interval Integer])\n---> "
-  print (iv0to2 <+> iv3to6 :: [Interval Integer])
-
-  putStrLn "\n-- A list with one `Interval` spanning iv2to4 and iv3to6, since the former is\n-- not `before` the latter"
-  putStr "print (iv2to4 <+> iv3to6 :: [Interval Integer])\n---> "
-  print (iv2to4 <+> iv3to6 :: [Interval Integer])
-
-  putStrLn "\n-- A Right with iv0to2, since:"
-  putStrLn "--     * iv0to2 is `before` iv3to6"
-  putStrLn "--     * We have specified Either as the return type"
-  putStrLn "--     * Lifting a value to an Either returns a Right"
-  putStrLn "--     * `<>` for two Rights returns the first Right"
-  putStr "print (iv0to2 <+> iv3to6 :: Either () (Interval Integer))\n---> "
-  print (iv0to2 <+> iv3to6 :: Either () (Interval Integer))
-
-  putStrLn "\n-- A Right with one `Interval` spanning iv2to4 and iv3to6, since the former is\n-- not `before` the latter"
-  putStr "print (iv2to4 <+> iv3to6 :: Either () (Interval Integer))\n---> "
-  print (iv2to4 <+> iv3to6 :: Either () (Interval Integer))
-
   putStrLn "-- end::intervalcombinable-interval-print[]"
 
 
@@ -316,40 +291,6 @@ main = do
   putStrLn "\n-- A Nothing since iv0to2 isn't `before` iv2to5"
   putStr "print $ makePairedInterval \"a\" iv0to2 >< makePairedInterval \"b\" iv2to5\n---> "
   print $ makePairedInterval "a" iv0to2 >< makePairedInterval "b" iv2to5
-
-  putStrLn "\n-- A list with elements (makePairedInterval \"a\" iv0to2) and \n-- (makePairedInterval \"b\" iv3to6), since:"
-  putStrLn "--     * iv0to2 is `before` iv3to6"
-  putStrLn "--     * We have specified a list as the return type"
-  putStrLn "--     * Lifting a value to a list returns a list with the input as the sole"
-  putStrLn "--       element"
-  putStrLn "--     * `<>` for lists concatenates the lists"
-  putStr "print (makePairedInterval \"a\" iv0to2 <+> makePairedInterval \"b\" iv3to6 :: [PairedInterval String Integer])\n--->"
-  print (makePairedInterval "a" iv0to2 <+> makePairedInterval "b" iv3to6 :: [PairedInterval String Integer])
-
-  putStrLn "\n-- A list with one `PairedInterval` where the embedded Interval spans iv2to4\n-- and iv3to6, and where the data is obtained by concatenating the embedded\n-- Strings, since:"
-  putStrLn "--     * iv2to4 is not `before` iv3to6"
-  putStrLn "--     * `<>` for Strings concatenates the Strings"
-  putStrLn "--     * We have specified a list as the return type"
-  putStrLn "--     * Lifting a value to a list returns a list with the input as the sole"
-  putStrLn "--       element"
-  putStr "print (makePairedInterval \"a\" iv2to4 <+> makePairedInterval \"b\" iv3to6 :: [PairedInterval String Integer])\n--->"
-  print (makePairedInterval "a" iv2to4 <+> makePairedInterval "b" iv3to6 :: [PairedInterval String Integer])
-
-  putStrLn "\n-- A Right with (makePairedInterval \"a\" iv0to2), since:"
-  putStrLn "--     * iv0to2 is `before` iv3to6"
-  putStrLn "--     * We have specified Either as the return type"
-  putStrLn "--     * Lifting a value to an Either returns a Right"
-  putStrLn "--     * `<>` for two Rights returns the first Right"
-  putStr "print (makePairedInterval \"a\" iv0to2 <+> makePairedInterval \"b\" iv3to6 :: Either () (PairedInterval String Integer))\n---> "
-  print (makePairedInterval "a" iv0to2 <+> makePairedInterval "b" iv3to6 :: Either () (PairedInterval String Integer))
-
-  putStrLn "\n-- A Right with a `PairedInterval` where the embedded interval spans iv2to4\n-- and iv3to6, and where the data is obtained by concatenating the embedded\n-- Strings, since:"
-  putStrLn "--     * iv2to4 is not `before` iv3to6"
-  putStrLn "--     * `<>` for Strings concatenates the Strings"
-  putStrLn "--     * We have specified Either as the return type"
-  putStrLn "--     * Lifting a value to an Either returns a Right"
-  putStr "print (makePairedInterval \"a\" iv2to4 <+> makePairedInterval \"b\" iv3to6 :: Either () (PairedInterval String Integer))\n---> "
-  print (makePairedInterval "a" iv2to4 <+> makePairedInterval "b" iv3to6 :: Either () (PairedInterval String Integer))
 
   putStrLn "-- end::intervalcombinable-pairedinterval-print[]"
 
