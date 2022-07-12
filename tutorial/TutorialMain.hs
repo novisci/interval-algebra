@@ -13,7 +13,6 @@ import Data.Bifunctor ( Bifunctor(..) )
 import Data.List ( sort )
 import Data.Time
     ( addDays, fromGregorian, secondsToDiffTime, Day, UTCTime(..) )
-import Prettyprinter ( Pretty(..) )
 import Witch ( into )
 import Data.Set ( fromList, difference, Set )
 -- end::import-declarations[]

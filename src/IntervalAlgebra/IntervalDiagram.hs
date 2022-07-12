@@ -64,6 +64,9 @@ module IntervalAlgebra.IntervalDiagram
   , AxisParseError(..)
   , IntervalDiagramOptionsError(..)
   , IntervalDiagramParseError(..)
+
+  -- * Re-exports
+  , Prettyprinter.Pretty(..)
   ) where
 
 import           Data.Foldable                  ( Foldable(toList) )
