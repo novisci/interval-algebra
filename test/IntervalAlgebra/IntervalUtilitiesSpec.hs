@@ -45,6 +45,7 @@ import           IntervalAlgebra.Arbitrary      ( arbitraryWithRelation )
 import           IntervalAlgebra.IntervalUtilities
                                                 ( clip
                                                 , combineIntervals
+                                                , combineIntervalsFromSorted
                                                 , durations
                                                 , filterAfter
                                                 , filterBefore
@@ -656,8 +657,14 @@ spec = do
     it "combineIntervals [] should be []"
       $          combineIntervals ([] :: [Interval Int])
       `shouldBe` []
-    it "combineIntervals [(0, 10), (2, 7), (10, 12), (13, 15)]"
+    it "combineIntervals works on sorted intervals"
       $          combineIntervals [iv 10 0, iv 5 2, iv 2 10, iv 2 13]
+      `shouldBe` [iv 12 0, iv 2 13]
+    it "combineIntervalsFromSorted works on sorted intervals"
+      $          combineIntervalsFromSorted [iv 10 0, iv 5 2, iv 2 10, iv 2 13]
+      `shouldBe` [iv 12 0, iv 2 13]
+    it "combineIntervals works on unsorted intervals"
+      $          combineIntervals [iv 2 13, iv 10 0, iv 2 10, iv 5 2]
       `shouldBe` [iv 12 0, iv 2 13]
 
   describe "combineIntervals property tests" $ modifyMaxSuccess (* 10) $ do

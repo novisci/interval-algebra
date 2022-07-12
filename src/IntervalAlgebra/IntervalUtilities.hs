@@ -12,6 +12,7 @@ Stability   : experimental
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module IntervalAlgebra.IntervalUtilities
   (
@@ -19,6 +20,8 @@ module IntervalAlgebra.IntervalUtilities
     -- * Fold over sequential intervals
     combineIntervals
   , combineIntervalsL
+  , combineIntervalsFromSorted
+  , combineIntervalsFromSortedL
   , rangeInterval
   , gaps
   , gapsL
@@ -89,7 +92,12 @@ import safe      Data.Bool                      ( (&&)
                                                 , (||)
                                                 )
 import safe      Data.Eq                        ( Eq((==)) )
-import safe      Data.Foldable                  ( Foldable(foldl', null, toList)
+import safe      Data.Foldable                  ( Foldable
+                                                  ( foldl'
+                                                  , foldr
+                                                  , null
+                                                  , toList
+                                                  )
                                                 , all
                                                 , any
                                                 , or
@@ -97,6 +105,10 @@ import safe      Data.Foldable                  ( Foldable(foldl', null, toList)
 import safe      Data.Function                  ( ($)
                                                 , (.)
                                                 , flip
+                                                )
+import safe      Data.List                      ( map
+                                                , reverse
+                                                , sortOn
                                                 )
 import safe      Data.Maybe                     ( Maybe(..)
                                                 , maybe
@@ -118,10 +130,7 @@ import safe      IntervalAlgebra.Core           ( (<|>)
                                                 , ComparativePredicateOf1
                                                 , ComparativePredicateOf2
                                                 , Interval
-                                                , IntervalCombinable
-                                                  ( (<+>)
-                                                  , (><)
-                                                  )
+                                                , IntervalCombinable((><))
                                                 , IntervalRelation(..)
                                                 , IntervalSizeable
                                                   ( diff
@@ -452,19 +461,11 @@ gapsWithin i x | null ivs  = Nothing
   res = catMaybes $ gapsM (s <> ivs <> e)
 {-# INLINABLE gapsWithin #-}
 
--- The Box is an internal type used to hold accumulated, combined intervals in 
--- 'combineIntervalsL'.
-newtype Box a = Box { unBox :: [a] }
-
-packIntervalBoxes :: (Intervallic i) => [i a] -> [Box (Interval a)]
-packIntervalBoxes = fmap (\z -> Box [getInterval z])
-
-instance (Ord a) => Semigroup (Box (Interval a)) where
-  Box x <> Box y = Box $ listCombiner (<->) x y
-
--- | Returns a container of intervals where any intervals that meet or share support
---   are combined into one interval. *To work properly, the input should 
---   be sorted*. See 'combineIntervalsL' for a version that works only on lists.
+-- | Returns a container of intervals where any intervals that meet or share
+-- support are combined into one interval. This functions sorts the input
+-- intervals first.  See @combineIntervalsL@ for a version that works only on
+-- lists. If you know the input intervals are sorted, use
+-- @combineIntervalsFromSorted@ instead.
 --
 -- >>> combineIntervals [iv 10 0, iv 5 2, iv 2 10, iv 2 13]
 -- [(0, 12),(13, 15)]
@@ -473,27 +474,71 @@ combineIntervals
   :: (Applicative f, Ord a, Intervallic i, Monoid (f (Interval a)), Foldable f)
   => f (i a)
   -> f (Interval a)
-combineIntervals x =
-  foldl' (\x y -> x <> pure y) mempty (combineIntervalsL $ toList x)
-  -- TODO: surely combineIntervals and combineIntervalsL could be combined
-{-# INLINABLE combineIntervals #-}
+combineIntervals = combineIntervalsWith combineIntervalsL
+
+-- | Returns a container of intervals where any intervals that meet or share support
+--   are combined into one interval. The condition is applied cumulatively,
+--   from left to right, so *to work properly, the input list should be
+--   sorted in increasing order*. See @combineIntervalsLFromSorted@ for a
+--   version that works only on lists.
+--
+-- >>> combineIntervalsFromSorted [iv 10 0, iv 5 2, iv 2 10, iv 2 13]
+-- [(0, 12),(13, 15)]
+--
+combineIntervalsFromSorted
+  :: (Applicative f, Ord a, Intervallic i, Monoid (f (Interval a)), Foldable f)
+  => f (i a)
+  -> f (Interval a)
+combineIntervalsFromSorted = combineIntervalsWith combineIntervalsFromSortedL
+
+
+-- | Unexported helper
+combineIntervalsWith
+  :: (Applicative f, Ord a, Intervallic i, Monoid (f (Interval a)), Foldable f)
+  => ([i a] -> [Interval a])
+  -> f (i a)
+  -> f (Interval a)
+combineIntervalsWith f x = foldl' (\x y -> x <> pure y) mempty (f $ toList x)
 
 -- | Returns a list of intervals where any intervals that meet or share support
---   are combined into one interval. *To work properly, the input list should 
---   be sorted*. 
+--   are combined into one interval. This function sorts the input. If you know
+--   the input intervals are sorted, use @combineIntervalsLFromSorted@.
 --
 -- >>> combineIntervalsL [iv 10 0, iv 5 2, iv 2 10, iv 2 13]
 -- [(0, 12),(13, 15)]
 --
-combineIntervalsL :: (Ord a, Intervallic i) => [i a] -> [Interval a]
-combineIntervalsL l = unBox $ foldl' (<>) (Box []) (packIntervalBoxes l)
-{-# INLINABLE combineIntervalsL #-}
+-- >>> combineIntervalsL [iv 0 8, iv 10 0, iv 5 2]
+-- [(0, 10)]
+--
+combineIntervalsL :: (Intervallic i, Ord a) => [i a] -> [Interval a]
+combineIntervalsL = combineIntervalsFromSortedL . sortOn getInterval
 
--- |
--- Maybe form an @Interval a@ from @Control.Foldl t => t (Interval a)@ spanning
--- the range of all intervals in the list, i.e.  whose @begin@ is the minimum
--- of @begin@ across intervals in the list and whose @end@ is the maximum of
--- @end@. 
+-- | Returns a list of intervals where any intervals that meet or share support
+-- are combined into one interval. The operation is applied cumulatively, from
+-- left to right, so *to work properly, the input list should be sorted in
+-- increasing order*.
+--
+-- >>> combineIntervalsFromSortedL [iv 10 0, iv 5 2, iv 2 10, iv 2 13]
+-- [(0, 12),(13, 15)]
+--
+-- >>> combineIntervalsFromSortedL [iv 10 0, iv 5 2, iv 0 8]
+-- [(0, 10)]
+
+combineIntervalsFromSortedL
+  :: forall a i . (Ord a, Intervallic i) => [i a] -> [Interval a]
+combineIntervalsFromSortedL = reverse . foldl' op []
+ where
+  op []       y = [getInterval y]
+  op (x : xs) y = if x `before` y
+    -- Since x <= y, not (x `before` y) iff they meet or share support
+    then yiv : x : xs
+    else extenterval x yiv : xs
+    where yiv = getInterval y
+
+-- | Maybe form an @Interval a@ from @Control.Foldl t => t (Interval
+-- a)@ spanning the range of all intervals in the list, i.e.  whose @begin@ is
+-- the minimum of @begin@ across intervals in the list and whose @end@ is the
+-- maximum of @end@. 
 --
 -- >>> rangeInterval [beginerval 0 0, beginerval 0 (-1)]
 -- Just (-1, 1)
@@ -503,15 +548,6 @@ combineIntervalsL l = unBox $ foldl' (<>) (Box []) (packIntervalBoxes l)
 -- Just (0, 1)
 rangeInterval :: (Ord a, L.Foldable t) => t (Interval a) -> Maybe (Interval a)
 rangeInterval = L.fold (liftA2 extenterval <$> L.minimum <*> L.maximum)
-
--- Internal function for combining maybe intervals in the 'combineIntervalsL' 
--- function
-(<->) :: (IntervalCombinable i a) => Maybe (i a) -> Maybe (i a) -> [Interval a]
-(<->) Nothing  Nothing  = []
-(<->) Nothing  (Just y) = [getInterval y]
-(<->) (Just x) Nothing  = [getInterval x]
-(<->) (Just x) (Just y) = (<+>) (getInterval x) (getInterval y)
-{-# INLINABLE (<->) #-}
 
 -- | Given a predicate combinator, a predicate, and list of intervals, returns 
 --   the input unchanged if the predicate combinator is @True@. Otherwise, returns
