@@ -235,10 +235,10 @@ parseInterval x y
 prsi :: (Show a, Ord a) => a -> a -> Either ParseErrorInterval (Interval a)
 prsi = parseInterval
 
-intervalBegin :: (Ord a) => Interval a -> a
+intervalBegin :: Interval a -> a
 intervalBegin (Interval x) = fst x
 
-intervalEnd :: (Ord a) => Interval a -> a
+intervalEnd :: Interval a -> a
 intervalEnd (Interval x) = snd x
 
 instance (Show a, Ord a) => Show (Interval a) where
@@ -269,7 +269,7 @@ class Intervallic i where
     setInterval :: i a -> Interval b -> i b
 
 -- | Access the endpoints of an @i a@ .
-begin, end :: (Ord a, Intervallic i) => i a -> a
+begin, end :: (Intervallic i) => i a -> a
 begin = intervalBegin . getInterval
 end = intervalEnd . getInterval
 
@@ -335,7 +335,7 @@ False
 True
 -}
 meets, metBy
-  :: (Ord a, Intervallic i0, Intervallic i1)
+  :: (Eq a, Intervallic i0, Intervallic i1)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 meets x y = end x == begin y
 metBy = flip meets

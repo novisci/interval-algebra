@@ -700,7 +700,7 @@ Each of the predicates has the following type signature.
 
 [source,haskell]
 ----
-(Intervallic i0 a, Intervallic i1 a) => ComparativePredicateOf2 (i0 a) (i1 a)
+(Ord a, Intervallic i0, Intervallic i1) => ComparativePredicateOf2 (i0 a) (i1 a)
 ----
 
 .Predicates of interval relations
