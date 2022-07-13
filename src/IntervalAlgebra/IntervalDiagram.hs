@@ -48,7 +48,7 @@ module IntervalAlgebra.IntervalDiagram
   -}
     parseIntervalDiagram
   , simpleIntervalDiagram
-  , labeledIntervalDiagram
+  , standardExampleDiagram
 
   -- * Diagram options
   , IntervalDiagramOptions(..)
@@ -734,36 +734,63 @@ simpleIntervalDiagram ref ivs = parseIntervalDiagram
   (makeIntervalText '=' (getInterval ref))
   (fmap (\x -> (pure $ makeIntervalText '-' $ getInterval x, [])) ivs)
 
-{- | 
-Given a list of tuples containing intervals and their label,
-creates an interval diagram with labels, and a reference range
-that spans all of the intervals.
-  
->>> x = bi 5 5
->>> y = bi 6 6
+{- | Given various inputs containing intervals and their label, creates an
+interval diagram with labels, along with a reference range that spans all of the
+intervals and is extended to include 0 if necesary.
 
->>> pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]
------   <- [x]
- ------ <- [y]
-=======
+In more detail, an interval diagram is created with one row in the diagram for
+each interval and label pair provided as the first input, and followed by a
+sequence of additional rows with one row per list element in the second input
+and such that each row displays each interval provided in the intervals list and
+label pair.
 
+>>> x1 = si (1, 5)
+>>> x2 = si (7, 10)
+>>> x3 = si (13, 15)
+>>> ivs = [x1, x2, x3]
+>>> gaps = [si (5, 7), si (10, 13)]
+>>> :{
+pretty $ standardExampleDiagram (zip ivs ["x1", "x2", "x3"]) [(gaps, "gaps")]
+:}
+ ----           <- [x1]
+       ---      <- [x2]
+             -- <- [x3]
+     --   ---   <- [gaps]
+===============
+
+>>> :{
+pretty $ standardExampleDiagram (zip ivs ["x1", "x2", "x3"]) []
+:}
+ ----           <- [x1]
+       ---      <- [x2]
+             -- <- [x3]
+===============
+
+>>> pretty $ standardExampleDiagram [] [(gaps, "gaps")]
+     --   --- <- [gaps]
+=============
+
+>>> pretty $ standardExampleDiagram [] []
+IntervalsExtendBeyondAxis
 -}
-labeledIntervalDiagram
-  :: (Ord a, Enum b, IntervalSizeable a b)
+standardExampleDiagram
+  :: (Num a, Ord a, Enum b, IntervalSizeable a b)
   => [(Interval a, String)]
+  -> [([Interval a], String)]
   -> Either IntervalDiagramParseError (IntervalDiagram a)
-labeledIntervalDiagram ivs = op ref
+standardExampleDiagram ivs livs = op ref
  where
   op Nothing     = Left IntervalsExtendBeyondAxis
-  op (Just ref') = parseIntervalDiagram
-    defaultIntervalDiagramOptions
-    []
-    (Just Bottom)
-    ref'
-    (fmap
-      (\x -> (pure $ makeIntervalText '-' $ getInterval (fst x), [pack (snd x)])
-      )
-      ivs
-    )
-  ref =
-    fmap (makeIntervalText '=') (rangeInterval (map (getInterval . fst) ivs))
+  op (Just ref') = parseIntervalDiagram defaultIntervalDiagramOptions
+                                        []
+                                        (Just Bottom)
+                                        ref'
+                                        combIvs
+  range         = rangeInterval $ map fst ivs ++ concatMap fst livs
+  anchoredRange = case range of
+    Nothing  -> Nothing
+    (Just x) -> Just $ safeInterval (min (begin x) 0, max (end x) 0)
+  ref = fmap (makeIntervalText '=') anchoredRange
+  f (iv, s) = ([iv], s)
+  g (ivs, s) = (map (makeIntervalText '-') ivs, [pack s])
+  combIvs = map (g . f) ivs ++ map g livs
