@@ -5,6 +5,9 @@
 * Refactors the `Intervallic` typeclass.
 * Adds a package component `tutorial` used to provide data for a tutorial document.
 * Adds a tutorial document: _interval-algebra foundations_.
+* Renames `labeledIntervalDiagram` to `standardExampleDiagram` and updates the function as follows:
+  * Adds an additional formal argument that can accept multiple intervals for a single row in the diagram.
+  * Adds a `Num a` constraint to the function type signature and ensures that the 0 value is included in the diagram reference line.
 
 ## 2.0.3
 

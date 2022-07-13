@@ -5,15 +5,15 @@ Copyright   : (c) NoviSci, Inc 2020
 License     : BSD3
 Maintainer  : bsaul@novisci.com
 
-The @IntervalAlgebra@ module provides data types and related classes for the 
+The @IntervalAlgebra@ module provides data types and related classes for the
 interval-based temporal logic described in [Allen (1983)](https://doi.org/10.1145/182.358434)
-and axiomatized in [Allen and Hayes (1987)](https://doi.org/10.1111/j.1467-8640.1989.tb00329.x). 
+and axiomatized in [Allen and Hayes (1987)](https://doi.org/10.1111/j.1467-8640.1989.tb00329.x).
 A good primer on Allen's algebra can be [found here](https://thomasalspaugh.org/pub/fnd/allen.html).
 
 = Design
 
-The module is built around three typeclasses designed to separate concerns of 
-constructing, relating, and combining types that contain @'Interval'@s: 
+The module is built around three typeclasses designed to separate concerns of
+constructing, relating, and combining types that contain @'Interval'@s:
 
 1. @'Intervallic'@ provides an interface to the data structures which contain an
    @'Interval'@.
@@ -58,7 +58,7 @@ module IntervalAlgebra.Core
   , expandl
   , expandr
 
-    -- * Interval Algebra 
+    -- * Interval Algebra
 
     -- ** Interval Relations and Predicates
   , IntervalRelation(..)
@@ -199,6 +199,10 @@ import           Test.QuickCheck                ( Arbitrary(..)
                                                 , suchThat
                                                 )
 
+{- $setup
+>>> import IntervalAlgebra.IntervalDiagram
+-}
+
 {- | An @'Interval' a@ is a pair \( (x, y) \text{ such that } x < y\). To create
 intervals use the @'parseInterval'@, @'beginerval'@, or @'enderval'@ functions.
 -}
@@ -208,19 +212,20 @@ newtype Interval a = Interval (a, a) deriving (Eq, Generic)
 newtype ParseErrorInterval = ParseErrorInterval String
     deriving (Eq, Show)
 
--- | Helper defining what a valid relation is between begin and end of an
--- Interval.
+{- | Helper defining what a valid relation is between begin and end of an
+Interval.
+-}
 isValidBeginEnd :: (Ord a) => a -> a -> Bool
 isValidBeginEnd b e = b < e
 
--- | Safely parse a pair of @a@s to create an @'Interval' a@.
---
--- >>> parseInterval 0 1
--- Right (0, 1)
--- 
--- >>> parseInterval 1 0
--- Left (ParseErrorInterval "0<=1")
--- 
+{- | Safely parse a pair of @a@s to create an @'Interval' a@.
+
+>>> parseInterval 0 1
+Right (0, 1)
+
+>>> parseInterval 1 0
+Left (ParseErrorInterval "0<=1")
+-}
 parseInterval
   :: (Show a, Ord a) => a -> a -> Either ParseErrorInterval (Interval a)
 parseInterval x y
@@ -242,10 +247,9 @@ instance (Show a, Ord a) => Show (Interval a) where
 instance Binary a => Binary (Interval a)
 instance NFData a => NFData (Interval a)
 
-{- | 
-The @'Intervallic'@ typeclass defines how to get and set the 'Interval' content
-of a data structure. It also includes functions for getting the endpoints of the
-'Interval' via @'begin'@ and @'end'@. 
+{- | The @'Intervallic'@ typeclass defines how to get and set the 'Interval'
+content of a data structure. It also includes functions for getting the
+endpoints of the 'Interval' via @'begin'@ and @'end'@.
 
 >>> getInterval (Interval (0, 10))
 (0, 10)
@@ -269,16 +273,16 @@ begin, end :: (Ord a, Intervallic i) => i a -> a
 begin = intervalBegin . getInterval
 end = intervalEnd . getInterval
 
--- | This *unexported* function is an internal convenience function for cases
--- in which @f@ is known to be strictly monotone.
+{- | This *unexported* function is an internal convenience function for cases in
+which @f@ is known to be strictly monotone.
+-}
 imapStrictMonotone :: (Intervallic i) => (a -> b) -> i a -> i b
 imapStrictMonotone f i = setInterval i (op f (getInterval i))
   where op f (Interval (b, e)) = Interval (f b, f e)
 
-{- | 
-The 'IntervalRelation' type and the associated predicate functions enumerate
+{- | The 'IntervalRelation' type and the associated predicate functions enumerate
 the thirteen possible ways that two @'Interval'@ objects may 'relate' according
-to Allen's interval algebra. Constructors are shown with their corresponding 
+to Allen's interval algebra. Constructors are shown with their corresponding
 predicate function.
 -}
 data IntervalRelation =
@@ -304,28 +308,19 @@ instance Bounded IntervalRelation where
 instance Ord IntervalRelation where
   compare x y = compare (fromEnum x) (fromEnum y)
 
-{- not for Haddock
-    code to generate interval for Haddock
-    x = bi 5 0
-    y = bi 5 5
-    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
--}
 
 {- | Does x `meets` y? Is x `metBy` y?
 
 Example data with corresponding diagram:
 
 >>> x = bi 5 0
-
 >>> y = bi 5 5
-
-@
+>>> pretty $ standardExampleDiagram [(x, "x"), (y, "y")] []
 -----      <- [x]
      ----- <- [y]
 ==========
-@
 
-Examples: 
+Examples:
 
 >>> x `meets` y
 True
@@ -338,7 +333,6 @@ False
 
 >>> y `metBy` x
 True
-
 -}
 meets, metBy
   :: (Ord a, Intervallic i0, Intervallic i1)
@@ -346,12 +340,6 @@ meets, metBy
 meets x y = end x == begin y
 metBy = flip meets
 
-{- not for Haddock
-    code to generate interval for Haddock
-    x = bi 3 0
-    y = bi 4 6
-    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
--}
 
 {- | Is x `before` y? Does x `precedes` y? Is x `after` y? Is x `precededBy` y?
 
@@ -359,12 +347,10 @@ Example data with corresponding diagram:
 
 >>> x = bi 3 0
 >>> y = bi 4 6
-
-@
+>>> pretty $ standardExampleDiagram [(x, "x"), (y, "y")] []
 ---        <- [x]
       ---- <- [y]
-========== 
-@
+==========
 
 Examples:
 
@@ -387,8 +373,6 @@ False
 True
 >>> y `precededBy` x
 True
-
-
 -}
 before, after, precedes, precededBy
   :: (Ord a, Intervallic i0, Intervallic i1)
@@ -398,13 +382,6 @@ after = flip before
 precedes = before
 precededBy = after
 
-{- not for Haddock
-    code to generate interval for Haddock
-    x = bi 6 0
-    y = bi 6 4
-    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
--}
-
 
 {- | Does x `overlaps` y? Is x `overlappedBy` y?
 
@@ -412,12 +389,10 @@ Example data with corresponding diagram:
 
 >>> x = bi 6 0
 >>> y = bi 6 4
-
-@
+>>> pretty $ standardExampleDiagram [(x, "x"), (y, "y")] []
 ------     <- [x]
     ------ <- [y]
 ==========
-@
 
 Examples:
 
@@ -432,7 +407,6 @@ False
 
 >>> y `overlappedBy` x
 True
-
 -}
 overlaps, overlappedBy
   :: (Ord a, Intervallic i0, Intervallic i1)
@@ -440,12 +414,6 @@ overlaps, overlappedBy
 overlaps x y = begin x < begin y && end x < end y && end x > begin y
 overlappedBy = flip overlaps
 
-{- not for Haddock
-    code to generate interval for Haddock
-    x = bi 3 4
-    y = bi 6 4
-    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
--}
 
 {-| Does x `starts` y? Is x `startedBy` y?
 
@@ -453,12 +421,10 @@ Example data with corresponding diagram:
 
 >>> x = bi 3 4
 >>> y = bi 6 4
-
-@
+>>> pretty $ standardExampleDiagram [(x, "x"), (y, "y")] []
     ---    <- [x]
     ------ <- [y]
 ==========
-@
 
 Examples:
 
@@ -473,7 +439,6 @@ False
 
 >>> y `startedBy` x
 True
-
 -}
 starts, startedBy
   :: (Ord a, Intervallic i0, Intervallic i1)
@@ -481,12 +446,6 @@ starts, startedBy
 starts x y = begin x == begin y && end x < end y
 startedBy = flip starts
 
-{- not for Haddock
-    code to generate interval for Haddock
-    x = bi 3 7
-    y = bi 6 4
-    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
--}
 
 {- | Does x `finishes` y? Is x `finishedBy` y?
 
@@ -494,12 +453,10 @@ Example data with corresponding diagram:
 
 >>> x = bi 3 7
 >>> y = bi 6 4
-
-@
+>>> pretty $ standardExampleDiagram [(x, "x"), (y, "y")] []
        --- <- [x]
     ------ <- [y]
 ==========
-@
 
 Examples:
 
@@ -514,7 +471,6 @@ False
 
 >>> y `finishedBy` x
 True
-
 -}
 finishes, finishedBy
   :: (Ord a, Intervallic i0, Intervallic i1)
@@ -522,12 +478,6 @@ finishes, finishedBy
 finishes x y = begin x > begin y && end x == end y
 finishedBy = flip finishes
 
-{- not for Haddock
-    code to generate interval for Haddock
-    x = bi 3 5
-    y = bi 6 4
-    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
--}
 
 {-| Is x `during` y? Does x `contains` y?
 
@@ -535,12 +485,10 @@ Example data with corresponding diagram:
 
 >>> x = bi 3 5
 >>> y = bi 6 4
-
-@
+>>> pretty $ standardExampleDiagram [(x, "x"), (y, "y")] []
      ---   <- [x]
     ------ <- [y]
 ==========
-@
 
 Examples:
 
@@ -555,7 +503,6 @@ False
 
 >>> y `contains` x
 True
-
 -}
 during, contains
   :: (Ord a, Intervallic i0, Intervallic i1)
@@ -564,25 +511,16 @@ during x y = begin x > begin y && end x < end y
 contains = flip during
 
 
-{- not for Haddock
-    code to generate interval for Haddock
-    x = bi 6 4
-    y = bi 6 4
-    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
--}
-
 {- | Does x `equals` y?
 
 Example data with corresponding diagram:
 
 >>> x = bi 6 4
 >>> y = bi 6 4
-
-@
+>>> pretty $ standardExampleDiagram [(x, "x"), (y, "y")] []
     ------ <- [x]
     ------ <- [y]
 ==========
-@
 
 Examples:
 
@@ -591,7 +529,6 @@ True
 
 >>> y `equals` x
 True
-
 -}
 equals
   :: (Ord a, Intervallic i0, Intervallic i1)
@@ -619,33 +556,16 @@ strictWithinRelations :: Data.Set.Set IntervalRelation
 strictWithinRelations = Data.Set.difference withinRelations (toSet [Equals])
 
 
-{- not for Haddock
-    code to generate interval for Haddock
-    x = bi 3 0
-    y = bi 3 5
-    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]    
-
-    x = bi 3 0
-    y = bi 3 3
-    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
-
-    x = bi 6 0
-    y = bi 3 3 
-    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
--}
-
 {- | Are x and y `disjoint` ('before', 'after', 'meets', or 'metBy')?
 
 Example data with corresponding diagram:
 
 >>> x = bi 3 0
 >>> y = bi 3 5
-
-@
----        <- [x]
-     ---   <- [y]
-==========
-@
+>>> pretty $ standardExampleDiagram [(x, "x"), (y, "y")] []
+---      <- [x]
+     --- <- [y]
+========
 
 Examples:
 
@@ -659,12 +579,10 @@ Example data with corresponding diagram:
 
 >>> x = bi 3 0
 >>> y = bi 3 3
-
-@
----        <- [x]
-   ---     <- [y]
-==========
-@
+>>> pretty $ standardExampleDiagram [(x, "x"), (y, "y")] []
+---    <- [x]
+   --- <- [y]
+======
 
 Examples:
 
@@ -677,13 +595,11 @@ True
 Example data with corresponding diagram:
 
 >>> x = bi 6 0
->>> y = bi 3 3 
-
-@
-------     <- [x]
-   ---     <- [y]
-==========
-@
+>>> y = bi 3 3
+>>> pretty $ standardExampleDiagram [(x, "x"), (y, "y")] []
+------ <- [x]
+   --- <- [y]
+======
 
 Examples:
 
@@ -692,27 +608,12 @@ False
 
 >>> y `disjoint` x
 False
-
 -}
 disjoint
   :: (Ord a, Intervallic i0, Intervallic i1)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 disjoint = predicate disjointRelations
 
-{- not for Haddock
-    code to generate interval for Haddock
-    x = bi 3 0
-    y = bi 3 4
-    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]    
-
-    x = bi 3 0
-    y = bi 3 3
-    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
-
-    x = bi 6 0
-    y = bi 3 3 
-    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]    
--}
 
 {-| Does x `concur` with y? Is x `notDisjoint` with y?); This is
 the 'complement' of 'disjoint'.
@@ -721,12 +622,10 @@ Example data with corresponding diagram:
 
 >>> x = bi 3 0
 >>> y = bi 3 4
-
-@
----        <- [x]
-     ---   <- [y]
-==========
-@
+>>> pretty $ standardExampleDiagram [(x, "x"), (y, "y")] []
+---     <- [x]
+    --- <- [y]
+=======
 
 Examples:
 
@@ -739,12 +638,10 @@ Example data with corresponding diagram:
 
 >>> x = bi 3 0
 >>> y = bi 3 3
-
-@
----        <- [x]
-   ---     <- [y]
-==========
-@
+>>> pretty $ standardExampleDiagram [(x, "x"), (y, "y")] []
+---    <- [x]
+   --- <- [y]
+======
 
 Examples:
 
@@ -756,13 +653,11 @@ False
 Example data with corresponding diagram:
 
 >>> x = bi 6 0
->>> y = bi 3 3 
-
-@
-------     <- [x]
-   ---     <- [y]
-==========
-@
+>>> y = bi 3 3
+>>> pretty $ standardExampleDiagram [(x, "x"), (y, "y")] []
+------ <- [x]
+   --- <- [y]
+======
 
 Examples:
 
@@ -770,7 +665,6 @@ Examples:
 True
 >>> y `concur` x
 True
-
 -}
 notDisjoint, concur
   :: (Ord a, Intervallic i0, Intervallic i1)
@@ -778,38 +672,18 @@ notDisjoint, concur
 notDisjoint = predicate (complement disjointRelations)
 concur = notDisjoint
 
-{- not for Haddock
-    code to generate interval for Haddock
-    x = bi 6 4
-    y = bi 6 4
-    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
 
-    x = bi 6 4
-    y = bi 5 4
-    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
-
-    x = bi 6 4
-    y = bi 4 5
-    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
-
-    x = bi 2 7
-    y = bi 1 5
-    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
--}
-
-{- | Is x `within` (`enclosedBy`) y? That is, 'during', 
-     'starts', 'finishes', or 'equals'?
+{- | Is x `within` (`enclosedBy`) y? That is, 'during', 'starts', 'finishes', or
+'equals'?
 
 Example data with corresponding diagram:
 
 >>> x = bi 6 4
 >>> y = bi 6 4
-
-@
+>>> pretty $ standardExampleDiagram [(x, "x"), (y, "y")] []
     ------ <- [x]
     ------ <- [y]
 ==========
-@
 
 Examples:
 
@@ -823,12 +697,10 @@ Example data with corresponding diagram:
 
 >>> x = bi 6 4
 >>> y = bi 5 4
-
-@
+>>> pretty $ standardExampleDiagram [(x, "x"), (y, "y")] []
     ------ <- [x]
     -----  <- [y]
 ==========
-@
 
 Examples:
 
@@ -842,12 +714,10 @@ Example data with corresponding diagram:
 
 >>> x = bi 6 4
 >>> y = bi 4 5
-
-@
+>>> pretty $ standardExampleDiagram [(x, "x"), (y, "y")] []
     ------ <- [x]
      ----  <- [y]
 ==========
-@
 
 Examples:
 
@@ -860,12 +730,10 @@ Example data with corresponding diagram:
 
 >>> x = bi 2 7
 >>> y = bi 1 5
-
-@
-       --  <- [x]
- -----     <- [y]
-==========
-@
+>>> pretty $ standardExampleDiagram [(x, "x"), (y, "y")] []
+       -- <- [x]
+     -    <- [y]
+=========
 
 Examples:
 
@@ -874,28 +742,12 @@ False
 
 >>> y `enclosedBy` x
 False
-
 -}
 within, enclosedBy
   :: (Ord a, Intervallic i0, Intervallic i1)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 within = predicate withinRelations
 enclosedBy = within
-
-{- not for Haddock
-    code to generate interval for Haddock
-    x = bi 6 4
-    y = bi 6 4
-    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]    
-
-    x = bi 6 4
-    y = bi 5 4
-    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
-
-    x = bi 2 7
-    y = bi 1 5
-    pretty $ labeledIntervalDiagram [(x, "x"), (y, "y")]   
--}
 
 
 {- | Does x `enclose` y? That is, is y 'within' x?
@@ -904,12 +756,10 @@ Example data with corresponding diagram:
 
 >>> x = bi 6 4
 >>> y = bi 6 4
-
-@
+>>> pretty $ standardExampleDiagram [(x, "x"), (y, "y")] []
     ------ <- [x]
     ------ <- [y]
 ==========
-@
 
 Examples:
 
@@ -923,12 +773,10 @@ Example data with corresponding diagram:
 
 >>> x = bi 6 4
 >>> y = bi 5 4
-
-@
+>>> pretty $ standardExampleDiagram [(x, "x"), (y, "y")] []
     ------ <- [x]
     -----  <- [y]
 ==========
-@ 
 
 Examples:
 
@@ -942,12 +790,10 @@ Example data with corresponding diagram:
 
 >>> x = bi 6 4
 >>> y = bi 4 5
-
-@
+>>> pretty $ standardExampleDiagram [(x, "x"), (y, "y")] []
     ------ <- [x]
      ----  <- [y]
 ==========
-@
 
 Examples:
 
@@ -961,12 +807,10 @@ Example data with corresponding diagram:
 
 >>> x = bi 2 7
 >>> y = bi 1 5
-
-@
-       --  <- [x]
- -----     <- [y]
-==========
-@
+>>> pretty $ standardExampleDiagram [(x, "x"), (y, "y")] []
+       -- <- [x]
+     -    <- [y]
+=========
 
 Examples:
 
@@ -975,7 +819,6 @@ False
 
 >>> y `enclose` x
 False
-
 -}
 enclose
   :: (Ord a, Intervallic i0, Intervallic i1)
@@ -996,7 +839,7 @@ toSet :: [IntervalRelation] -> Data.Set.Set IntervalRelation
 toSet = Data.Set.fromList
 
 -- | Compose a list of interval relations with _or_ to create a new
--- @'ComparativePredicateOf1' i a@. For example, 
+-- @'ComparativePredicateOf1' i a@. For example,
 -- @unionPredicates [before, meets]@ creates a predicate function determining
 -- if one interval is either before or meets another interval.
 unionPredicates :: [ComparativePredicateOf2 a b] -> ComparativePredicateOf2 a b
@@ -1022,7 +865,7 @@ toPredicate r = case r of
   MetBy        -> metBy
   After        -> after
 
--- | Given a set of 'IntervalRelation's return a list of 'predicate' functions 
+-- | Given a set of 'IntervalRelation's return a list of 'predicate' functions
 --   corresponding to each relation.
 predicates
   :: (Ord a, Intervallic i0, Intervallic i1)
@@ -1083,14 +926,14 @@ composeRelationLookup =
   cncr  = o ++ f' ++ d' ++ s ++ e ++ s' ++ d ++ f ++ o'
   full  = p ++ m ++ cncr ++ m' ++ p'
 
--- | Compare two @i a@ to determine their 'IntervalRelation'.
---
--- >>> relate (Interval (0::Int, 1)) (Interval (1, 2))
--- Meets
---
--- >>> relate (Interval (1::Int, 2)) (Interval (0, 1))
--- MetBy
--- 
+{- | Compare two @i a@ to determine their 'IntervalRelation'.
+
+>>> relate (Interval (0::Int, 1)) (Interval (1, 2))
+Meets
+
+>>> relate (Interval (1::Int, 2)) (Interval (0, 1))
+MetBy
+-}
 relate
   :: (Ord a, Intervallic i0, Intervallic i1) => i0 a -> i1 a -> IntervalRelation
 relate x y | x `before` y       = Before
@@ -1107,9 +950,10 @@ relate x y | x `before` y       = Before
            | x `contains` y     = Contains
            | otherwise          = Equals
 
--- | Compose two interval relations according to the rules of the algebra.
---   The rules are enumerated according to
--- <https://thomasalspaugh.org/pub/fnd/allen.html#BasicCompositionsTable this table>.
+{- | Compose two interval relations according to the rules of the algebra.
+The rules are enumerated according to
+<https://thomasalspaugh.org/pub/fnd/allen.html#BasicCompositionsTable this table>.
+-}
 compose
   :: IntervalRelation -> IntervalRelation -> Data.Set.Set IntervalRelation
 compose x y = toSet (composeRelationLookup !! fromEnum x !! fromEnum y)
@@ -1132,13 +976,12 @@ union
   -> Data.Set.Set IntervalRelation
 union = Data.Set.union
 
--- | Find the converse of a @'Data.Set.Set' 'IntervalRelation'@. 
+-- | Find the converse of a @'Data.Set.Set' 'IntervalRelation'@.
 converse :: Data.Set.Set IntervalRelation -> Data.Set.Set IntervalRelation
 converse = Data.Set.map converseRelation
 
-{- |
-The 'IntervalSizeable' typeclass provides functions to determine the size of an
-'Intervallic' type and to resize an 'Interval a'.
+{- | The 'IntervalSizeable' typeclass provides functions to determine the size of
+an 'Intervallic' type and to resize an 'Interval a'.
 -}
 class (Ord a, Num b, Ord b) => IntervalSizeable a b | a -> b where
 
@@ -1150,23 +993,35 @@ class (Ord a, Num b, Ord b) => IntervalSizeable a b | a -> b where
     duration :: (Intervallic i) => i a -> b
     duration x = diff (end x) (begin x)
 
-    -- | Shifts an @a@. Most often, the @b@ will be the same type as @a@. 
+    -- | Shifts an @a@. Most often, the @b@ will be the same type as @a@.
     --   But for example, if @a@ is 'Day' then @b@ could be 'Int'.
     add :: b -> a -> a
 
     -- | Takes the difference between two @a@ to return a @b@.
     diff :: a -> a -> b
 
--- | Resize an @i a@ to by expanding to "left" by @l@ and to the 
---   "right" by @r@. In the case that @l@ or @r@ are less than a 'moment'
---   the respective endpoints are unchanged. 
---
--- >>> expand 0 0 (Interval (0::Int, 2::Int))
--- (0, 2)
---
--- >>> expand 1 1 (Interval (0::Int, 2::Int))
--- (-1, 3)
---
+{- | Resize an @i a@ to by expanding to "left" by @l@ and to the "right" by @r@.
+In the case that @l@ or @r@ are less than a 'moment' the respective endpoints
+are unchanged.
+
+>>> iv2to4 = safeInterval (2::Int, 4::Int)
+>>> iv2to4' = expand 0 0 iv2to4
+>>> iv1to5 = expand 1 1 iv2to4
+
+>>> iv2to4
+(2, 4)
+
+>>> iv2to4'
+(2, 4)
+
+>>> iv1to5
+(1, 5)
+
+>>> pretty $ standardExampleDiagram [(iv2to4, "iv2to4"), (iv1to5, "iv1to5")] []
+  --  <- [iv2to4]
+ ---- <- [iv1to5]
+=====
+-}
 expand
   :: forall i a b
    . (IntervalSizeable a b, Intervallic i)
@@ -1180,38 +1035,60 @@ expand l r p = setInterval p i
   e = if r < moment @a then 0 else r
   i = Interval (add s $ begin p, add e $ end p)
 
--- | Expands an @i a@ to "left".
---
--- >>> expandl 2 (Interval (0::Int, 2::Int))
--- (-2, 2)
---
+{- | Expands an @i a@ to the "left".
+
+>>> iv2to4 = (safeInterval (2::Int, 4::Int))
+>>> iv0to4 = expandl 2 iv2to4
+
+>>> iv2to4
+(2, 4)
+
+>>> iv0to4
+(0, 4)
+
+>>> pretty $ standardExampleDiagram [(iv2to4, "iv2to4"), (iv0to4, "iv0to4")] []
+  -- <- [iv2to4]
+---- <- [iv0to4]
+====
+-}
 expandl :: (IntervalSizeable a b, Intervallic i) => b -> i a -> i a
 expandl i = expand i 0
 
--- | Expands an @i a@ to "right".
---
--- >>> expandr 2 (Interval (0::Int, 2::Int))
--- (0, 4)
---
+{- | Expands an @i a@ to the "right".
+
+>>> iv2to4 = (safeInterval (2::Int, 4::Int))
+>>> iv2to6 = expandr 2 iv2to4
+
+>>> iv2to4
+(2, 4)
+
+>>> iv2to6
+(2, 6)
+
+>>> pretty $ standardExampleDiagram [(iv2to4, "iv2to4"), (iv2to6, "iv2to6")] []
+  --   <- [iv2to4]
+  ---- <- [iv2to6]
+======
+-}
 expandr :: (IntervalSizeable a b, Intervallic i) => b -> i a -> i a
 expandr = expand 0
 
--- | Safely creates an 'Interval a' using @x@ as the 'begin' and adding 
---   @max 'moment' dur@ to @x@ as the 'end'.
---
--- >>> beginerval (0::Int) (0::Int)
--- (0, 1)
---
--- >>> beginerval (1::Int) (0::Int)
--- (0, 1)
---
--- >>> beginerval (2::Int) (0::Int)
--- (0, 2)
---
+{- | Safely creates an 'Interval a' using @x@ as the 'begin' and adding @max
+'moment' dur@ to @x@ as the 'end'.
+
+>>> beginerval (0::Int) (0::Int)
+(0, 1)
+
+>>> beginerval (1::Int) (0::Int)
+(0, 1)
+
+>>> beginerval (2::Int) (0::Int)
+(0, 2)
+-}
 beginerval
   :: forall a b
    . (IntervalSizeable a b)
-  => b -- ^ @dur@ation to add to the 'begin' 
+  => b -- ^ @dur@ation to add to the 'begin'
   -> a -- ^ the 'begin' point of the 'Interval'
   -> Interval a
 beginerval dur x = Interval (x, y)
@@ -1224,28 +1101,28 @@ beginerval dur x = Interval (x, y)
 -- | A synonym for `beginerval`
 bi
   :: (IntervalSizeable a b)
-  => b -- ^ @dur@ation to add to the 'begin' 
+  => b -- ^ @dur@ation to add to the 'begin'
   -> a -- ^ the 'begin' point of the 'Interval'
   -> Interval a
 bi = beginerval
 
 
--- | Safely creates an 'Interval a' using @x@ as the 'end' and adding
---   @negate max 'moment' dur@ to @x@ as the 'begin'.
---
--- >>> enderval (0::Int) (0::Int)
--- (-1, 0)
---
--- >>> enderval (1::Int) (0::Int)
--- (-1, 0)
---
--- >>> enderval (2::Int) (0::Int)
--- (-2, 0)
---
+{- | Safely creates an 'Interval a' using @x@ as the 'end' and adding @negate max
+'moment' dur@ to @x@ as the 'begin'.
+
+>>> enderval (0::Int) (0::Int)
+(-1, 0)
+
+>>> enderval (1::Int) (0::Int)
+(-1, 0)
+
+>>> enderval (2::Int) (0::Int)
+(-2, 0)
+-}
 enderval
   :: forall a b
    . (IntervalSizeable a b)
-  => b -- ^ @dur@ation to subtract from the 'end' 
+  => b -- ^ @dur@ation to subtract from the 'end'
   -> a -- ^ the 'end' point of the 'Interval'
   -> Interval a
 enderval dur x = Interval (add (negate $ max (moment @a) dur) x, x)
@@ -1255,14 +1132,14 @@ enderval dur x = Interval (add (negate $ max (moment @a) dur) x, x)
 -- | A synonym for `enderval`
 ei
   :: (IntervalSizeable a b)
-  => b -- ^ @dur@ation to subtract from the 'end' 
+  => b -- ^ @dur@ation to subtract from the 'end'
   -> a -- ^ the 'end' point of the 'Interval'
   -> Interval a
 ei = enderval
 
 
 -- | Safely creates an @'Interval'@ from a pair of endpoints.
--- IMPORTANT: This function uses 'beginerval', 
+-- IMPORTANT: This function uses 'beginerval',
 -- thus if the second element of the pair is `<=` the first element,
 -- the duration will be an @"Interval"@ of 'moment' duration.
 --
@@ -1281,7 +1158,7 @@ si = safeInterval
 -- | Creates a new Interval from the 'end' of an @i a@.
 beginervalFromEnd
   :: (IntervalSizeable a b, Intervallic i)
-  => b  -- ^ @dur@ation to add to the 'end' 
+  => b  -- ^ @dur@ation to add to the 'end'
   -> i a -- ^ the @i a@ from which to get the 'end'
   -> Interval a
 beginervalFromEnd d i = beginerval d (end i)
@@ -1289,47 +1166,71 @@ beginervalFromEnd d i = beginerval d (end i)
 -- | Creates a new Interval from the 'begin' of an @i a@.
 endervalFromBegin
   :: (IntervalSizeable a b, Intervallic i)
-  => b -- ^ @dur@ation to subtract from the 'begin'  
+  => b -- ^ @dur@ation to subtract from the 'begin'
   -> i a -- ^ the @i a@ from which to get the 'begin'
   -> Interval a
 endervalFromBegin d i = enderval d (begin i)
 
--- | Safely creates a new @Interval@ with 'moment' length with 'begin' at @x@
---
--- >>> beginervalMoment (10 :: Int)
--- (10, 11)
+{- | Safely creates a new @Interval@ with 'moment' length with 'begin' at @x@
 
--- 
+>>> beginervalMoment (10 :: Int)
+(10, 11)
+-}
 beginervalMoment :: forall a b . (IntervalSizeable a b) => a -> Interval a
 beginervalMoment x = beginerval (moment @a) x where i = Interval (x, x)
 
--- | Safely creates a new @Interval@ with 'moment' length with 'end' at @x@
---
--- >>> endervalMoment (10 :: Int)
--- (9, 10)
--- 
+{- | Safely creates a new @Interval@ with 'moment' length with 'end' at @x@
+
+>>> endervalMoment (10 :: Int)
+(9, 10)
+-}
 endervalMoment :: forall a b . (IntervalSizeable a b) => a -> Interval a
 endervalMoment x = enderval (moment @a) x where i = Interval (x, x)
 
--- | Creates a new @Interval@ spanning the extent x and y.
---
--- >>> extenterval (Interval (0, 1)) (Interval (9, 10))
--- (0, 10)
---
+{- | Creates a new @Interval@ spanning the extent x and y.
+
+>>> extenterval (Interval (0, 1)) (Interval (9, 10))
+(0, 10)
+-}
 extenterval :: (Ord a, Intervallic i) => i a -> i a -> Interval a
 extenterval x y = Interval (s, e)
  where
   s = min (begin x) (begin y)
   e = max (end x) (end y)
 
--- | Modifies the endpoints of second argument's interval by taking the difference
---   from the first's input's 'begin'. 
--- >>> shiftFromBegin (Interval ((5::Int), 6)) (Interval (10, 15))
--- (5, 10)
---
--- >>> shiftFromBegin (Interval ((1::Int), 2)) (Interval (3, 15))
--- (2, 14)
---
+{- | Modifies the endpoints of second argument's interval by taking the difference
+from the first's input's 'begin'.
+
+Example data with corresponding diagram:
+
+>>> a = bi 3 2 :: Interval Int
+>>> a
+(2, 5)
+>>> x = bi 3 7 :: Interval Int
+>>> x
+(7, 10)
+>>> y = bi 4 9 :: Interval Int
+>>> y
+(9, 13)
+>>> pretty $ standardExampleDiagram [(a, "a"), (x, "x"), (y, "y")] []
+  ---         <- [a]
+       ---    <- [x]
+         ---- <- [y]
+=============
+
+Examples:
+
+>>> x' = shiftFromBegin a x
+>>> x'
+(5, 8)
+>>> y' = shiftFromBegin a y
+>>> y'
+(7, 11)
+>>> pretty $ standardExampleDiagram [(x', "x'"), (y', "y'")] []
+     ---    <- [x']
+       ---- <- [y']
+===========
+-}
 shiftFromBegin
   :: (IntervalSizeable a b, Intervallic i1, Intervallic i0)
   => i0 a
@@ -1337,14 +1238,39 @@ shiftFromBegin
   -> i1 b
 shiftFromBegin i = imapStrictMonotone (`diff` begin i)
 
--- | Modifies the endpoints of second argument's interval by taking the difference
---   from the first's input's 'end'.
--- >>> shiftFromEnd (Interval ((5::Int), 6)) (Interval (10, 15))
--- (4, 9)
---
--- >>> shiftFromEnd (Interval ((1::Int), 2)) (Interval (3, 15))
--- (1, 13)
---
+{- | Modifies the endpoints of second argument's interval by taking the difference
+from the first's input's 'end'.
+
+Example data with corresponding diagram:
+
+>>> a = bi 3 2 :: Interval Int
+>>> a
+(2, 5)
+>>> x = bi 3 7 :: Interval Int
+>>> x
+(7, 10)
+>>> y = bi 4 9 :: Interval Int
+>>> y
+(9, 13)
+>>> pretty $ standardExampleDiagram [(a, "a"), (x, "x"), (y, "y")] []
+  ---         <- [a]
+       ---    <- [x]
+         ---- <- [y]
+=============
+
+Examples:
+
+>>> x' = shiftFromEnd a x
+>>> x'
+(2, 5)
+>>> y' = shiftFromEnd a y
+>>> y'
+(4, 8)
+>>> pretty $ standardExampleDiagram [(x', "x'"), (y', "y'")] []
+  ---    <- [x']
+    ---- <- [y']
+========
+-}
 shiftFromEnd
   :: (IntervalSizeable a b, Intervallic i1, Intervallic i0)
   => i0 a
@@ -1368,20 +1294,19 @@ toEnumInterval = imapStrictMonotone toEnum
 
 
 
--- | Changes the duration of an 'Intervallic' value to a moment starting at the 
---   'begin' of the interval.
---
--- >>> momentize (Interval (6, 10))
--- (6, 7)
---
+{- | Changes the duration of an 'Intervallic' value to a moment starting at the
+'begin' of the interval.
+
+>>> momentize (Interval (6, 10))
+(6, 7)
+-}
 momentize
   :: forall i a b . (IntervalSizeable a b, Intervallic i) => i a -> i a
 momentize i = setInterval i (beginerval (moment @a) (begin i))
 
-{- |
-The @'IntervalCombinable'@ typeclass provides methods for (possibly) combining
-two @i a@s to form a @'Maybe' i a@, or in case of @><@, a possibly different 
-@Intervallic@ type.
+{- | The @'IntervalCombinable'@ typeclass provides methods for (possibly)
+combining two @i a@s to form a @'Maybe' i a@, or in case of @><@, a possibly
+different @Intervallic@ type.
 -}
 class (Ord a, Intervallic i) => IntervalCombinable i a where
 
@@ -1394,14 +1319,14 @@ class (Ord a, Intervallic i) => IntervalCombinable i a where
             e = end y
     {-# INLINABLE (.+.) #-}
 
-    -- | If @x@ is 'before' @y@, then form a new @Just Interval a@ from the 
+    -- | If @x@ is 'before' @y@, then form a new @Just Interval a@ from the
     --   interval in the "gap" between @x@ and @y@ from the 'end' of @x@ to the
     --   'begin' of @y@. Otherwise, 'Nothing'.
     (><) :: i a -> i a -> Maybe (i a)
 
-    -- | If @x@ is 'before' @y@, return @f x@ appended to @f y@. Otherwise, 
-    --   return 'extenterval' of @x@ and @y@ (wrapped in @f@). This is useful for 
-    --   (left) folding over an *ordered* container of @Interval@s and combining 
+    -- | If @x@ is 'before' @y@, return @f x@ appended to @f y@. Otherwise,
+    --   return 'extenterval' of @x@ and @y@ (wrapped in @f@). This is useful for
+    --   (left) folding over an *ordered* container of @Interval@s and combining
     --   intervals when @x@ is *not* 'before' @y@.
     (<+>):: ( Semigroup (f (i a)), Applicative f) =>
                i a
@@ -1423,7 +1348,7 @@ type ComparativePredicateOf2 a b = (a -> b -> Bool)
 -- Instances
 -- -}
 
--- | Imposes a total ordering on @'Interval' a@ based on first ordering the 
+-- | Imposes a total ordering on @'Interval' a@ based on first ordering the
 --   'begin's then the 'end's.
 instance (Ord a) => Ord (Interval a) where
   (<=) x y | begin x < begin y  = True

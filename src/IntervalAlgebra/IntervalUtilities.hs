@@ -142,6 +142,7 @@ import safe      IntervalAlgebra.Core           ( (<|>)
                                                 , begin
                                                 , beginerval
                                                 , beginervalFromEnd
+                                                , bi
                                                 , concur
                                                 , contains
                                                 , disjoint
@@ -181,14 +182,15 @@ import safe      Witherable                     ( Filterable(filter)
                                                 , mapMaybe
                                                 )
 
+{- $setup
+>>> import GHC.List ( (++), zip )
+>>> import IntervalAlgebra.IntervalDiagram
+>>> import Prettyprinter ( pretty )
+-}
 
 -------------------------------------------------
 -- Unexported utilties used in functions below --
 -------------------------------------------------
-
--- Just a synonym used to examples to save typing
-iv :: Int -> Int -> Interval Int
-iv = beginerval
 
 -- An internal utility function for creating a @Fold@ that maps over a structure
 -- by consecutive pairs into a new structure.
@@ -312,7 +314,7 @@ listCombiner f x y = initSafe x <> f (lastMay x) (headMay y) <> tailSafe y
 -- | Returns a list of the 'IntervalRelation' between each consecutive pair 
 --   of intervals. This is just a specialized 'relations' which returns a list.
 --
--- >>> relationsL [iv 1 0, iv 1 1] 
+-- >>> relationsL [bi 1 0, bi 1 1]
 -- [Meets]
 --
 relationsL
@@ -322,7 +324,7 @@ relationsL = relations
 -- | A generic form of 'relations' which can output any 'Applicative' and 
 --   'Monoid' structure.
 --
--- >>> (relations [iv 1 0,iv 1 1]) :: [IntervalRelation]
+-- >>> (relations [bi 1 0,bi 1 1]) :: [IntervalRelation]
 -- [Meets]
 --
 --
@@ -341,7 +343,7 @@ relations = L.fold (makeFolder relate)
 -- | Forms a 'Just' new interval from the intersection of two intervals, 
 --   provided the intervals are not disjoint.
 -- 
--- >>> intersect (iv 5 0) (iv 2 3)
+-- >>> intersect (bi 5 0) (bi 2 3)
 -- Just (3, 5)
 --
 intersect
@@ -365,13 +367,45 @@ gapsM
 gapsM = L.fold (makeFolder (\i j -> getInterval i >< getInterval j))
 {-# INLINABLE gapsM #-}
 
--- | Returns a @Maybe@ container of intervals consisting of the gaps 
---   between intervals in the input. *To work properly, the input should be
---   sorted*. See 'gapsL' for a version that always returns a list.
---
--- >>> gaps [iv 4 1, iv 4 8, iv 3 11]
--- Nothing
---
+{- | Returns a @Maybe@ container of intervals consisting of the gaps between
+intervals in the input. __To work properly, the input should be sorted.__ See
+'gapsL' for a version that always returns a list.
+
+>>> x1 = bi 4 1
+>>> x2 = bi 4 8
+>>> x3 = bi 3 11
+>>> ivs = [x1, x2, x3]
+>>> ivs
+[(1, 5),(8, 12),(11, 14)]
+>>> gaps ivs
+Nothing
+>>> pretty $ standardExampleDiagram (zip ivs ["x1", "x2", "x3"]) []
+ ----          <- [x1]
+        ----   <- [x2]
+           --- <- [x3]
+==============
+
+>>> x1 = bi 4 1
+>>> x2 = bi 3 7
+>>> x3 = bi 2 13
+>>> ivs = [x1, x2, x3]
+>>> ivs
+[(1, 5),(7, 10),(13, 15)]
+>>> gapIvs = gaps ivs
+>>> gapIvs
+Just [(5, 7),(10, 13)]
+>>> :{
+case gapIvs of
+  Nothing -> pretty ""
+  (Just x) -> pretty $
+    standardExampleDiagram (zip ivs ["x1", "x2", "x3"]) [(x, "gapIvs")]
+:}
+ ----           <- [x1]
+       ---      <- [x2]
+             -- <- [x3]
+     --   ---   <- [gapIvs]
+===============
+-}
 gaps
   :: ( IntervalCombinable i a
      , Traversable f
@@ -383,10 +417,47 @@ gaps
 gaps = sequenceA . gapsM
 {-# INLINABLE gaps #-}
 
--- | Returns a (possibly empty) list of intervals consisting of the gaps between
---   intervals in the input container. *To work properly, the input should be 
---   sorted*. This version outputs a list. See 'gaps' for a version that lifts
---   the result to same input structure @f@.
+{- | Returns a (possibly empty) list of intervals consisting of the gaps between
+intervals in the input container.
+__To work properly, the input should be sorted.__ This version outputs a list.
+See 'gaps' for a version that lifts the result to same input structure @f@.
+
+>>> x1 = bi 4 1
+>>> x2 = bi 4 8
+>>> x3 = bi 3 11
+>>> ivs = [x1, x2, x3]
+>>> ivs
+[(1, 5),(8, 12),(11, 14)]
+>>> gapIvs = gapsL ivs
+>>> gapIvs
+[]
+>>> :{
+pretty $ standardExampleDiagram (zip ivs ["x1", "x2", "x3"]) []
+:}
+ ----          <- [x1]
+        ----   <- [x2]
+           --- <- [x3]
+==============
+
+>>> x1 = bi 4 1
+>>> x2 = bi 3 7
+>>> x3 = bi 2 13
+>>> ivs = [x1, x2, x3]
+>>> ivs
+[(1, 5),(7, 10),(13, 15)]
+>>> gapIvs = gapsL ivs
+>>> gapIvs
+[(5, 7),(10, 13)]
+>>> :{
+pretty $
+  standardExampleDiagram (zip ivs ["x1", "x2", "x3"]) [(gapIvs, "gapIvs")]
+:}
+ ----           <- [x1]
+       ---      <- [x2]
+             -- <- [x3]
+     --   ---   <- [gapIvs]
+===============
+-}
 gapsL
   :: ( IntervalCombinable i a
      , Applicative f
@@ -400,7 +471,7 @@ gapsL x = maybe [] toList (gaps x)
 
 -- | Returns the 'duration' of each 'Intervallic i a' in the 'Functor' @f@.
 --
--- >>> durations [iv 9 1, iv 10 2, iv 1 5]
+-- >>> durations [bi 9 1, bi 10 2, bi 1 5 :: Interval Int]
 -- [9,10,1]
 --
 durations :: (Functor f, Intervallic i, IntervalSizeable a b) => f (i a) -> f b
@@ -408,10 +479,10 @@ durations = fmap duration
 
 -- | In the case that x y are not disjoint, clips y to the extent of x.
 -- 
--- >>> clip (iv 5 0) (iv 3 3)
+-- >>> clip (bi 5 0) ((bi 3 3) :: Interval Int)
 -- Just (3, 5)
 --
--- >>> clip (iv 3 0) (iv 2 4)
+-- >>> clip (bi 3 0) ((bi 2 4) :: Interval Int)
 -- Nothing
 --
 clip
@@ -430,14 +501,14 @@ clip x y
   jx = starts <|> during <|> finishes
 {-# INLINABLE clip #-}
 
--- | Applies 'gaps' to all the non-disjoint intervals in @x@ that are *not* disjoint
+-- | Applies 'gaps' to all the non-disjoint intervals in @x@ that are /not/ disjoint
 -- from @i@. Intervals that 'overlaps' or are 'overlappedBy' @i@ are 'clip'ped 
 -- to @i@, so that all the intervals are 'within' @i@. If all of the input intervals 
 -- are disjoint from the focal interval or if the input is empty, then 'Nothing' 
 -- is returned. When there are no gaps among the concurring intervals, then 
--- `Just mempty` (e.g. `Just []`) is returned.
+-- @Just mempty@ (e.g. @Just []@) is returned.
 --
--- >>> gapsWithin (iv 9 1) [iv 5 0, iv 2 7, iv 3 12]
+-- >>> gapsWithin (bi 9 1) [bi 5 0, bi 2 7, bi 3 12]
 -- Just [(5, 7),(9, 10)]
 --
 gapsWithin
@@ -461,36 +532,54 @@ gapsWithin i x | null ivs  = Nothing
   res = catMaybes $ gapsM (s <> ivs <> e)
 {-# INLINABLE gapsWithin #-}
 
--- | Returns a container of intervals where any intervals that meet or share
--- support are combined into one interval. This functions sorts the input
--- intervals first.  See @combineIntervalsL@ for a version that works only on
--- lists. If you know the input intervals are sorted, use
--- @combineIntervalsFromSorted@ instead.
---
--- >>> combineIntervals [iv 10 0, iv 5 2, iv 2 10, iv 2 13]
--- [(0, 12),(13, 15)]
---
+{- | Returns a container of intervals where any intervals that meet or share
+support are combined into one interval. This functions sorts the input intervals
+first. See @combineIntervalsL@ for a version that works only on lists. If you
+know the input intervals are sorted, use @combineIntervalsFromSorted@ instead.
+
+>>> x1 = bi 10 0
+>>> x2 = bi 5 2
+>>> x3 = bi 2 10
+>>> x4 = bi 2 13
+>>> ivs = [x1, x2, x3, x4]
+>>> ivs
+[(0, 10),(2, 7),(10, 12),(13, 15)]
+>>> xComb = combineIntervals ivs
+>>> xComb
+[(0, 12),(13, 15)]
+>>> :{
+pretty $
+  standardExampleDiagram
+    (zip ivs ["x1", "x2", "x3", "x4"])
+    [(xComb, "xComb")]
+:}
+----------      <- [x1]
+  -----         <- [x2]
+          --    <- [x3]
+             -- <- [x4]
+------------ -- <- [xComb]
+===============
+-}
 combineIntervals
   :: (Applicative f, Ord a, Intervallic i, Monoid (f (Interval a)), Foldable f)
   => f (i a)
   -> f (Interval a)
 combineIntervals = combineIntervalsWith combineIntervalsL
 
--- | Returns a container of intervals where any intervals that meet or share support
---   are combined into one interval. The condition is applied cumulatively,
---   from left to right, so *to work properly, the input list should be
---   sorted in increasing order*. See @combineIntervalsLFromSorted@ for a
---   version that works only on lists.
---
--- >>> combineIntervalsFromSorted [iv 10 0, iv 5 2, iv 2 10, iv 2 13]
--- [(0, 12),(13, 15)]
---
+{- | Returns a container of intervals where any intervals that meet or share
+support are combined into one interval. The condition is applied cumulatively,
+from left to right, so
+__to work properly, the input list should be sorted in increasing order__. See
+@combineIntervalsLFromSorted@ for a version that works only on lists.
+
+>>> combineIntervalsFromSorted [bi 10 0, bi 5 2, bi 2 10, bi 2 13]
+[(0, 12),(13, 15)]
+-}
 combineIntervalsFromSorted
   :: (Applicative f, Ord a, Intervallic i, Monoid (f (Interval a)), Foldable f)
   => f (i a)
   -> f (Interval a)
 combineIntervalsFromSorted = combineIntervalsWith combineIntervalsFromSortedL
-
 
 -- | Unexported helper
 combineIntervalsWith
@@ -500,30 +589,47 @@ combineIntervalsWith
   -> f (Interval a)
 combineIntervalsWith f x = foldl' (\x y -> x <> pure y) mempty (f $ toList x)
 
--- | Returns a list of intervals where any intervals that meet or share support
---   are combined into one interval. This function sorts the input. If you know
---   the input intervals are sorted, use @combineIntervalsLFromSorted@.
---
--- >>> combineIntervalsL [iv 10 0, iv 5 2, iv 2 10, iv 2 13]
--- [(0, 12),(13, 15)]
---
--- >>> combineIntervalsL [iv 0 8, iv 10 0, iv 5 2]
--- [(0, 10)]
---
+{- | Returns a list of intervals where any intervals that meet or share support
+are combined into one interval. This function sorts the input. If you know the
+input intervals are sorted, use @combineIntervalsLFromSorted@.
+
+>>> x1 = bi 10 0
+>>> x2 = bi 5 2
+>>> x3 = bi 2 10
+>>> x4 = bi 2 13
+>>> ivs = [x1, x2, x3, x4]
+>>> ivs
+[(0, 10),(2, 7),(10, 12),(13, 15)]
+>>> xComb = combineIntervalsL ivs
+>>> xComb
+[(0, 12),(13, 15)]
+>>> :{
+pretty $
+  standardExampleDiagram
+    (zip ivs ["x1", "x2", "x3", "x4"])
+    [(xComb, "xComb")]
+:}
+----------      <- [x1]
+  -----         <- [x2]
+          --    <- [x3]
+             -- <- [x4]
+------------ -- <- [xComb]
+===============
+-}
 combineIntervalsL :: (Intervallic i, Ord a) => [i a] -> [Interval a]
 combineIntervalsL = combineIntervalsFromSortedL . sortOn getInterval
 
--- | Returns a list of intervals where any intervals that meet or share support
--- are combined into one interval. The operation is applied cumulatively, from
--- left to right, so *to work properly, the input list should be sorted in
--- increasing order*.
---
--- >>> combineIntervalsFromSortedL [iv 10 0, iv 5 2, iv 2 10, iv 2 13]
--- [(0, 12),(13, 15)]
---
--- >>> combineIntervalsFromSortedL [iv 10 0, iv 5 2, iv 0 8]
--- [(0, 10)]
+{- | Returns a list of intervals where any intervals that meet or share support
+are combined into one interval. The operation is applied cumulatively, from left
+to right, so
+__to work properly, the input list should be sorted in increasing order__.
 
+>>> combineIntervalsFromSortedL [bi 10 0, bi 5 2, bi 2 10, bi 2 13]
+[(0, 12),(13, 15)]
+
+>>> combineIntervalsFromSortedL [bi 10 0, bi 5 2, bi 0 8]
+[(0, 10)]
+-}
 combineIntervalsFromSortedL
   :: forall a i . (Ord a, Intervallic i) => [i a] -> [Interval a]
 combineIntervalsFromSortedL = reverse . foldl' op []
@@ -535,17 +641,41 @@ combineIntervalsFromSortedL = reverse . foldl' op []
     else extenterval x yiv : xs
     where yiv = getInterval y
 
--- | Maybe form an @Interval a@ from @Control.Foldl t => t (Interval
--- a)@ spanning the range of all intervals in the list, i.e.  whose @begin@ is
--- the minimum of @begin@ across intervals in the list and whose @end@ is the
--- maximum of @end@. 
---
--- >>> rangeInterval [beginerval 0 0, beginerval 0 (-1)]
--- Just (-1, 1)
--- >>> rangeInterval ([] :: [Interval Int])
--- Nothing
--- >>> rangeInterval (Just (beginerval 0 0))
--- Just (0, 1)
+{- | @Maybe@ form an @Interval a@ from @Control.Foldl t => t (Interval a)@
+spanning the range of all intervals in the list, i.e. whose @begin@ is the
+minimum of @begin@ across intervals in the list and whose @end@ is the maximum
+of @end@.
+
+>>> rangeInterval ([] :: [Interval Int])
+Nothing
+
+>>> x1 = bi 2 2
+>>> x2 = bi 3 6
+>>> x3 = bi 4 7
+>>> ivs = [x1, x2, x3] :: [Interval Int]
+>>> ivs
+[(2, 4),(6, 9),(7, 11)]
+>>> spanIv = rangeInterval ivs
+>>> spanIv
+Just (2, 11)
+>>> :{
+case spanIv of
+  Nothing -> pretty ""
+  (Just x) -> pretty $ standardExampleDiagram
+    (zip (ivs ++ [x]) ["x1", "x2", "x3", "spanIv"])
+    []
+:}
+  --        <- [x1]
+      ---   <- [x2]
+       ---- <- [x3]
+  --------- <- [spanIv]
+===========
+
+>>> rangeInterval Nothing
+Nothing
+>>> rangeInterval (Just (bi 1 0))
+Just (0, 1)
+-}
 rangeInterval :: (Ord a, L.Foldable t) => t (Interval a) -> Maybe (Interval a)
 rangeInterval = L.fold (liftA2 extenterval <$> L.minimum <*> L.maximum)
 
@@ -567,12 +697,12 @@ nothingIf quantifier predicate x =
 -- For example, the following returns 'Nothing' because none of the intervals
 -- in the input list 'starts' (3, 5).
 --
--- >>> nothingIfNone (starts (iv 2 3)) [iv 1 3, iv 1 5]
+-- >>> nothingIfNone (starts (bi 2 3)) [bi 1 3, bi 1 5]
 -- Nothing
 --
 -- In the following, (3, 5) 'starts' (3, 6), so 'Just' the input is returned.
 --
--- >>> nothingIfNone (starts (iv 2 3)) [iv 3 3, iv 1 5]
+-- >>> nothingIfNone (starts (bi 2 3)) [bi 3 3, bi 1 5]
 -- Just [(3, 6),(5, 6)]
 --
 nothingIfNone
@@ -584,10 +714,10 @@ nothingIfNone = nothingIf (\f x -> (not . any f) x)
 
 -- | Returns 'Nothing' if *any* of the element of input satisfy the predicate condition.
 --
--- >>> nothingIfAny (startedBy (iv 2 3)) [iv 3 3, iv 1 5]
+-- >>> nothingIfAny (startedBy (bi 2 3)) [bi 3 3, bi 1 5]
 -- Just [(3, 6),(5, 6)]
 --
--- >>> nothingIfAny (starts (iv 2 3)) [iv 3 3, iv 1 5]
+-- >>> nothingIfAny (starts (bi 2 3)) [bi 3 3, bi 1 5]
 -- Nothing
 --
 nothingIfAny
@@ -599,7 +729,7 @@ nothingIfAny = nothingIf any
 
 -- | Returns 'Nothing' if *all* of the element of input satisfy the predicate condition.
 --
--- >>> nothingIfAll (starts (iv 2 3)) [iv 3 3, iv 4 3]
+-- >>> nothingIfAll (starts (bi 2 3)) [bi 3 3, bi 4 3]
 -- Nothing
 --
 nothingIfAll
@@ -824,4 +954,3 @@ allMeet x = all (== Meets) (relationsL x)
 
 hasEqData :: (Eq b) => [PairedInterval b a] -> Bool
 hasEqData x = or (L.fold (makeFolder (==)) (fmap getPairData x) :: [Bool])
-
