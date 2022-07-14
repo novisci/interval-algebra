@@ -83,7 +83,7 @@ module IntervalAlgebra.Core
   , notDisjoint
   , concur
   , within
-  , enclose
+  , encloses
   , enclosedBy
   , (<|>)
   , predicate
@@ -750,7 +750,7 @@ within = predicate withinRelations
 enclosedBy = within
 
 
-{- | Does x `enclose` y? That is, is y 'within' x?
+{- | Does x `encloses` y? That is, is y 'within' x?
 
 Example data with corresponding diagram:
 
@@ -763,10 +763,10 @@ Example data with corresponding diagram:
 
 Examples:
 
->>> x `enclose` y
+>>> x `encloses` y
 True
 
->>> y `enclose` x
+>>> y `encloses` x
 True
 
 Example data with corresponding diagram:
@@ -780,10 +780,10 @@ Example data with corresponding diagram:
 
 Examples:
 
->>> x `enclose` y
+>>> x `encloses` y
 True
 
->>> y `enclose` x
+>>> y `encloses` x
 False
 
 Example data with corresponding diagram:
@@ -797,10 +797,10 @@ Example data with corresponding diagram:
 
 Examples:
 
->>> x `enclose` y
+>>> x `encloses` y
 True
 
->>> y `enclose` x
+>>> y `encloses` x
 False
 
 Example data with corresponding diagram:
@@ -814,16 +814,16 @@ Example data with corresponding diagram:
 
 Examples:
 
->>> x `enclose` y
+>>> x `encloses` y
 False
 
->>> y `enclose` x
+>>> y `encloses` x
 False
 -}
-enclose
+encloses
   :: (Ord a, Intervallic i0, Intervallic i1)
   => ComparativePredicateOf2 (i0 a) (i1 a)
-enclose = flip enclosedBy
+encloses = flip enclosedBy
 
 -- | The 'Data.Set.Set' of all 'IntervalRelation's.
 intervalRelations :: Data.Set.Set IntervalRelation

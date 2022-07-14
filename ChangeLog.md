@@ -8,6 +8,7 @@
 * Renames `labeledIntervalDiagram` to `standardExampleDiagram` and updates the function as follows:
   * Adds an additional formal argument that can accept multiple intervals for a single row in the diagram.
   * Adds a `Num a` constraint to the function type signature and ensures that the 0 value is included in the diagram reference line.
+* Renames `enclose` to `encloses` so tense is consistent with other relations
 
 ## 2.0.3
 

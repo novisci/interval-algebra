@@ -57,7 +57,7 @@ module IntervalAlgebra.IntervalUtilities
   , filterNotDisjoint
   , filterConcur
   , filterWithin
-  , filterEnclose
+  , filterEncloses
   , filterEnclosedBy
 
     -- * Functions for manipulating intervals
@@ -147,8 +147,8 @@ import safe      IntervalAlgebra.Core           ( (<|>)
                                                 , contains
                                                 , disjoint
                                                 , during
-                                                , enclose
                                                 , enclosedBy
+                                                , encloses
                                                 , end
                                                 , enderval
                                                 , endervalFromBegin
@@ -753,7 +753,7 @@ Filter 'Witherable.Filterable' containers of one @'Intervallic'@ type based by c
 a (potentially different) 'Intervallic' type using the corresponding interval
 predicate function.
 -}
-filterOverlaps, filterOverlappedBy, filterBefore, filterAfter, filterStarts, filterStartedBy, filterFinishes, filterFinishedBy, filterMeets, filterMetBy, filterDuring, filterContains, filterEquals, filterDisjoint, filterNotDisjoint, filterConcur, filterWithin, filterEnclose, filterEnclosedBy
+filterOverlaps, filterOverlappedBy, filterBefore, filterAfter, filterStarts, filterStartedBy, filterFinishes, filterFinishedBy, filterMeets, filterMetBy, filterDuring, filterContains, filterEquals, filterDisjoint, filterNotDisjoint, filterConcur, filterWithin, filterEncloses, filterEnclosedBy
   :: (Filterable f, Ord a, Intervallic i0, Intervallic i1)
   => i0 a
   -> f (i1 a)
@@ -775,7 +775,7 @@ filterDisjoint = makeFilter disjoint
 filterNotDisjoint = makeFilter notDisjoint
 filterConcur = makeFilter concur
 filterWithin = makeFilter within
-filterEnclose = makeFilter enclose
+filterEncloses = makeFilter encloses
 filterEnclosedBy = makeFilter enclosedBy
 
 -- | Folds over a list of Paired Intervals and in the case that the 'getPairData' 
