@@ -818,7 +818,7 @@ Additional points of note:
 | `concur` (a synonym of `notDisjoint`)
 | Do *none* of the relations hold: `Before`, `After`, `Meets`, `MetBy`?
 
-| `enclose`
+| `encloses`
 | Does *one* of the relations hold: `StartedBy`, `Contains`, `FinishedBy`, `Equals`?
 
 | `enclosedby` (a synonym of `within`)
@@ -833,7 +833,7 @@ Additional points of note:
 
 * The `disjoint` and ``notDisjoint``/``concur`` predicates are complements of each other in the sense that `pass:[x `disjoint` y]`
 and `pass:[not (x `notDisjoint` y)]` evalute to the same value for any pair of `x` and `y`.
-* The `enclose` and `enclosedBy`/`within` predicates are duals of each other in the sense that `pass:[x `enclose` y]`
+* The `encloses` and `enclosedBy`/`within` predicates are duals of each other in the sense that `pass:[x `encloses` y]`
 and `pass:[y `enclosedBy` x]` evalute to the same value for any pair of `x` and `y`.
 
 

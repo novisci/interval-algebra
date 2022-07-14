@@ -145,11 +145,11 @@ class ( IntervalSizeable a b ) => IntervalRelationProperties a b where
         -> Property
     prop_enclosedBy_predicate = prop_predicate_unions withinRelations enclosedBy
 
-    prop_enclose_predicate :: (Ord a) =>
+    prop_encloses_predicate :: (Ord a) =>
           Interval a
         -> Interval a
         -> Property
-    prop_enclose_predicate = prop_predicate_unions (converse withinRelations) enclose
+    prop_encloses_predicate = prop_predicate_unions (converse withinRelations) encloses
 
 instance IntervalRelationProperties Int Int
 instance IntervalRelationProperties Day Integer

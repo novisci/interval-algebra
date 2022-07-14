@@ -53,8 +53,8 @@ import           IntervalAlgebra.IntervalUtilities
                                                 , filterContains
                                                 , filterDisjoint
                                                 , filterDuring
-                                                , filterEnclose
                                                 , filterEnclosedBy
+                                                , filterEncloses
                                                 , filterEquals
                                                 , filterFinishedBy
                                                 , filterFinishes
@@ -439,10 +439,10 @@ class ( Ord a ) => FiltrationProperties a  where
       -> Property
    prop_filterEnclosedBy = prop_filtration filterEnclosedBy withinRelations
 
-   prop_filterEnclose :: Interval a
+   prop_filterEncloses :: Interval a
       -> [Interval a]
       -> Property
-   prop_filterEnclose = prop_filtration filterEnclose (converse withinRelations)
+   prop_filterEncloses = prop_filtration filterEncloses (converse withinRelations)
 
    prop_filterConcur :: Interval a
       -> [Interval a]
@@ -569,7 +569,7 @@ spec = do
     it "filterNotDisjoint property" $ property (prop_filterNotDisjoint @Int)
     it "filterWithin property" $ property (prop_filterWithin @Int)
     it "filterConcur property" $ property (prop_filterConcur @Int)
-    it "filterEnclose property" $ property (prop_filterEnclose @Int)
+    it "filterEncloses property" $ property (prop_filterEncloses @Int)
     it "filterEnclosedBy property" $ property (prop_filterEnclosedBy @Int)
 
   describe "nothingIf unit tests" $ do
