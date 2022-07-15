@@ -3,7 +3,7 @@
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module TutorialMain where
+module Main where
 
 -- tag::import-declarations[]
 import IntervalAlgebra
