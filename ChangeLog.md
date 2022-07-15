@@ -1,14 +1,17 @@
 # Changelog for interval-algebra
 
-## 2.1
+## 2.1.0
 
-* Refactors the `Intervallic` typeclass.
+* Changes the type signature of the `Intervallic` typeclass.
 * Adds a package component `tutorial` used to provide data for a tutorial document.
 * Adds a tutorial document: _interval-algebra foundations_.
-* Renames `labeledIntervalDiagram` to `standardExampleDiagram` and updates the function as follows:
-  * Adds an additional formal argument that can accept multiple intervals for a single row in the diagram.
-  * Adds a `Num a` constraint to the function type signature and ensures that the 0 value is included in the diagram reference line.
-* Renames `enclose` to `encloses` so tense is consistent with other relations
+* Adds a function `standardExampleDiagram` to `IntervalAlgebra.IntervalDiagram` that can be concisely invoked in Haddock documentation examples.
+* Renames `enclose` to `encloses` so tense is consistent with other relational predicates.
+* Changes `combineIntervals` and `combineIntervalsL` to sort their inputs and adds new functions `combineIntervalsFromSorted` and `combineIntervalsFromSortedL` for cases when the input data already are sorted.
+* Removes the unnecessary `Ord` constraint from `begin` and `end`, made possible by the changes to `Intervallic`.
+* Removes `Functor Interval` instance and the `Functor`, `Bifunctor` instances of `PairedInterval`. It is not possible to write an instance that both satisfies the `Functor` laws and maintains the desired `Interval` property that the `begin` be strictly less than the `end`.
+* Minor changes to the `IntervalAlgebra.IntervalDiagram` module, such as re-exporting `Pretty` and its methods.
+* Deprecates `(<+>)`.
 
 ## 2.0.3
 
@@ -32,15 +35,7 @@
 
 * Adds `Abitrary (Interval a)` instance generic over `Ord a, Arbitrary a`.
 * Removes the `moment'` function from the `IntervalSizeable` class.
-Use type application with `moment` instead, as in `moment @Int`, `moment @Day`, etc.
-* Adds the following utility functions:
-`lookback`, `lookahead`, `makeGapsWithinPredicate`,
-`pairGaps`, `anyGapsWithinAtLeastDuration`, `allGapsWithinLessThanDuration`
-
-## 2.0
-
-* Removes the `moment'` function from the `IntervalSizeable` class.
-Use type application with `moment` instead, as in `moment @Int`, `moment @Day`, etc.
+* Use type application with `moment` instead, as in `moment @Int`, `moment @Day`, etc.
 * Adds the following utility functions:
 `lookback`, `lookahead`, `makeGapsWithinPredicate`,
 `pairGaps`, `anyGapsWithinAtLeastDuration`, `allGapsWithinLessThanDuration`
