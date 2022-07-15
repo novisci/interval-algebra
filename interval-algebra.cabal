@@ -112,7 +112,6 @@ test-suite interval-algebra-test
 
 executable tutorial
   main-is: TutorialMain.hs
-  ghc-options: -main-is TutorialMain
   hs-source-dirs: tutorial
   build-depends:
       base >=4.7 && <5
