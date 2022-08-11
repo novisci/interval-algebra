@@ -118,6 +118,6 @@ executable tutorial
     , containers ^>= 0.6
     , interval-algebra
     , prettyprinter ^>= 1.7
-    , time ^>= 1.9
+    , time >= 1.9 && < 2
     , witch ^>= 1.0
   default-language: Haskell2010
