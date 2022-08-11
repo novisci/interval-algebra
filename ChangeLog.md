@@ -1,5 +1,10 @@
 # Changelog for interval-algebra
 
+## 2.1.1
+
+* Makes the version bounds on the `time` package
+consistent among project components.
+
 ## 2.1.0
 
 * Changes the type signature of the `Intervallic` typeclass.
