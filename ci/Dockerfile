@@ -4,7 +4,7 @@
 # from scratch,
 # thus reducing CI times.
 ARG GHC
-FROM registry.novisci.com/nsstat/nsbuild/haskell:${GHC}
+FROM registry.gitlab.com/targetrwe/epistats/nsstat/nsbuild/haskell:${GHC}
 WORKDIR /project
 RUN cabal update
 COPY interval-algebra.cabal .

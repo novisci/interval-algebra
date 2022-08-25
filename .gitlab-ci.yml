@@ -2,6 +2,11 @@ variables:
   GHC: "8.10.7"
   PKG: interval-algebra
 
+# Tag all jobs with nsstat so that the nsstat runner is used:
+# https://gitlab.com/groups/TargetRWE/epistats/-/runners/16673355
+default: 
+  tags: ["nsstat"]
+
 # run on merge request and default branch
 workflow:
   rules:
@@ -34,7 +39,7 @@ is-draft:
 
 checks:
   stage: prep
-  image: registry.novisci.com/nsstat/nsbuild/haskell:${GHC}
+  image: registry.gitlab.com/targetrwe/epistats/nsstat/nsbuild/haskell:${GHC}
   script:
     - hlint --version
     - ./ci/ci-lint.sh
@@ -60,7 +65,7 @@ test:
       optional: true
     - job: docker-build
       optional: true
-  image: registry.novisci.com/nsstat/$PKG/$PKG-build:${VERSION}
+  image: registry.gitlab.com/targetrwe/epistats/nsstat/$PKG/$PKG-build:${VERSION}
   artifacts:
     paths:
     - "**/*.tix"
@@ -70,7 +75,7 @@ test:
 
 coverage-report:
   stage: coverage
-  image: registry.novisci.com/nsstat/$PKG/$PKG-build:latest
+  image: registry.gitlab.com/targetrwe/epistats/nsstat/$PKG/$PKG-build:latest
   needs:
     - job: build-vars
       artifacts: true
