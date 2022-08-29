@@ -6,104 +6,67 @@ module IntervalAlgebra.IntervalUtilitiesSpec
   ( spec
   ) where
 
-import           Control.Monad                  ( liftM2 )
-import           Data.List                      ( sort )
-import           Data.Maybe                     ( fromJust
-                                                , isJust
-                                                , isNothing
-                                                )
-import           Data.Set                       ( Set
-                                                , difference
-                                                , fromList
-                                                , member
-                                                , toList
-                                                )
-import qualified Data.Set                       ( null )
-import           Data.Time                      ( Day
-                                                , UTCTime
-                                                )
-import           IntervalAlgebra                ( Interval
-                                                , IntervalCombinable(..)
-                                                , IntervalRelation(..)
-                                                , IntervalSizeable
-                                                , Intervallic(..)
-                                                , beginerval
-                                                , complement
-                                                , converse
-                                                , disjointRelations
-                                                , duration
-                                                , intervalRelations
-                                                , moment
-                                                , predicate
-                                                , rangeInterval
-                                                , safeInterval
-                                                , starts
-                                                , strictWithinRelations
-                                                , withinRelations
-                                                )
-import           IntervalAlgebra.Arbitrary      ( arbitraryWithRelation )
-import           IntervalAlgebra.IntervalUtilities
-                                                ( clip
-                                                , combineIntervals
-                                                , combineIntervalsFromSorted
-                                                , durations
-                                                , filterAfter
-                                                , filterBefore
-                                                , filterConcur
-                                                , filterContains
-                                                , filterDisjoint
-                                                , filterDuring
-                                                , filterEnclosedBy
-                                                , filterEncloses
-                                                , filterEquals
-                                                , filterFinishedBy
-                                                , filterFinishes
-                                                , filterMeets
-                                                , filterMetBy
-                                                , filterNotDisjoint
-                                                , filterOverlappedBy
-                                                , filterOverlaps
-                                                , filterStartedBy
-                                                , filterStarts
-                                                , filterWithin
-                                                , foldMeetingSafe
-                                                , formMeetingSequence
-                                                , gaps
-                                                , gapsL
-                                                , gapsWithin
-                                                , intersect
-                                                , nothingIfAll
-                                                , nothingIfAny
-                                                , nothingIfNone
-                                                , relationsL
-                                                )
-import           IntervalAlgebra.PairedInterval ( PairedInterval
-                                                , getPairData
-                                                , makePairedInterval
-                                                , trivialize
-                                                )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
-import           Test.Hspec.QuickCheck          ( modifyMaxDiscardRatio
-                                                , modifyMaxSuccess
-                                                )
-import           Test.QuickCheck                ( (===)
-                                                , (==>)
-                                                , Arbitrary(arbitrary, shrink)
-                                                , Arbitrary1(liftArbitrary)
-                                                , Property
-                                                , Testable(property)
-                                                , elements
-                                                , listOf
-                                                , orderedList
-                                                , resize
-                                                , sublistOf
-                                                , suchThat
-                                                )
-import           Witherable                     ( Filterable )
+import           Control.Monad                     (liftM2)
+import           Data.List                         (sort)
+import           Data.Maybe                        (fromJust, isJust, isNothing)
+import           Data.Set                          (Set, difference, fromList,
+                                                    member, toList)
+import qualified Data.Set                          (null)
+import           Data.Time                         (Day, UTCTime)
+import           IntervalAlgebra                   (Interval,
+                                                    IntervalCombinable (..),
+                                                    IntervalRelation (..),
+                                                    IntervalSizeable,
+                                                    Intervallic (..),
+                                                    beginerval, complement,
+                                                    converse, disjointRelations,
+                                                    duration, intervalRelations,
+                                                    moment, predicate,
+                                                    rangeInterval, safeInterval,
+                                                    starts,
+                                                    strictWithinRelations,
+                                                    withinRelations)
+import           IntervalAlgebra.Arbitrary         (arbitraryWithRelation)
+import           IntervalAlgebra.IntervalUtilities (clip, combineIntervals,
+                                                    combineIntervalsFromSorted,
+                                                    durations, filterAfter,
+                                                    filterBefore, filterConcur,
+                                                    filterContains,
+                                                    filterDisjoint,
+                                                    filterDuring,
+                                                    filterEnclosedBy,
+                                                    filterEncloses,
+                                                    filterEquals,
+                                                    filterFinishedBy,
+                                                    filterFinishes, filterMeets,
+                                                    filterMetBy,
+                                                    filterNotDisjoint,
+                                                    filterOverlappedBy,
+                                                    filterOverlaps,
+                                                    filterStartedBy,
+                                                    filterStarts, filterWithin,
+                                                    foldMeetingSafe,
+                                                    formMeetingSequence, gaps,
+                                                    gapsL, gapsWithin,
+                                                    intersect, nothingIfAll,
+                                                    nothingIfAny, nothingIfNone,
+                                                    relationsL)
+import           IntervalAlgebra.PairedInterval    (PairedInterval, getPairData,
+                                                    makePairedInterval,
+                                                    trivialize)
+import           Test.Hspec                        (Spec, describe, it,
+                                                    shouldBe)
+import           Test.Hspec.QuickCheck             (modifyMaxDiscardRatio,
+                                                    modifyMaxSuccess)
+import           Test.QuickCheck                   (Arbitrary (arbitrary, shrink),
+                                                    Arbitrary1 (liftArbitrary),
+                                                    Property,
+                                                    Testable (property),
+                                                    elements, listOf,
+                                                    orderedList, resize,
+                                                    sublistOf, suchThat, (===),
+                                                    (==>))
+import           Witherable                        (Filterable)
 
 -- Types for testing
 

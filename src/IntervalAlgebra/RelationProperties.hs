@@ -5,7 +5,7 @@ Copyright   : (c) NoviSci, Inc 2020
 License     : BSD3
 Maintainer  : bsaul@novisci.com
 
-This module exports a single typeclass @IntervalAxioms@ which contains 
+This module exports a single typeclass @IntervalAxioms@ which contains
 property-based tests for the axioms in section 1 of [Allen and Hayes (1987)](https://doi.org/10.1111/j.1467-8640.1989.tb00329.x).
 The notation below is that of the original paper.
 
@@ -13,34 +13,21 @@ This module is useful if creating a new instance of interval types that you want
 
 -}
 {- HLINT ignore -}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 module IntervalAlgebra.RelationProperties
   ( IntervalRelationProperties(..)
   ) where
 
-import           Data.Maybe                     ( fromJust
-                                                , isJust
-                                                , isNothing
-                                                )
-import           Data.Set                       ( Set
-                                                , disjointUnion
-                                                , fromList
-                                                , member
-                                                )
-import           Data.Time                     as DT
-                                                ( Day
-                                                , NominalDiffTime
-                                                , UTCTime
-                                                )
+import           Data.Maybe                (fromJust, isJust, isNothing)
+import           Data.Set                  (Set, disjointUnion, fromList,
+                                            member)
+import           Data.Time                 as DT (Day, NominalDiffTime, UTCTime)
 import           IntervalAlgebra.Arbitrary
 import           IntervalAlgebra.Core
-import           Test.QuickCheck                ( (===)
-                                                , (==>)
-                                                , Arbitrary(arbitrary)
-                                                , Property
-                                                )
+import           Test.QuickCheck           (Arbitrary (arbitrary), Property,
+                                            (===), (==>))
 
 allIArelations :: (Ord a) => [ComparativePredicateOf1 (Interval a)]
 allIArelations =
@@ -59,7 +46,7 @@ allIArelations =
   , contains
   ]
 
--- | A collection of properties for the interval algebra. Some of these come from 
+-- | A collection of properties for the interval algebra. Some of these come from
 --   figure 2 in  [Allen and Hayes (1987)](https://doi.org/10.1111/j.1467-8640.1989.tb00329.x).
 class ( IntervalSizeable a b ) => IntervalRelationProperties a b where
 
@@ -68,8 +55,8 @@ class ( IntervalSizeable a b ) => IntervalRelationProperties a b where
     prop_exclusiveRelations x y =
       (  1 == length (filter id $ map (\r -> r x y) allIArelations)) === True
 
-    -- | Given a set of interval relations and predicate function, test that the 
-    -- predicate between two interval is equivalent to the relation of two intervals 
+    -- | Given a set of interval relations and predicate function, test that the
+    -- predicate between two interval is equivalent to the relation of two intervals
     -- being in the set of relations.
     prop_predicate_unions :: Ord a =>
           Set IntervalRelation

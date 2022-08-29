@@ -8,11 +8,11 @@ Stability   : experimental
 
 -}
 
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE NoImplicitPrelude   #-}
+{-# LANGUAGE Safe                #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections       #-}
 
 module IntervalAlgebra.IntervalUtilities
   (
@@ -78,109 +78,55 @@ module IntervalAlgebra.IntervalUtilities
   , durations
   ) where
 
-import safe      Control.Applicative            ( (<$>)
-                                                , (<*>)
-                                                , Applicative(pure)
-                                                , liftA2
-                                                )
-import qualified Control.Foldl                 as L
-import safe      Control.Monad                  ( Functor(fmap) )
-import safe      Data.Bool                      ( (&&)
-                                                , Bool(..)
-                                                , not
-                                                , otherwise
-                                                , (||)
-                                                )
-import safe      Data.Eq                        ( Eq((==)) )
-import safe      Data.Foldable                  ( Foldable
-                                                  ( foldl'
-                                                  , foldr
-                                                  , null
-                                                  , toList
-                                                  )
-                                                , all
-                                                , any
-                                                , or
-                                                )
-import safe      Data.Function                  ( ($)
-                                                , (.)
-                                                , flip
-                                                )
-import safe      Data.List                      ( map
-                                                , reverse
-                                                , sortOn
-                                                )
-import safe      Data.Maybe                     ( Maybe(..)
-                                                , maybe
-                                                , maybeToList
-                                                )
-import safe      Data.Monoid                    ( Monoid(mempty) )
-import safe      Data.Ord                       ( (<)
-                                                , (>=)
-                                                , Ord(max, min)
-                                                )
-import safe      Data.Semigroup                 ( Semigroup((<>)) )
-import safe      Data.Traversable               ( Traversable(sequenceA) )
-import safe      Data.Tuple                     ( fst
-                                                , uncurry
-                                                )
-import safe      GHC.Int                        ( Int )
-import safe      GHC.Show                       ( Show )
-import safe      IntervalAlgebra.Core           ( (<|>)
-                                                , ComparativePredicateOf1
-                                                , ComparativePredicateOf2
-                                                , Interval
-                                                , IntervalCombinable((><))
-                                                , IntervalRelation(..)
-                                                , IntervalSizeable
-                                                  ( diff
-                                                  , duration
-                                                  )
-                                                , Intervallic(..)
-                                                , after
-                                                , before
-                                                , begin
-                                                , beginerval
-                                                , beginervalFromEnd
-                                                , bi
-                                                , concur
-                                                , contains
-                                                , disjoint
-                                                , during
-                                                , enclosedBy
-                                                , encloses
-                                                , end
-                                                , enderval
-                                                , endervalFromBegin
-                                                , equals
-                                                , extenterval
-                                                , finishedBy
-                                                , finishes
-                                                , meets
-                                                , metBy
-                                                , notDisjoint
-                                                , overlappedBy
-                                                , overlaps
-                                                , relate
-                                                , startedBy
-                                                , starts
-                                                , within
-                                                )
-import safe      IntervalAlgebra.PairedInterval ( PairedInterval
-                                                , equalPairData
-                                                , getPairData
-                                                , makePairedInterval
-                                                )
-import safe      Safe                           ( headMay
-                                                , initSafe
-                                                , lastMay
-                                                , tailSafe
-                                                )
-import safe      Witherable                     ( Filterable(filter)
-                                                , Witherable(..)
-                                                , catMaybes
-                                                , mapMaybe
-                                                )
+import safe           Control.Applicative            (Applicative (pure),
+                                                      liftA2, (<$>), (<*>))
+import qualified Control.Foldl                  as L
+import safe           Control.Monad                  (Functor (fmap))
+import safe           Data.Bool                      (Bool (..), not, otherwise,
+                                                      (&&), (||))
+import safe           Data.Eq                        (Eq ((==)))
+import safe           Data.Foldable                  (Foldable (foldl', foldr, null, toList),
+                                                      all, any, or)
+import safe           Data.Function                  (flip, ($), (.))
+import safe           Data.List                      (map, reverse, sortOn)
+import safe           Data.Maybe                     (Maybe (..), maybe,
+                                                      maybeToList)
+import safe           Data.Monoid                    (Monoid (mempty))
+import safe           Data.Ord                       (Ord (max, min), (<), (>=))
+import safe           Data.Semigroup                 (Semigroup ((<>)))
+import safe           Data.Traversable               (Traversable (sequenceA))
+import safe           Data.Tuple                     (fst, uncurry)
+import safe           GHC.Int                        (Int)
+import safe           GHC.Show                       (Show)
+import safe           IntervalAlgebra.Core           (ComparativePredicateOf1,
+                                                      ComparativePredicateOf2,
+                                                      Interval,
+                                                      IntervalCombinable ((><)),
+                                                      IntervalRelation (..),
+                                                      IntervalSizeable (diff, duration),
+                                                      Intervallic (..), after,
+                                                      before, begin, beginerval,
+                                                      beginervalFromEnd, bi,
+                                                      concur, contains,
+                                                      disjoint, during,
+                                                      enclosedBy, encloses, end,
+                                                      enderval,
+                                                      endervalFromBegin, equals,
+                                                      extenterval, finishedBy,
+                                                      finishes, meets, metBy,
+                                                      notDisjoint, overlappedBy,
+                                                      overlaps, relate,
+                                                      startedBy, starts, within,
+                                                      (<|>))
+import safe           IntervalAlgebra.PairedInterval (PairedInterval,
+                                                      equalPairData,
+                                                      getPairData,
+                                                      makePairedInterval)
+import safe           Safe                           (headMay, initSafe,
+                                                      lastMay, tailSafe)
+import safe           Witherable                     (Filterable (filter),
+                                                      Witherable (..),
+                                                      catMaybes, mapMaybe)
 
 {- $setup
 >>> import GHC.List ( (++), zip )
@@ -237,7 +183,7 @@ pairGaps es = fmap (fmap duration . uncurry (><)) (pairs es)
     go []       = []
     go (x : xs) = fmap (x, ) xs <> go xs
 
--- | Creates a new @Interval@ of a provided lookback duration ending at the 
+-- | Creates a new @Interval@ of a provided lookback duration ending at the
 --   'begin' of the input interval.
 --
 -- >>> lookback 4 (beginerval 10 (1 :: Int))
@@ -249,7 +195,7 @@ lookback
   -> Interval a
 lookback d x = enderval d (begin x)
 
--- | Creates a new @Interval@ of a provided lookahead duration beginning at the 
+-- | Creates a new @Interval@ of a provided lookahead duration beginning at the
 --   'end' of the input interval.
 --
 -- >>> lookahead 4 (beginerval 1 (1 :: Int))
@@ -299,8 +245,8 @@ allGapsWithinLessThanDuration
 allGapsWithinLessThanDuration = makeGapsWithinPredicate all (<)
 
 
--- Used to combine two lists by combining the last element of @x@ and the first 
--- element of @y@ by @f@. The combining function @f@ will generally return a 
+-- Used to combine two lists by combining the last element of @x@ and the first
+-- element of @y@ by @f@. The combining function @f@ will generally return a
 -- singleton list in the case that the last of x and head of y can be combined
 -- or a two element list in the case they cannot.
 listCombiner
@@ -311,7 +257,7 @@ listCombiner
 listCombiner f x y = initSafe x <> f (lastMay x) (headMay y) <> tailSafe y
 {-# INLINABLE listCombiner #-}
 
--- | Returns a list of the 'IntervalRelation' between each consecutive pair 
+-- | Returns a list of the 'IntervalRelation' between each consecutive pair
 --   of intervals. This is just a specialized 'relations' which returns a list.
 --
 -- >>> relationsL [bi 1 0, bi 1 1]
@@ -321,7 +267,7 @@ relationsL
   :: (Foldable f, Ord a, Intervallic i) => f (i a) -> [IntervalRelation]
 relationsL = relations
 
--- | A generic form of 'relations' which can output any 'Applicative' and 
+-- | A generic form of 'relations' which can output any 'Applicative' and
 --   'Monoid' structure.
 --
 -- >>> (relations [bi 1 0,bi 1 1]) :: [IntervalRelation]
@@ -340,9 +286,9 @@ relations
 relations = L.fold (makeFolder relate)
 {-# INLINABLE relations #-}
 
--- | Forms a 'Just' new interval from the intersection of two intervals, 
+-- | Forms a 'Just' new interval from the intersection of two intervals,
 --   provided the intervals are not disjoint.
--- 
+--
 -- >>> intersect (bi 5 0) (bi 2 3)
 -- Just (3, 5)
 --
@@ -478,7 +424,7 @@ durations :: (Functor f, Intervallic i, IntervalSizeable a b) => f (i a) -> f b
 durations = fmap duration
 
 -- | In the case that x y are not disjoint, clips y to the extent of x.
--- 
+--
 -- >>> clip (bi 5 0) ((bi 3 3) :: Interval Int)
 -- Just (3, 5)
 --
@@ -502,10 +448,10 @@ clip x y
 {-# INLINABLE clip #-}
 
 -- | Applies 'gaps' to all the non-disjoint intervals in @x@ that are /not/ disjoint
--- from @i@. Intervals that 'overlaps' or are 'overlappedBy' @i@ are 'clip'ped 
--- to @i@, so that all the intervals are 'within' @i@. If all of the input intervals 
--- are disjoint from the focal interval or if the input is empty, then 'Nothing' 
--- is returned. When there are no gaps among the concurring intervals, then 
+-- from @i@. Intervals that 'overlaps' or are 'overlappedBy' @i@ are 'clip'ped
+-- to @i@, so that all the intervals are 'within' @i@. If all of the input intervals
+-- are disjoint from the focal interval or if the input is empty, then 'Nothing'
+-- is returned. When there are no gaps among the concurring intervals, then
 -- @Just mempty@ (e.g. @Just []@) is returned.
 --
 -- >>> gapsWithin (bi 9 1) [bi 5 0, bi 2 7, bi 3 12]
@@ -679,7 +625,7 @@ Just (0, 1)
 rangeInterval :: (Ord a, L.Foldable t) => t (Interval a) -> Maybe (Interval a)
 rangeInterval = L.fold (liftA2 extenterval <$> L.minimum <*> L.maximum)
 
--- | Given a predicate combinator, a predicate, and list of intervals, returns 
+-- | Given a predicate combinator, a predicate, and list of intervals, returns
 --   the input unchanged if the predicate combinator is @True@. Otherwise, returns
 --   an empty list. See 'nothingIfAny' and 'nothingIfNone' for examples.
 nothingIf
@@ -693,7 +639,7 @@ nothingIf quantifier predicate x =
 
 -- | Returns the 'Nothing' if *none* of the element of input satisfy
 --   the predicate condition.
--- 
+--
 -- For example, the following returns 'Nothing' because none of the intervals
 -- in the input list 'starts' (3, 5).
 --
@@ -739,8 +685,8 @@ nothingIfAll
   -> Maybe (f (i a))
 nothingIfAll = nothingIf all
 
--- | Creates a function for filtering a 'Witherable.Filterable' of @i1 a@s 
---   by comparing the @Interval a@s that of an @i0 a@. 
+-- | Creates a function for filtering a 'Witherable.Filterable' of @i1 a@s
+--   by comparing the @Interval a@s that of an @i0 a@.
 makeFilter
   :: (Filterable f, Intervallic i0, Intervallic i1)
   => ComparativePredicateOf2 (i0 a) (i1 a)
@@ -748,8 +694,8 @@ makeFilter
   -> (f (i1 a) -> f (i1 a))
 makeFilter f p = Witherable.filter (f p)
 
-{- | 
-Filter 'Witherable.Filterable' containers of one @'Intervallic'@ type based by comparing to 
+{- |
+Filter 'Witherable.Filterable' containers of one @'Intervallic'@ type based by comparing to
 a (potentially different) 'Intervallic' type using the corresponding interval
 predicate function.
 -}
@@ -778,21 +724,21 @@ filterWithin = makeFilter within
 filterEncloses = makeFilter encloses
 filterEnclosedBy = makeFilter enclosedBy
 
--- | Folds over a list of Paired Intervals and in the case that the 'getPairData' 
---   is equal between two sequential meeting intervals, these two intervals are 
+-- | Folds over a list of Paired Intervals and in the case that the 'getPairData'
+--   is equal between two sequential meeting intervals, these two intervals are
 --   combined into one. This function is "safe" in the sense that if the input is
 --   invalid and contains any sequential pairs of intervals with an @IntervalRelation@,
---   other than 'Meets', then the function returns an empty list. 
+--   other than 'Meets', then the function returns an empty list.
 foldMeetingSafe
   :: (Eq b, Ord a, Show a)
-  => [PairedInterval b a] -- ^ Be sure this only contains intervals 
+  => [PairedInterval b a] -- ^ Be sure this only contains intervals
                                   --   that sequentially 'meets'.
   -> [PairedInterval b a]
 foldMeetingSafe l = maybe [] (getMeeting . foldMeeting) (parseMeeting l)
 
--- | Folds over a list of Meeting Paired Intervals and in the case that the 'getPairData' 
---   is equal between two sequential meeting intervals, these two intervals are 
---   combined into one.  
+-- | Folds over a list of Meeting Paired Intervals and in the case that the 'getPairData'
+--   is equal between two sequential meeting intervals, these two intervals are
+--   combined into one.
 foldMeeting
   :: (Eq b, Ord a, Show a)
   => Meeting [PairedInterval b a]
@@ -800,7 +746,7 @@ foldMeeting
 foldMeeting (Meeting l) =
   foldl' joinMeetingPairedInterval (Meeting []) (packMeeting l)
 
--- This type identifies that @a@ contains intervals that sequentially meet one 
+-- This type identifies that @a@ contains intervals that sequentially meet one
 -- another.
 newtype Meeting a = Meeting { getMeeting :: a } deriving (Eq, Show)
 
@@ -845,12 +791,12 @@ join2MeetingWhen p (Just x) Nothing  = [x]
 join2MeetingWhen p (Just x) (Just y) | p x y = [setInterval y (extenterval x y)]
                                      | otherwise = pure x <> pure y
 
-{- | 
+{- |
 Takes two *ordered* events, x <= y, and "disjoins" them in the case that the
-two events have different states, creating a sequence (list) of new events that 
+two events have different states, creating a sequence (list) of new events that
 sequentially meet one another. Since x <= y, there are 7 possible interval
-relations between x and y. If the states of x and y are equal and x is not 
-before y, then x and y are combined into a single event. 
+relations between x and y. If the states of x and y are equal and x is not
+before y, then x and y are combined into a single event.
 -}
 disjoinPaired
   :: (Eq b, Monoid b, Show a, IntervalSizeable a c)
@@ -881,13 +827,13 @@ disjoinPaired o e = case relate x y of
   evp b e = ev (beginerval (diff e b) b)
 {-# INLINABLE disjoinPaired #-}
 
-{- | 
+{- |
 The internal function for converting a non-disjoint, ordered sequence of
 events into a disjoint, ordered sequence of events. The function operates
-by recursion on a pair of events and the input events. The first of the 
-is the accumulator set -- the disjoint events that need no longer be 
+by recursion on a pair of events and the input events. The first of the
+is the accumulator set -- the disjoint events that need no longer be
 compared to input events. The second of the pair are disjoint events that
-still need to be compared to be input events. 
+still need to be compared to be input events.
 -}
 recurseDisjoin
   :: (Monoid b, Eq b, IntervalSizeable a c, Show a)
@@ -895,19 +841,19 @@ recurseDisjoin
   -> [(PairedInterval b) a]
   -> [(PairedInterval b) a]
 recurseDisjoin (acc, o : os) []       = acc <> (o : os)           -- the "final" pattern
-recurseDisjoin (acc, []    ) []       = acc                 -- another "final" pattern 
+recurseDisjoin (acc, []    ) []       = acc                 -- another "final" pattern
 recurseDisjoin (acc, []    ) (e : es) = recurseDisjoin (acc, [e]) es -- the "initialize" pattern
 recurseDisjoin (acc, o : os) (e : es)
-  |                       -- the "operating" patterns 
+  |                       -- the "operating" patterns
      -- If input event is equal to the first comparator, skip the comparison.
     e == o = recurseDisjoin (acc, o : os) es
   |
 
-     {- If o is either before or meets e, then 
-     the first of the combined events can be put into the accumulator. 
-     That is, since the inputs events are ordered, once the beginning of o 
-     is before or meets e, then we are assured that all periods up to the 
-     beginning of o are fully disjoint and subsequent input events will 
+     {- If o is either before or meets e, then
+     the first of the combined events can be put into the accumulator.
+     That is, since the inputs events are ordered, once the beginning of o
+     is before or meets e, then we are assured that all periods up to the
+     beginning of o are fully disjoint and subsequent input events will
      not overlap these in any way. -}
     (before <|> meets) o e = recurseDisjoin
     (acc <> nh, recurseDisjoin ([], nt) os)
@@ -922,12 +868,12 @@ recurseDisjoin (acc, o : os) (e : es)
   nt = tailSafe n
 {-# INLINABLE recurseDisjoin #-}
 
-{- | 
+{- |
 Convert an ordered sequence of @PairedInterval b a@. that may have any interval relation
-('before', 'starts', etc) into a sequence of sequentially meeting @PairedInterval b a@. 
-That is, a sequence where one the end of one interval meets the beginning of 
+('before', 'starts', etc) into a sequence of sequentially meeting @PairedInterval b a@.
+That is, a sequence where one the end of one interval meets the beginning of
 the subsequent event. The 'getPairData' of the input @PairedIntervals@ are
-combined using the Monoid '<>' function, hence the pair data must be a 
+combined using the Monoid '<>' function, hence the pair data must be a
 'Monoid' instance.
 -}
 formMeetingSequence
@@ -940,7 +886,7 @@ formMeetingSequence x
   | otherwise = formMeetingSequence (recurseDisjoin ([], []) x)
   -- recurseDisjoin ([], []) (recurseDisjoin ([], []) (recurseDisjoin ([], []) x))
 
-   -- the multiple passes of recurseDisjoin is to handle the situation where the 
+   -- the multiple passes of recurseDisjoin is to handle the situation where the
    -- initial passes almost disjoins all the events correctly into a meeting sequence
    -- but due to nesting of intervals in the input -- some of the sequential pairs have
    -- the same data after the first pass. The recursive passes merges any sequential

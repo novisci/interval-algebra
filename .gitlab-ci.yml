@@ -1,5 +1,5 @@
 variables:
-  GHC: "8.10.7"
+  GHC: "9.2.2"
   PKG: interval-algebra
 
 # Tag all jobs with nsstat so that the nsstat runner is used:
