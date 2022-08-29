@@ -47,7 +47,7 @@ checks:
 
 docker-build:
  stage : build
- image: docker:19.03.8
+ image: docker:20.10.16
  needs:
     - job: checks
     - job: build-vars

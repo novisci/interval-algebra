@@ -55,5 +55,5 @@ hpc sum "${tixFiles[@]}" \
 
 # FIXME: hardcoded "x86_64-linux" in --srcdir
 hpc report coverage.tix \
-    --srcdir=dist-newstyle/build/x86_64-linux/ghc-8.10.7/"$PKG"-"$VERSION"\
+    --srcdir=dist-newstyle/build/x86_64-linux/ghc-"$GHC"/"$PKG"-"$VERSION"\
     --hpcdir=hpc/vanilla/mix/"$PKG"-"$VERSION"
