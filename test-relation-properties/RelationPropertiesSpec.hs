@@ -1,21 +1,15 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeApplications      #-}
 module RelationPropertiesSpec
   ( spec
   ) where
 
 import           Data.Time
-import           IntervalAlgebra.RelationProperties
-                                                ( IntervalRelationProperties(..)
-                                                )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , hspec
-                                                , it
-                                                )
-import           Test.Hspec.QuickCheck          ( modifyMaxSuccess )
+import           IntervalAlgebra.RelationProperties (IntervalRelationProperties (..))
+import           Test.Hspec                         (Spec, describe, hspec, it)
+import           Test.Hspec.QuickCheck              (modifyMaxSuccess)
 import           Test.QuickCheck
 
 testScale = 100

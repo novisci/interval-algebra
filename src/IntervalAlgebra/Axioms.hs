@@ -6,7 +6,7 @@ Copyright   : (c) NoviSci, Inc 2020
 License     : BSD3
 Maintainer  : bsaul@novisci.com
 
-This module exports a single typeclass @IntervalAxioms@ which contains 
+This module exports a single typeclass @IntervalAxioms@ which contains
 property-based tests for the axioms in section 1 of [Allen and Hayes (1987)](https://doi.org/10.1111/j.1467-8640.1989.tb00329.x).
 The notation below is that of the original paper.
 
@@ -14,7 +14,7 @@ This module is useful if creating a new instance of interval types that you want
 
 -}
 
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 
@@ -25,29 +25,16 @@ module IntervalAlgebra.Axioms
   , M5set(..)
   ) where
 
-import           Data.Either                    ( isRight )
-import           Data.Maybe                     ( fromJust
-                                                , isJust
-                                                , isNothing
-                                                )
-import           Data.Set                       ( Set
-                                                , disjointUnion
-                                                , fromList
-                                                , member
-                                                )
-import           Data.Time                     as DT
-                                                ( Day(..)
-                                                , DiffTime
-                                                , NominalDiffTime
-                                                , UTCTime(..)
-                                                )
+import           Data.Either               (isRight)
+import           Data.Maybe                (fromJust, isJust, isNothing)
+import           Data.Set                  (Set, disjointUnion, fromList,
+                                            member)
+import           Data.Time                 as DT (Day (..), DiffTime,
+                                                  NominalDiffTime, UTCTime (..))
 import           IntervalAlgebra.Arbitrary
 import           IntervalAlgebra.Core
-import           Test.QuickCheck                ( (===)
-                                                , (==>)
-                                                , Arbitrary(arbitrary)
-                                                , Property
-                                                )
+import           Test.QuickCheck           (Arbitrary (arbitrary), Property,
+                                            (===), (==>))
 
 
 xor :: Bool -> Bool -> Bool
@@ -161,12 +148,12 @@ class ( IntervalSizeable a b ) => IntervalAxioms a b where
     == Axiom M1
 
     The first axiom of Allen and Hayes (1987) states that if "two periods both
-    meet a third, thn any period met by one must also be met by the other." 
+    meet a third, thn any period met by one must also be met by the other."
     That is:
 
     \[
       \forall \text{ i,j,k,l } s.t. (i:j \text{ & } i:k \text{ & } l:j) \implies l:k
-    \] 
+    \]
     -}
     prop_IAaxiomM1 :: (Ord a) => M1set a -> Property
     prop_IAaxiomM1 x =
@@ -188,21 +175,21 @@ class ( IntervalSizeable a b ) => IntervalAxioms a b where
 
     == Axiom M2
 
-    If period i meets period j and period k meets l, 
+    If period i meets period j and period k meets l,
     then exactly one of the following holds:
 
-      1) i meets l; 
-      2) there is an m such that i meets m and m meets l; 
+      1) i meets l;
+      2) there is an m such that i meets m and m meets l;
       3) there is an n such that k meets n and n meets j.
-      
+
     That is,
 
     \[
-      \forall i,j,k,l s.t. (i:j \text { & } k:l) \implies 
-        i:l \oplus 
+      \forall i,j,k,l s.t. (i:j \text { & } k:l) \implies
+        i:l \oplus
         (\exists m s.t. i:m:l) \oplus
-        (\exists m s.t. k:m:j) 
-    \] 
+        (\exists m s.t. k:m:j)
+    \]
 
     -}
 
@@ -228,7 +215,7 @@ class ( IntervalSizeable a b ) => IntervalAxioms a b where
 
     \[
       \forall i \lnot i:i
-    \] 
+    \]
     -}
 
     prop_IAaxiomML1 :: (Ord a) => Interval a -> Property
@@ -242,7 +229,7 @@ class ( IntervalSizeable a b ) => IntervalAxioms a b where
 
     \[
     \forall i,j i:j \implies \lnot j:i
-    \] 
+    \]
     -}
 
     prop_IAaxiomML2 :: (Ord a)=> M2set a -> Property
@@ -259,7 +246,7 @@ class ( IntervalSizeable a b ) => IntervalAxioms a b where
 
     \[
     \forall i \exists j,k s.t. j:i:k
-    \] 
+    \]
     -}
 
     prop_IAaxiomM3 :: (IntervalSizeable a b)=>
@@ -282,8 +269,8 @@ class ( IntervalSizeable a b ) => IntervalAxioms a b where
     If two meets are separated by intervals, then this sequence is a longer interval.
 
     \[
-    \forall i,j i:j \implies (\exists k,m,n s.t m:i:j:n \text { & } m:k:n) 
-    \] 
+    \forall i,j i:j \implies (\exists k,m,n s.t m:i:j:n \text { & } m:k:n)
+    \]
     -}
 
     prop_IAaxiomM4 :: (IntervalSizeable a b)=>
@@ -314,7 +301,7 @@ class ( IntervalSizeable a b ) => IntervalAxioms a b where
 
     \[
     \forall i,j,k,l (i:j:l \text{ & } i:k:l) \equiv j = k
-    \] 
+    \]
     -}
     prop_IAaxiomM5 :: (IntervalSizeable a b) =>
         M5set a -> Property
@@ -335,7 +322,7 @@ class ( IntervalSizeable a b ) => IntervalAxioms a b where
 
     \[
     \forall i,j i:j \implies (\exists m,n s.t. m:i:j:n \text{ & } m:(i+j):n)
-    \] 
+    \]
     -}
     prop_IAaxiomM4_1 :: (IntervalSizeable a b)=>
                     b -> M2set a -> Property

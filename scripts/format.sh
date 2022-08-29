@@ -13,4 +13,4 @@ find . -name '*.hs'                           \
   -not -path './docs-site/*'                  \
   -not -path './docs/*'                       \
   -not -path './tutorial/TutorialMain.hs'     \
-  -exec brittany --write-mode=inplace {} ';'
+  -exec stylish-haskell --config ci/ci-stylish-haskell.yaml --inplace {} ';'

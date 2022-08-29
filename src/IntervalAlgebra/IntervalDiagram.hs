@@ -5,23 +5,23 @@ For example,
 
 >>> let ref = bi 30 (0 :: Int)
 >>> let ivs = [ bi 2 0, bi 5 10, bi 6 16 ]
->>> pretty $ simpleIntervalDiagram ref ivs 
---                            
-          -----               
-                ------        
+>>> pretty $ simpleIntervalDiagram ref ivs
+--
+          -----
+                ------
 ==============================
 
 >>> let ref = bi 30 (fromGregorian 2022 5 6)
 >>> let ivs = [ bi 2 (fromGregorian 2022 5 6), bi 5 (fromGregorian 2022 5 10)]
->>> pretty $ simpleIntervalDiagram ref ivs 
---                            
-    -----                     
+>>> pretty $ simpleIntervalDiagram ref ivs
+--
+    -----
 ==============================
 
 Such diagrams are useful for documentation, examples,
 and learning to reason with the interval algebra.
 
-There are two main functions available: 
+There are two main functions available:
 
 * @'parseIntervalDiagram'@:
 exposes all available options
@@ -29,15 +29,15 @@ and gives the most flexibility in producing diagrams
 * @'simpleIntervalDiagram'@
 produces simple diagram using defaults.
 -}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE MultiWayIf #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiWayIf            #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TupleSections         #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 module IntervalAlgebra.IntervalDiagram
   (
@@ -69,27 +69,17 @@ module IntervalAlgebra.IntervalDiagram
   , Prettyprinter.Pretty(..)
   ) where
 
-import           Data.Foldable                  ( Foldable(toList) )
-import qualified Data.IntMap.NonEmpty          as NEM
-import qualified Data.List.NonEmpty            as NE
-                                         hiding ( toList )
-import           Data.Maybe                     ( fromMaybe
-                                                , isNothing
-                                                )
-import           Data.Text                      ( Text
-                                                , pack
-                                                )
+import           Data.Foldable                     (Foldable (toList))
+import qualified Data.IntMap.NonEmpty              as NEM
+import qualified Data.List.NonEmpty                as NE hiding (toList)
+import           Data.Maybe                        (fromMaybe, isNothing)
+import           Data.Text                         (Text, pack)
 import           IntervalAlgebra.Core
-import           IntervalAlgebra.IntervalUtilities
-                                                ( rangeInterval )
-import           IntervalAlgebra.PairedInterval ( PairedInterval
-                                                , getPairData
-                                                , makePairedInterval
-                                                )
+import           IntervalAlgebra.IntervalUtilities (rangeInterval)
+import           IntervalAlgebra.PairedInterval    (PairedInterval, getPairData,
+                                                    makePairedInterval)
 import           Prettyprinter
-import           Witch                          ( From(..)
-                                                , into
-                                                )
+import           Witch                             (From (..), into)
 
 -- $setup
 -- >>> :set -XTypeApplications -XFlexibleContexts -XOverloadedStrings
@@ -159,22 +149,22 @@ containing a list of @IntervalText@.
 
 Values of this type should only be created
 through the 'parseIntervalTextLine' function,
-which checks that the inputs are parsed correctly to form intervals 
+which checks that the inputs are parsed correctly to form intervals
 that will be pretty-printed correctly.
 
 >>> let i1 =  makeIntervalText '*' (beginerval 10 (5::Int))
 >>> let i2  = makeIntervalText '-' (beginerval 2 (1::Int))
->>> let x = parseIntervalTextLine [] [i1, i2] 
+>>> let x = parseIntervalTextLine [] [i1, i2]
 >>> pretty x
 UnsortedIntervals
 >>> let i1 =  makeIntervalText '*' (beginerval 10 (5::Int))
 >>> let i2  = makeIntervalText '-' (beginerval 2 (10::Int))
->>> let x = parseIntervalTextLine [] [i1, i2] 
+>>> let x = parseIntervalTextLine [] [i1, i2]
 >>> pretty x
 ConcurringIntervals
 >>> let i1 =  makeIntervalText '*' (beginerval 10 ((-1)::Int))
 >>> let i2  = makeIntervalText '-' (beginerval 2 (10::Int))
->>> let x = parseIntervalTextLine []  [i1, i2] 
+>>> let x = parseIntervalTextLine []  [i1, i2]
 >>> pretty x
 BeginsLessThanZero
 >>> let i1 =  makeIntervalText '*' (beginerval  5 (0::Int))
@@ -221,7 +211,7 @@ A type representing errors that may occur
 when a list of @IntervalText@ is parsed into a @IntervalTextLine@.
 -}
 data IntervalTextLineParseError =
-    -- | The inputs contains concurring intervals. 
+    -- | The inputs contains concurring intervals.
     --   All inputs should be @'disjoint'@.
       ConcurringIntervals
     -- | The inputs are not sorted.
@@ -257,7 +247,7 @@ parseIntervalTextLine labs l =
   {-
   Modifies the inputs sequentially
   so that the begin of one interval is
-  shifted based on the end of the previous interval.  
+  shifted based on the end of the previous interval.
   This function assumes that the inputs are sorted and disjoint.
   -}
   makeIntervalLine
@@ -274,7 +264,7 @@ parseIntervalTextLine labs l =
 
 
 {-------------------------------------------------------------------------------
-  Axis Config and Components 
+  Axis Config and Components
 -------------------------------------------------------------------------------}
 
 {-|
@@ -283,7 +273,7 @@ A type representing options of where to place the axis in a printed diagram.
 data AxisPlacement =
   -- | Print the axis at the top of the diagram
     Top
-  -- | Print the axis at the bottom of the diagram 
+  -- | Print the axis at the bottom of the diagram
   | Bottom deriving (Eq, Show)
 
 {-|
@@ -318,7 +308,7 @@ prettyAxisLabels pos (MkAxisLabels labs) = do
     Bottom -> out
 
 {-------------------------------------------------------------------------------
-  Axis 
+  Axis
 -------------------------------------------------------------------------------}
 
 {-|
@@ -327,14 +317,14 @@ A type containing the data necessary to print an axis in an 'IntervalDiagram'.
 Use 'parseAxis' for construction.
 
 >>> let ref = makeIntervalText '=' (beginerval 10 (0::Int))
- 
+
 
 >>> let b = parseAxis [] (Just Top) ref
->>> pretty b 
+>>> pretty b
 ==========
 
 >>> let c = parseAxis [(4, 'a'), (6, 'b')] (Just Top) ref
->>> pretty c 
+>>> pretty c
     a b
     | |
 ==========
@@ -405,7 +395,7 @@ parseAxis l (Just p) i = do
       any (\x -> x < begin i || x > end i) (fmap fst l) -> Left
       LabelsBeyondReference
     |
--- Identify if the number of elements in the input list is different 
+-- Identify if the number of elements in the input list is different
 -- from the number of elements after transforming the list
 -- into a nonempty IntMap.
 -- If different, then flag.
@@ -457,9 +447,9 @@ parseDiagramOptions
   :: IntervalDiagramOptions
   -> Either IntervalDiagramOptionsError IntervalDiagramOptions
 parseDiagramOptions opts = if
-  | leftPadding opts < 0 -> Left LeftPaddingLessThan0
+  | leftPadding opts < 0                       -> Left LeftPaddingLessThan0
   | layoutPageWidth (layout opts) == Unbounded -> Left UnboundedPageWidth
-  | otherwise            -> Right opts
+  | otherwise                                  -> Right opts
   where isSorted xs = and $ zipWith (<=) xs (tail xs)
 
 -- | Default 'IntervalDiagramOptions' options
@@ -503,10 +493,10 @@ data IntervalDiagramParseError =
   -- | Indicates that the reference axis is longer than the @'PageWidth'@
   --   given in the @'IntervalDiagramOptions'@.
   | AxisWiderThanAvailable
-  -- | Indicates that left padding is >0 
-  --   and no axis is printed. 
-  --   This is considered an error because it be impossible 
-  --   to know the 'begin' values of intervals in a printed @IntervalDiagram@ 
+  -- | Indicates that left padding is >0
+  --   and no axis is printed.
+  --   This is considered an error because it be impossible
+  --   to know the 'begin' values of intervals in a printed @IntervalDiagram@
   --   that has been padded and has no axis.
   | PaddingWithNoAxis
   -- | Indicates that an error occurring when checking the document options.
@@ -529,13 +519,13 @@ instance (IntervalSizeable a b) => Pretty (IntervalDiagram a) where
 
     -- Position line labels relative to the reference interval
     -- and the end of the last interval in a line.
-    -- NOTE: 
+    -- NOTE:
     -- This is tricky because the intervals
     -- in a parsed IntervalTextLine are referenced relative
     -- to the previous interval in the line,
-    -- not to the reference interval. 
+    -- not to the reference interval.
     -- See use of makeIntervalLine in parseIntervalTextLine.
-    -- This why the intervalLineEnd function is used to determine 
+    -- This why the intervalLineEnd function is used to determine
     -- the end of the intervals in a line.
     let labelIndents  = fmap (diff refDur . intervalLineEnd) ivs
 
@@ -584,8 +574,8 @@ how to put more than one interval interval on a line:
 >>> let l2 = [ mkIntrvl '*' 3 5, mkIntrvl '*' 5 10, mkIntrvl 'x' 1 17 ]
 >>> let l3 = [ mkIntrvl '#' 2 18]
 >>> pretty $ parseIntervalDiagram defaultIntervalDiagramOptions  [] (Just Bottom) x [ (l1, []), (l2, []), (l3, []) ]
-    -               
-     ***  *****  x  
+    -
+     ***  *****  x
                   ##
 ====================
 
@@ -594,16 +584,16 @@ We can put the axis on the top:
 
 >>> pretty $ parseIntervalDiagram defaultIntervalDiagramOptions [] (Just Top) x [ (l1, []), (l2, []), (l3, []) ]
 ====================
-    -               
-     ***  *****  x  
+    -
+     ***  *****  x
                   ##
 
 
 We can annotate the axis:
 
 >>> pretty $ parseIntervalDiagram defaultIntervalDiagramOptions [(5, 'a')] (Just Bottom) x [ (l1, []), (l2, []), (l3, []) ]
-    -               
-     ***  *****  x  
+    -
+     ***  *****  x
                   ##
 ====================
      |
@@ -692,7 +682,7 @@ parseIntervalDiagram opts labels placement ref ivs =
 {-|
 Given a reference interval and a list of intervals,
 produces an 'IntervalDiagram' with one line per interval,
-using the 'defaultIntervalDiagramOptions'. 
+using the 'defaultIntervalDiagramOptions'.
 
 >>> pretty $ simpleIntervalDiagram (bi 10 (0 :: Int)) (fmap (bi 1) [0..9])
 -
@@ -709,7 +699,7 @@ using the 'defaultIntervalDiagramOptions'.
 
 >>> let ref = bi 30 (0 :: Int)
 >>> let ivs = [ bi 2 0, bi 5 10, bi 6 16 ]
->>> pretty $ simpleIntervalDiagram ref ivs 
+>>> pretty $ simpleIntervalDiagram ref ivs
 --
           -----
                 ------

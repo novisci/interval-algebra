@@ -3,26 +3,15 @@ module IntervalAlgebra.PairedIntervalSpec
   ) where
 
 import           Data.Bool
-import           Data.Time                      ( Day(ModifiedJulianDay)
-                                                , fromGregorian
-                                                )
-import           IntervalAlgebra                ( IntervalCombinable(..)
-                                                , IntervalSizeable(duration)
-                                                , before
-                                                , beginerval
-                                                , equals
-                                                , toEnumInterval
-                                                )
-import           IntervalAlgebra.PairedInterval ( Empty(..)
-                                                , PairedInterval
-                                                , intervals
-                                                , makePairedInterval
-                                                )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
+import           Data.Time                      (Day (ModifiedJulianDay),
+                                                 fromGregorian)
+import           IntervalAlgebra                (IntervalCombinable (..),
+                                                 IntervalSizeable (duration),
+                                                 before, beginerval, equals,
+                                                 toEnumInterval)
+import           IntervalAlgebra.PairedInterval (Empty (..), PairedInterval,
+                                                 intervals, makePairedInterval)
+import           Test.Hspec                     (Spec, describe, it, shouldBe)
 
 type TestPair = PairedInterval String Int
 

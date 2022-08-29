@@ -1,5 +1,5 @@
 {-|
-Module      : Paired interval 
+Module      : Paired interval
 Description : Extends the Interval Algebra to an interval paired with some data.
 Copyright   : (c) NoviSci, Inc 2020
 License     : BSD3
@@ -7,10 +7,10 @@ Maintainer  : bsaul@novisci.com
 Stability   : experimental
 -}
 {-# OPTIONS_HADDOCK prune #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE Safe                  #-}
 
 module IntervalAlgebra.PairedInterval
   ( PairedInterval
@@ -23,20 +23,16 @@ module IntervalAlgebra.PairedInterval
   , trivialize
   ) where
 
-import safe      Control.Applicative            ( liftA2 )
-import safe      Control.DeepSeq                ( NFData )
-import safe      Data.Binary                    ( Binary )
-import safe      GHC.Generics                   ( Generic )
-import safe      IntervalAlgebra.Core           ( ComparativePredicateOf1
-                                                , Interval
-                                                , IntervalCombinable(..)
-                                                , IntervalSizeable
-                                                , Intervallic(..)
-                                                , before
-                                                , extenterval
-                                                )
-import safe      Test.QuickCheck                ( Arbitrary(..) )
-import safe      Witherable                     ( Filterable(filter) )
+import safe           Control.Applicative  (liftA2)
+import safe           Control.DeepSeq      (NFData)
+import safe           Data.Binary          (Binary)
+import safe           GHC.Generics         (Generic)
+import safe           IntervalAlgebra.Core (ComparativePredicateOf1, Interval,
+                                            IntervalCombinable (..),
+                                            IntervalSizeable, Intervallic (..),
+                                            before, extenterval)
+import safe           Test.QuickCheck      (Arbitrary (..))
+import safe           Witherable           (Filterable (filter))
 
 -- | An @Interval a@ paired with some other data of type @b@.
 newtype PairedInterval b a = PairedInterval (Interval a, b)
@@ -67,7 +63,7 @@ instance (Ord a, Eq b, Monoid b) =>
     | otherwise = pure
     $ makePairedInterval (getPairData x <> getPairData y) (extenterval x y)
 
--- | Make a paired interval. 
+-- | Make a paired interval.
 makePairedInterval :: b -> Interval a -> PairedInterval b a
 makePairedInterval d i = PairedInterval (i, d)
 

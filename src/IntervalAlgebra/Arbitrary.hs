@@ -6,74 +6,45 @@ License     : BSD3
 Maintainer  : bsaul@novisci.com
 Stability   : experimental
 -}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE Safe              #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE NoImplicitPrelude   #-}
+{-# LANGUAGE Safe                #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 
 
 module IntervalAlgebra.Arbitrary
   ( arbitraryWithRelation
   ) where
 
-import           Control.Applicative            ( (<$>)
-                                                , liftA2
-                                                )
-import           Control.Monad                  ( liftM2 )
+import           Control.Applicative (liftA2, (<$>))
+import           Control.Monad       (liftM2)
 import           Data.Bool
 import           Data.Fixed
-import           Data.Function                  ( ($)
-                                                , (.)
-                                                , flip
-                                                )
-import           Data.Maybe                     ( Maybe(Just, Nothing) )
+import           Data.Function       (flip, ($), (.))
+import           Data.Maybe          (Maybe (Just, Nothing))
 import           Data.Ord
-import qualified Data.Set                       ( Set
-                                                , difference
-                                                , null
-                                                , singleton
-                                                )
-import           Data.Time                     as DT
-                                                ( Day(ModifiedJulianDay)
-                                                , DiffTime
-                                                , NominalDiffTime
-                                                , UTCTime(..)
-                                                , picosecondsToDiffTime
-                                                , secondsToDiffTime
-                                                , secondsToNominalDiffTime
-                                                , toModifiedJulianDay
-                                                )
+import qualified Data.Set            (Set, difference, null, singleton)
+import           Data.Time           as DT (Day (ModifiedJulianDay), DiffTime,
+                                            NominalDiffTime, UTCTime (..),
+                                            picosecondsToDiffTime,
+                                            secondsToDiffTime,
+                                            secondsToNominalDiffTime,
+                                            toModifiedJulianDay)
 import           GHC.Float
-import           GHC.Int                        ( Int )
+import           GHC.Int             (Int)
 import           GHC.Num
 import           GHC.Real
-import           IntervalAlgebra                ( Interval
-                                                , IntervalRelation(..)
-                                                , IntervalSizeable
-                                                , Intervallic
-                                                , PairedInterval
-                                                , beginerval
-                                                , converse
-                                                , duration
-                                                , makePairedInterval
-                                                , moment
-                                                , predicate
-                                                , strictWithinRelations
-                                                )
-import           Prelude                        ( (==)
-                                                , Eq
-                                                )
-import           Test.QuickCheck                ( Arbitrary(arbitrary, shrink)
-                                                , Gen
-                                                , NonNegative
-                                                , arbitrarySizedNatural
-                                                , elements
-                                                , resize
-                                                , sized
-                                                , suchThat
-                                                )
+import           IntervalAlgebra     (Interval, IntervalRelation (..),
+                                      IntervalSizeable, Intervallic,
+                                      PairedInterval, beginerval, converse,
+                                      duration, makePairedInterval, moment,
+                                      predicate, strictWithinRelations)
+import           Prelude             (Eq, (==))
+import           Test.QuickCheck     (Arbitrary (arbitrary, shrink), Gen,
+                                      NonNegative, arbitrarySizedNatural,
+                                      elements, resize, sized, suchThat)
 
 -- NOTE: the default size for arbitrary :: Gen Int appears to be 30
 arbitrarySizedPositive :: Integral a => Gen a

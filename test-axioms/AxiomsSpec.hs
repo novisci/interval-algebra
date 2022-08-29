@@ -1,28 +1,18 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeApplications      #-}
 module AxiomsSpec
   ( spec
   ) where
 
-import           Data.Time                      ( Day
-                                                , UTCTime
-                                                )
-import           IntervalAlgebra.Axioms         ( IntervalAxioms(..) )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , hspec
-                                                , it
-                                                )
-import           Test.Hspec.QuickCheck          ( modifyMaxSuccess )
-import           Test.QuickCheck                ( Arbitrary(arbitrary)
-                                                , Gen(..)
-                                                , Property
-                                                , Testable(property)
-                                                , generate
-                                                , quickCheck
-                                                )
+import           Data.Time              (Day, UTCTime)
+import           IntervalAlgebra.Axioms (IntervalAxioms (..))
+import           Test.Hspec             (Spec, describe, hspec, it)
+import           Test.Hspec.QuickCheck  (modifyMaxSuccess)
+import           Test.QuickCheck        (Arbitrary (arbitrary), Gen (..),
+                                         Property, Testable (property),
+                                         generate, quickCheck)
 
 
 testScale :: Int

@@ -1,54 +1,30 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeApplications      #-}
 module IntervalAlgebraSpec
   ( spec
   ) where
 
-import           Data.Either                    ( isRight )
-import           Data.Fixed                     ( Pico )
-import           Data.Maybe                     ( fromJust
-                                                , isJust
-                                                , isNothing
-                                                )
-import           Data.Set                       ( Set
-                                                , disjointUnion
-                                                , fromList
-                                                , member
-                                                )
-import           Data.Time                     as DT
-                                                ( Day(..)
-                                                , DiffTime
-                                                , NominalDiffTime
-                                                , UTCTime(..)
-                                                , fromGregorian
-                                                , picosecondsToDiffTime
-                                                , secondsToDiffTime
-                                                )
-import           GHC.Real                       ( Rational(..)
-                                                , Real(..)
-                                                )
-import           IntervalAlgebra               as IA
-import           IntervalAlgebra.Arbitrary      ( )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , hspec
-                                                , it
-                                                , shouldBe
-                                                )
-import           Test.Hspec.QuickCheck          ( modifyMaxDiscardRatio
-                                                , modifyMaxSuccess
-                                                )
-import           Test.QuickCheck                ( (===)
-                                                , (==>)
-                                                , Arbitrary(arbitrary)
-                                                , Gen(..)
-                                                , Property
-                                                , Testable(property)
-                                                , generate
-                                                , quickCheck
-                                                )
+import           Data.Either               (isRight)
+import           Data.Fixed                (Pico)
+import           Data.Maybe                (fromJust, isJust, isNothing)
+import           Data.Set                  (Set, disjointUnion, fromList,
+                                            member)
+import           Data.Time                 as DT (Day (..), DiffTime,
+                                                  NominalDiffTime, UTCTime (..),
+                                                  fromGregorian,
+                                                  picosecondsToDiffTime,
+                                                  secondsToDiffTime)
+import           GHC.Real                  (Rational (..), Real (..))
+import           IntervalAlgebra           as IA
+import           IntervalAlgebra.Arbitrary ()
+import           Test.Hspec                (Spec, describe, hspec, it, shouldBe)
+import           Test.Hspec.QuickCheck     (modifyMaxDiscardRatio,
+                                            modifyMaxSuccess)
+import           Test.QuickCheck           (Arbitrary (arbitrary), Gen (..),
+                                            Property, Testable (property),
+                                            generate, quickCheck, (===), (==>))
 
 mkIntrvl :: Int -> Int -> Interval Int
 mkIntrvl = beginerval

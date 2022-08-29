@@ -1,7 +1,9 @@
 #!/bin/sh
-# Checks that the source code is formatted using the brittany
-# formatter (https://hackage.haskell.org/package/brittany)
+# Checks that the source code is formatted using the stylish-haskell
+# formatter (https://hackage.haskell.org/package/stylish-haskell)
 set -e 
+
+stylish-haskell --version
 
 # Check for changes and return exit code 1 if any are necessary. Note that we
 # can't use `-exec` here since the return code of the exec'd command isn't
@@ -13,4 +15,4 @@ find . -name "*.hs"                        \
   -not -path './docs/*'                    \
   -not -path './tutorial/TutorialMain.hs'  \
   -print0  |
-  xargs -0 brittany --check-mode
+  xargs -0 stylish-haskell --config ci/ci-stylish-haskell.yaml

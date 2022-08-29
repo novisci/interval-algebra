@@ -24,14 +24,14 @@ constructing, relating, and combining types that contain @'Interval'@s:
 
 -}
 
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE AllowAmbiguousTypes    #-}
+{-# LANGUAGE DeriveGeneric          #-}
+{-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE NoImplicitPrelude      #-}
+{-# LANGUAGE Safe                   #-}
+{-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE TypeApplications       #-}
 
 module IntervalAlgebra.Core
   (
@@ -120,84 +120,30 @@ module IntervalAlgebra.Core
   , IntervalSizeable(..)
   ) where
 
-import           Control.Applicative            ( Applicative(pure)
-                                                , liftA2
-                                                )
-import           Control.DeepSeq                ( NFData )
-import           Data.Binary                    ( Binary )
-import           Data.Fixed                     ( Pico )
-import           Data.Function                  ( ($)
-                                                , (.)
-                                                , flip
-                                                , id
-                                                )
-import           Data.Ord                       ( Ord(..)
-                                                , Ordering(..)
-                                                , max
-                                                , min
-                                                )
-import           Data.Semigroup                 ( Semigroup((<>)) )
-import qualified Data.Set                       ( Set
-                                                , difference
-                                                , fromList
-                                                , intersection
-                                                , map
-                                                , toList
-                                                , union
-                                                )
-import           Data.Time                     as DT
-                                                ( Day
-                                                , DiffTime
-                                                , NominalDiffTime
-                                                , UTCTime
-                                                , addDays
-                                                , addUTCTime
-                                                , diffDays
-                                                , diffUTCTime
-                                                , nominalDiffTimeToSeconds
-                                                , secondsToNominalDiffTime
-                                                )
-import           Data.Tuple                     ( fst
-                                                , snd
-                                                )
-import           GHC.Generics                   ( Generic )
-import           Prelude                        ( (!!)
-                                                , (&&)
-                                                , (+)
-                                                , (++)
-                                                , (-)
-                                                , (==)
-                                                , Bool(..)
-                                                , Bounded(..)
-                                                , Either(..)
-                                                , Enum(..)
-                                                , Eq
-                                                , Int
-                                                , Integer
-                                                , Maybe(..)
-                                                , Num
-                                                , Rational
-                                                , Show
-                                                , String
-                                                , any
-                                                , curry
-                                                , fromInteger
-                                                , fromRational
-                                                , map
-                                                , negate
-                                                , not
-                                                , otherwise
-                                                , realToFrac
-                                                , replicate
-                                                , show
-                                                , toInteger
-                                                , toRational
-                                                )
-import           Test.QuickCheck                ( Arbitrary(..)
-                                                , resize
-                                                , sized
-                                                , suchThat
-                                                )
+import           Control.Applicative (Applicative (pure), liftA2)
+import           Control.DeepSeq     (NFData)
+import           Data.Binary         (Binary)
+import           Data.Fixed          (Pico)
+import           Data.Function       (flip, id, ($), (.))
+import           Data.Ord            (Ord (..), Ordering (..), max, min)
+import           Data.Semigroup      (Semigroup ((<>)))
+import qualified Data.Set            (Set, difference, fromList, intersection,
+                                      map, toList, union)
+import           Data.Time           as DT (Day, DiffTime, NominalDiffTime,
+                                            UTCTime, addDays, addUTCTime,
+                                            diffDays, diffUTCTime,
+                                            nominalDiffTimeToSeconds,
+                                            secondsToNominalDiffTime)
+import           Data.Tuple          (fst, snd)
+import           GHC.Generics        (Generic)
+import           Prelude             (Bool (..), Bounded (..), Either (..),
+                                      Enum (..), Eq, Int, Integer, Maybe (..),
+                                      Num, Rational, Show, String, any, curry,
+                                      fromInteger, fromRational, map, negate,
+                                      not, otherwise, realToFrac, replicate,
+                                      show, toInteger, toRational, (!!), (&&),
+                                      (+), (++), (-), (==))
+import           Test.QuickCheck     (Arbitrary (..), resize, sized, suchThat)
 
 {- $setup
 >>> import IntervalAlgebra.IntervalDiagram
