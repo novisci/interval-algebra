@@ -1,5 +1,11 @@
 # Changelog for interval-algebra
 
+## 2.1.2
+
+* Exports `IntervalAlgebra.IntervalDiagram` module and makes the following changes so as to export it as `safe`:
+  * Removes `nonempty-containers` dependency and `Data.IntMap.NonEmpty` usage in `IntervalAlgebra.IntervalDiagram`. Replaces the non-empty `IntMap` with a key-value pair in a non-empty list.
+  * Removes `From` instances, which were unnecessary.
+
 ## 2.1.1
 
 * Makes the version bounds on the `time` package
