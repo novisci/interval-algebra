@@ -268,14 +268,14 @@ print $ shiftFromEnd ivDay ivDay
 ---> (-6, 0)
 -- end::shifting-intervals-print[]
 -- tag::relations-variables-diagram-print[]
---           <- [iv0to2]
-  --         <- [iv2to4]
-  ---        <- [iv2to5]
-   ---       <- [iv3to6]
-    -        <- [iv4to5]
-      --     <- [iv6to8]
-     ---     <- [iv5to8]
-============
+--       <- [iv0to2]
+  --     <- [iv2to4]
+  ---    <- [iv2to5]
+   ---   <- [iv3to6]
+    -    <- [iv4to5]
+      -- <- [iv6to8]
+     --- <- [iv5to8]
+========
 -- end::relations-variables-diagram-print[]
 -- tag::composing-relations-print[]
 

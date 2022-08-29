@@ -24,5 +24,6 @@ module IntervalAlgebra
   ) where
 
 import safe           IntervalAlgebra.Core
+import safe           IntervalAlgebra.IntervalDiagram
 import safe           IntervalAlgebra.IntervalUtilities
 import safe           IntervalAlgebra.PairedInterval

@@ -70,7 +70,6 @@ module IntervalAlgebra.IntervalDiagram
   ) where
 
 import           Data.Foldable                     (Foldable (toList))
-import qualified Data.IntMap.NonEmpty              as NEM
 import qualified Data.List.NonEmpty                as NE hiding (toList)
 import           Data.Maybe                        (fromMaybe, isNothing)
 import           Data.Text                         (Text, pack)
@@ -79,7 +78,6 @@ import           IntervalAlgebra.IntervalUtilities (rangeInterval)
 import           IntervalAlgebra.PairedInterval    (PairedInterval, getPairData,
                                                     makePairedInterval)
 import           Prettyprinter
-import           Witch                             (From (..), into)
 
 -- $setup
 -- >>> :set -XTypeApplications -XFlexibleContexts -XOverloadedStrings
@@ -105,10 +103,6 @@ Each component in sections below organized as follows:
 which contains an @Interval a@ and the @Char@ used to print
 the interval in a diagram.
 
-The @Interval a@ type needs to be an instance of @IntervalSizeable a b@;
-Moreover, the type @b@ should be castable to @Int@,
-using its @'Witch.From' b Int@  instance.
-
 >>> pretty $ makeIntervalText '-' (beginerval 5 (0::Int))
 -----
 >>> pretty $ makeIntervalText '*' (beginerval 10 (0::Int))
@@ -129,15 +123,6 @@ instance (Enum b, IntervalSizeable a b) => Pretty (IntervalText a) where
    where
     c = getPairData x
     i = getInterval x
-
-instance From (Char, Interval a) (IntervalText a) where
-  from = uncurry makeIntervalText
-
-instance From (IntervalText a) Char where
-  from (MkIntervalText x) = getPairData x
-
-instance From (IntervalText a) (Interval a) where
-  from = getInterval
 
 {-------------------------------------------------------------------------------
   IntervalTextLine
@@ -277,10 +262,13 @@ data AxisPlacement =
   | Bottom deriving (Eq, Show)
 
 {-|
-Type containing data that can be presented below the axis
-on an @IntervalDiagram@.
+Key-value list data that can be presented below the axis on an
+@IntervalDiagram@. First element of the tuple is an Int key, the second the
+Char to print. Note that it does not guarantee uniqueness of the keys, and most
+if not all functions should first call @intMapList@ on the internal
+@NE.NonEmpty@ list before using this type.
 -}
-newtype AxisLabels = MkAxisLabels (NEM.NEIntMap Char)
+newtype AxisLabels = MkAxisLabels (NE.NonEmpty (Int, Char))
   deriving (Eq, Show)
 
 {-|
@@ -293,10 +281,22 @@ data AxisConfig = MkAxisConfig
   }
   deriving (Eq, Show)
 
+-- Internal utility to give equivalent structure to IntMap from
+-- Data.IntMap.NonEmpty for the key-value list in @AxisLabels@. Previously,
+-- when using IntMap for the @AxisLabels@ container, uniqueness and ordering of
+-- keys was guaranteed. Now, you should first call this function before using
+-- those keys, e.g. in @prettyAxisLabels@, to get the same properties. This has
+-- a runtime cost and could be rewritten for efficiency if that were a concern.
+-- NOTE: NE does not have a sortOn.
+intMapList :: NE.NonEmpty (Int, a) -> NE.NonEmpty (Int, a)
+intMapList = NE.sortBy (\(k, _) (k', _) -> compare k k')
+  . NE.nubBy (\(k, _) (k', _) -> k == k')
+
 prettyAxisLabels :: AxisPlacement -> AxisLabels -> [Doc ann]
 prettyAxisLabels pos (MkAxisLabels labs) = do
-  let ints  = NEM.keys labs
-  let marks = toList $ NEM.elems labs
+  let labssorted = intMapList labs
+  let ints       = NE.map fst labssorted
+  let marks      = toList $ NE.map snd labssorted
   let labPos =
         NE.head ints : zipWith (\x y -> y - x - 1) (toList ints) (NE.tail ints)
   let out =
@@ -386,8 +386,8 @@ parseAxis
 -- if the axis is not shown then any labels are ignored
 parseAxis _ Nothing  i = Right $ MkAxis i (MkAxisConfig Nothing Nothing)
 parseAxis l (Just p) i = do
-  let labels          = NEM.fromList <$> NE.nonEmpty l
-  let labPos          = NEM.keys <$> labels
+  let labels          = intMapList <$> NE.nonEmpty l
+  let labPos          = NE.map fst <$> labels
   let inputLabelCount = length l
   if
     |
@@ -568,7 +568,7 @@ This function provides the most flexibility in producing interval diagrams.
 Here's a basic diagram that shows
 how to put more than one interval interval on a line:
 
->>> let mkIntrvl c d b = into @(IntervalText Int) (c, bi d (b :: Int))
+>>> let mkIntrvl c d b = makeIntervalText c (bi d (b :: Int))
 >>> let x = mkIntrvl  '=' 20 0
 >>> let l1 = [ mkIntrvl '-' 1 4 ]
 >>> let l2 = [ mkIntrvl '*' 3 5, mkIntrvl '*' 5 10, mkIntrvl 'x' 1 17 ]

@@ -42,7 +42,6 @@ library
     , containers ^>= 0.6
     , deepseq >= 1.1 && < 1.5
     , foldl ^>= 1.4
-    , nonempty-containers ^>= 0.3
     , prettyprinter ^>= 1.7
     , QuickCheck ^>= 2.14
     , safe ^>= 0.3
