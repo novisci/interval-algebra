@@ -86,7 +86,6 @@ instance Semigroup Empty where
   x <> y = Empty
 instance Monoid Empty where
   mempty = Empty
-  mappend x y = x <> y
 
 -- | Lifts an @Interval a@ into a @PairedInterval Empty a@, where @Empty@ is a
 --   trivial type that contains no data.

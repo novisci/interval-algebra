@@ -61,6 +61,6 @@ spec = do
       it "show empty" $ show Empty `shouldBe` "Empty"
       it "combine emptyies" $ Empty <> Empty `shouldBe` Empty
       it "monoid empty" $ (mempty :: Empty) `shouldBe` Empty
-      it "monoid mappend" $ mappend Empty Empty `shouldBe` Empty
+      it "monoid <>" $ Empty <> Empty `shouldBe` Empty
       it "ord empty" $ Empty < Empty `shouldBe` False
       it "ord empty" $ Empty <= Empty `shouldBe` True
