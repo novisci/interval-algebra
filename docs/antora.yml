@@ -1,8 +1,5 @@
 # See: https://docs.antora.org/antora/latest/component-version-descriptor/#provide-metadata-with-antora-yml
 # for information on what antora.yml and what it may contain
 name: interval-algebra
-# Take version from refname, in our case the tag
-# https://docs.antora.org/antora/latest/component-version-key/
-version:
-  v(?<version>+({0..9}).+({0..9})).x: $<version>
+version: 'latest'
 start_page: interval-algebra-foundations.adoc
