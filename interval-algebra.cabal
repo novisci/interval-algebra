@@ -1,6 +1,6 @@
 cabal-version:  2.2
 name:           interval-algebra
-version:        2.1.2
+version:        2.1.3
 synopsis:       An implementation of Allen's interval algebra for temporal logic
 description:    Please see the README on GitHub at <https://github.com/novisci/interval-algebra>
 category:       Algebra,Time
@@ -47,7 +47,7 @@ library
     , safe ^>= 0.3
     , text ^>= 1.2 || ^>= 2.0
     , time >= 1.9 && < 2
-    , witch ^>= 1.0
+    , witch
     , witherable ^>= 0.4
   default-language: Haskell2010
 
@@ -118,5 +118,5 @@ executable tutorial
     , interval-algebra
     , prettyprinter ^>= 1.7
     , time >= 1.9 && < 2
-    , witch ^>= 1.0
+    , witch
   default-language: Haskell2010
