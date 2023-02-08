@@ -1,5 +1,9 @@
 # Changelog for interval-algebra
 
+## 2.1.3
+
+* Removes the version constraints on the `witch` package.
+
 ## 2.1.2
 
 * Exports `IntervalAlgebra.IntervalDiagram` module and makes the following changes so as to export it as `safe`:
