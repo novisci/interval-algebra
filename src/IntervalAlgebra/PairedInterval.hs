@@ -1,16 +1,17 @@
 {-|
 Module      : Paired interval
 Description : Extends the Interval Algebra to an interval paired with some data.
-Copyright   : (c) NoviSci, Inc 2020
+Copyright   : (c) NoviSci, Inc 2020-2022
+                  TargetRWE, 2023
 License     : BSD3
-Maintainer  : bsaul@novisci.com
+Maintainer  : bsaul@novisci.com 2020-2022, bbrown@targetrwe.com 2023
 Stability   : experimental
 -}
 {-# OPTIONS_HADDOCK prune #-}
 {-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE Safe                  #-}
 
 module IntervalAlgebra.PairedInterval
   ( PairedInterval
@@ -23,20 +24,20 @@ module IntervalAlgebra.PairedInterval
   , trivialize
   ) where
 
-import safe           Control.Applicative  (liftA2)
-import safe           Control.DeepSeq      (NFData)
-import safe           Data.Binary          (Binary)
-import safe           GHC.Generics         (Generic)
-import safe           IntervalAlgebra.Core (ComparativePredicateOf1, Interval,
-                                            IntervalCombinable (..),
-                                            IntervalSizeable, Intervallic (..),
-                                            before, extenterval)
-import safe           Test.QuickCheck      (Arbitrary (..))
-import safe           Witherable           (Filterable (filter))
+import           Control.Applicative  (liftA2)
+import           Control.DeepSeq      (NFData)
+import           Data.Binary          (Binary)
+import           GHC.Generics         (Generic)
+import           IntervalAlgebra.Core (ComparativePredicateOf1, Interval,
+                                       Intervallic (..), SizedIv (..), before,
+                                       extenterval)
+import           Test.QuickCheck      (Arbitrary (..))
+import           Witherable           (Filterable (filter))
 
 -- | An @Interval a@ paired with some other data of type @b@.
-newtype PairedInterval b a = PairedInterval (Interval a, b)
-    deriving (Eq, Generic)
+newtype PairedInterval b a
+  = PairedInterval (Interval a, b)
+  deriving (Eq, Generic)
 
 instance Intervallic (PairedInterval b) where
   getInterval (PairedInterval x) = fst x
@@ -53,15 +54,6 @@ instance (Eq a, Eq b, Ord a) => Ord (PairedInterval b a) where
 
 instance (Show b, Show a, Ord a) => Show (PairedInterval b a) where
   show x = "{" ++ show (getInterval x) ++ ", " ++ show (getPairData x) ++ "}"
-
-instance (Ord a, Eq b, Monoid b) =>
-          IntervalCombinable (PairedInterval b) a where
-  (><) x y = fmap (makePairedInterval mempty) (getInterval x >< getInterval y)
-
-  (<+>) x y
-    | x `before` y = pure x <> pure y
-    | otherwise = pure
-    $ makePairedInterval (getPairData x <> getPairData y) (extenterval x y)
 
 -- | Make a paired interval.
 makePairedInterval :: b -> Interval a -> PairedInterval b a
@@ -80,8 +72,7 @@ intervals :: (Ord a, Functor f) => f (PairedInterval b a) -> f (Interval a)
 intervals = fmap getInterval
 
 -- | Empty is used to trivially lift an @Interval a@ into a @PairedInterval@.
-data Empty = Empty
-  deriving (Eq, Ord, Show)
+data Empty = Empty deriving (Eq, Ord, Show)
 instance Semigroup Empty where
   x <> y = Empty
 instance Monoid Empty where
@@ -98,6 +89,7 @@ trivialize :: Functor f => f (Interval a) -> f (PairedInterval Empty a)
 trivialize = fmap toTrivialPair
 
 
+-- TODO REFACTOR need to revisit this
 -- Arbitrary instance
-instance (Arbitrary b, Ord a, Arbitrary a) => Arbitrary (PairedInterval b a) where
-  arbitrary = liftA2 makePairedInterval arbitrary arbitrary
+--instance (Arbitrary b, Arbitrary (Interval a)) => Arbitrary (PairedInterval b a) where
+--  arbitrary = liftA2 makePairedInterval arbitrary arbitrary

@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE TypeApplications  #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -18,11 +19,21 @@ import           Data.Set                       ( Set
 import           Data.Time                      ( Day
                                                 , UTCTime(..)
                                                 , addDays
+                                                , diffDays
                                                 , fromGregorian
                                                 , secondsToDiffTime
                                                 )
 import           Witch                          ( into )
 -- end::import-declarations[]
+
+-- tag::safeInterval-alias[]
+interval ::
+  (SizedIv (Interval a), Ord a, Ord (Moment (Interval a))) =>
+  a ->
+  a ->
+  Interval a
+interval = curry safeInterval
+-- end::safeInterval-alias[]
 
 main :: IO ()
 main = do
@@ -182,9 +193,9 @@ main = do
   print $ getInterval pairListstringInteger
 
   putStr
-    "\nprint $ setInterval pairListstringInteger (safeInterval (4, 9) :: Interval Integer)\n---> "
+    "\nprint $ setInterval pairListstringInteger (interval 4 9 :: Interval Integer)\n---> "
   print $ setInterval pairListstringInteger
-                      (safeInterval (4, 9) :: Interval Integer)
+                      (interval 4 9 :: Interval Integer)
 
   putStr
     "\nprint $ intervals [pairListstringInteger, pairListstringInteger]\n---> "
@@ -239,29 +250,38 @@ main = do
   putStrLn "-- end::intervallic-interval-instance-print[]"
 
 
-  -- IntervalSizeable instance examples ------------------------------------------------------
+  -- SizedIv instance examples ------------------------------------------------------
 
   putStrLn "-- tag::intervalsizeable-instance-print[]"
 
   putStr "\nprint ivDay\n---> "
   print ivDay
 
-  putStr "\nprint $ moment @Day\n---> "
-  print $ moment @Day
+  putStr "\nprint $ moment @(Interval Day)\n---> "
+  print $ moment @(Interval Day)
+
+  putStr "\nprint $ interval (ivBegin ivDay) (ivEnd ivDay)\n---> "
+  print $ interval (ivBegin ivDay) (ivEnd ivDay)
+
+  putStr "\nprint $ interval (ivEnd ivDay) (ivBegin ivDay)\n---> "
+  print $ interval (ivEnd ivDay) (ivBegin ivDay)
 
   putStr "\nprint $ duration ivDay\n---> "
   print $ duration ivDay
 
-  putStr "\nprint $ add 15 (begin ivDay)\n---> "
-  print $ add 15 (begin ivDay)
+  putStr "\nprint $ ivExpandr 15 ivDay\n---> "
+  print $ ivExpandr 15 ivDay
 
-  putStr "\nprint $ diff (add 15 (begin ivDay)) (begin ivDay)\n---> "
-  print $ diff (add 15 (begin ivDay)) (begin ivDay)
+  putStr "\nprint $ ivExpandl 0 ivDay\n---> "
+  print $ ivExpandl 0 ivDay
+
+  putStr "\nprint $ ivExpandl 10 ivDay\n---> "
+  print $ ivExpandl 10 ivDay
 
   putStrLn "-- end::intervalsizeable-instance-print[]"
 
 
-  -- IntervalCombineable Interval examples -------------------------------------
+  -- "Combining" utility examples -------------------------------------
 
   putStrLn "-- tag::intervalcombinable-interval-print[]"
 
@@ -286,7 +306,7 @@ main = do
   putStrLn "-- end::intervalcombinable-interval-print[]"
 
 
-  -- IntervalCombineable PairedInterval examples -------------------------------
+  -- "Combining" utilities for PairedInterval examples -------------------------------
 
   putStrLn "-- tag::intervalcombinable-pairedinterval-print[]"
 
@@ -375,20 +395,11 @@ main = do
   putStr "\nprint [iv2to4, iv5to8]\n---> "
   print [iv2to4, iv5to8]
 
-  putStr "\nprint ivDay\n---> "
-  print ivDay
-
   putStr "\nprint $ shiftFromBegin iv2to4 iv5to8\n---> "
   print $ shiftFromBegin iv2to4 iv5to8
 
-  putStr "\nprint $ shiftFromBegin ivDay ivDay\n---> "
-  print $ shiftFromBegin ivDay ivDay
-
   putStr "\nprint $ shiftFromEnd iv2to4 iv5to8\n---> "
   print $ shiftFromEnd iv2to4 iv5to8
-
-  putStr "\nprint $ shiftFromEnd ivDay ivDay\n---> "
-  print $ shiftFromEnd ivDay ivDay
 
   putStrLn "-- end::shifting-intervals-print[]"
 
@@ -509,34 +520,33 @@ rightIvUTC = parseInterval
 -- end::parseinterval-examples[]
 
 
--- tag::safeinterval-examples[]
+-- tag::interval-examples[]
 ivInteger :: Interval Integer
-ivInteger = safeInterval (2, 6)
+ivInteger = interval 2 6
 
 ivMinDurInteger :: Interval Integer
-ivMinDurInteger = safeInterval (2, 2)
+ivMinDurInteger = interval 2 2
 
 ivDay :: Interval Day
-ivDay = safeInterval (fromGregorian 1967 01 18, fromGregorian 1967 01 24)
+ivDay = interval (fromGregorian 1967 01 18) (fromGregorian 1967 01 24)
 
 ivUTC :: Interval UTCTime
-ivUTC = safeInterval
-  ( UTCTime (fromGregorian 1967 01 18) (secondsToDiffTime 32400)
-  , UTCTime (fromGregorian 1967 01 18) (secondsToDiffTime 33200)
-  )
--- end::safeinterval-examples[]
+ivUTC = interval
+  (UTCTime (fromGregorian 1967 01 18) (secondsToDiffTime 32400))
+  (UTCTime (fromGregorian 1967 01 18) (secondsToDiffTime 33200))
+-- end::interval-examples[]
 
 
 -- tag::ivXtoY-examples[] ----------------
 
 iv0to2, iv2to4, iv2to5, iv4to5, iv5to8, iv6to8, iv3to6 :: Interval Integer
-iv0to2 = safeInterval (0, 2)
-iv2to4 = safeInterval (2, 4)
-iv2to5 = safeInterval (2, 5)
-iv3to6 = safeInterval (3, 6)
-iv4to5 = safeInterval (4, 5)
-iv5to8 = safeInterval (5, 8)
-iv6to8 = safeInterval (6, 8)
+iv0to2 = interval 0 2
+iv2to4 = interval 2 4
+iv2to5 = interval 2 5
+iv3to6 = interval 3 6
+iv4to5 = interval 4 5
+iv5to8 = interval 5 8
+iv6to8 = interval 6 8
 
 -- end::ivXtoY-examples[]
 
@@ -586,14 +596,14 @@ empty = endedPriorRelations `intersection` notEndedPriorRelations
 
 -- We can construct a predicate function from a 'Set IntervalRelation'
 endedPrior
-  :: (Ord a, Intervallic i0, Intervallic i1)
+  :: (SizedIv (Interval a), Ord a, Intervallic i0, Intervallic i1)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 endedPrior = predicate (fromList [Before, Meets])
 
 -- We can also construct a predicate function directly from a list of predicate
 -- functions
 endedPrior'
-  :: (Ord a, Intervallic i0, Intervallic i1)
+  :: (SizedIv (Interval a), Ord a, Intervallic i0, Intervallic i1)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 endedPrior' = unionPredicates [before, meets]
 
@@ -601,7 +611,7 @@ endedPrior' = unionPredicates [before, meets]
 -- using the <|> operator. If we had multiple predicates we could use e.g.:
 --     p1 <|> p2 <|> p3
 endedPrior''
-  :: (Ord a, Intervallic i0, Intervallic i1)
+  :: (SizedIv (Interval a), Ord a, Intervallic i0, Intervallic i1)
   => ComparativePredicateOf2 (i0 a) (i1 a)
 endedPrior'' = before <|> meets
 
@@ -799,21 +809,21 @@ findFirstFlu (Just iv) xs | null filteredFlus = Nothing
 -- Calculate the difference between the start endpoint of the first Intervallic
 -- and the start endpoint of the second Intervallic
 calcDiff
-  :: (IntervalSizeable a b, Intervallic i0, Intervallic i1)
+  :: (SizedIv (Interval a), Num a, Intervallic i0, Intervallic i1)
   => Maybe (i0 a)
   -> Maybe (i1 a)
-  -> Maybe b
-calcDiff (Just y) (Just x) = Just $ diff (begin y) (end x)
+  -> Maybe a
+calcDiff (Just y) (Just x) = Just $ (-) (begin y) (end x)
 calcDiff _        _        = Nothing
 
 -- Calculate the difference between the end endpoint of the first Intervallic
 -- and the start endpoint of the second Intervallic
 calcAtRisk
-  :: (IntervalSizeable a b, Intervallic i0, Intervallic i1)
+  :: (SizedIv (Interval a), Num a, Intervallic i0, Intervallic i1)
   => Maybe (i0 a)
   -> Maybe (i1 a)
-  -> Maybe b
-calcAtRisk (Just y) (Just x) = Just $ diff (end y) (end x)
+  -> Maybe a
+calcAtRisk (Just y) (Just x) = Just $ (-) (end y) (end x)
 calcAtRisk _        _        = Nothing
 
 -- end::extended-example-1-processing-functions[]

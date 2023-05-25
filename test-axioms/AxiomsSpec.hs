@@ -6,13 +6,14 @@ module AxiomsSpec
   ( spec
   ) where
 
-import           Data.Time              (Day, UTCTime)
-import           IntervalAlgebra.Axioms (IntervalAxioms (..))
-import           Test.Hspec             (Spec, describe, hspec, it)
-import           Test.Hspec.QuickCheck  (modifyMaxSuccess)
-import           Test.QuickCheck        (Arbitrary (arbitrary), Gen (..),
-                                         Property, Testable (property),
-                                         generate, quickCheck)
+import           Data.Time                 (Day, UTCTime)
+import           IntervalAlgebra.Arbitrary
+import           IntervalAlgebra.Axioms
+import           Test.Hspec                (Spec, describe, hspec, it)
+import           Test.Hspec.QuickCheck     (modifyMaxSuccess)
+import           Test.QuickCheck           (Arbitrary (arbitrary), Gen (..),
+                                            Property, Testable (property),
+                                            forAll, generate, quickCheck)
 
 
 testScale :: Int
@@ -42,11 +43,11 @@ spec = do
 
         it "M3" $ property (prop_IAaxiomM3 @Int)
         it "M3" $ property (prop_IAaxiomM3 @Day)
-        it "M3" $ property (prop_IAaxiomM3 @UTCTime)
+        it "M3" $ forAll genNominalDiffTime (prop_IAaxiomM3 @UTCTime)
 
         it "M4" $ property (prop_IAaxiomM4 @Int)
         it "M4" $ property (prop_IAaxiomM4 @Day)
-        it "M4" $ property (prop_IAaxiomM4 @UTCTime)
+        it "M4" $ forAll genNominalDiffTime (prop_IAaxiomM4 @UTCTime)
 
         it "M5" $ property (prop_IAaxiomM5 @Int)
         it "M5" $ property (prop_IAaxiomM5 @Day)
@@ -54,5 +55,5 @@ spec = do
 
         it "M4.1" $ property (prop_IAaxiomM4_1 @Int)
         it "M4.1" $ property (prop_IAaxiomM4_1 @Day)
-        it "M4.1" $ property (prop_IAaxiomM4_1 @UTCTime)
+        it "M4.1" $ forAll genNominalDiffTime (prop_IAaxiomM4_1 @UTCTime)
 

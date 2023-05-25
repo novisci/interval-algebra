@@ -33,6 +33,12 @@ include::example$TutorialMain.hs[tag=import-declarations]
 
 
 == Intervals
+Throughout the examples we'll use the following alias
+
+[source,haskell]
+----
+include::example$TutorialMain.hs[tag=safeInterval-alias]
+----
 
 === The Interval type
 
@@ -140,13 +146,18 @@ include::example$TutorialMain.out[tag=parseinterval-print]
 ==== Creating Intervals using 'safeInterval'
 
 For the `safeInterval` function we provide a pair with a starting point and ending point as the input.
-If the ending point is no greater than the starting point then the ending point is adjusted so that the duration is the minimal allowed amount for the endpoint type as defined by the `moment` method for the IntervalSizeable class
+If the ending point is no greater than the starting point then the ending point is adjusted so that the duration is the minimal allowed amount for the endpoint type as defined by the `moment` method for the SizedIv class
 (see <<_the_intervalsizeable_class>> section for details),
 while the starting point is left unchanged.
 This mechanism ensures that an `Interval` is created where the starting point is strictly less than the ending point.
 
 For example, the minimum duration allowed for an `Interval Integer` is 1.
 In one of the examples below, the duration provided for `ivMinDurInteger` is less than 1 so consequently the ending point for the resulting `Interval` is adjusted to be 1 more than the starting point.
+
+[NOTE]
+`safeInterval` is deprecated. You can "safely" construct an `Interval a` that
+is an instance of `SizedIv` with `interval`. The new usage is shown
+here.
 
 [source,haskell]
 ----
@@ -165,7 +176,7 @@ The `beginerval` and `enderval` functions offer alternatives to the `safeInterva
 The `beginerval` function takes a duration and a starting point as inputs,
 while the `enderval` function takes a duration and an ending point as inputs.
 Similar to how the `safeInterval` function operates,
-if the duration is smaller than the minimal allowed amount for the endpoint type as defined by the `moment` method for the `IntervalSizeable` class,
+if the duration is smaller than the minimal allowed amount for the endpoint type as defined by the `moment` method for the `SizedIv` class,
 then the duration is adjusted to take the value of the minimum duration.
 
 In the following examples, we see two instances where the input duration is smaller than 1, which is the minimal allowed amount for an `Interval Integer`. Note that the expression type signatures are needed to prevent an ambiguous type variable error.
@@ -178,7 +189,7 @@ include::example$TutorialMain.out[tag=beginerval-enderval-print]
 
 ==== Creating Intervals using 'beginervalMoment' and 'endervalMoment'
 
-The `beginervalMoment` and `endervalMoment` functions create ``Interval``s with the minimum duration as defined by the corresponding `IntervalSizeable` instance.
+The `beginervalMoment` and `endervalMoment` functions create ``Interval``s with the minimum duration as defined by the corresponding `SizedIv` instance.
 In the case of `beginervalMoment` the starting point is specified by the function's input value,
 while for the case of `endervalMoment` the ending point is specified by the function's input value.
 
@@ -290,12 +301,11 @@ include::example$TutorialMain.out[tag=pairedinterval-getset-data-print]
 
 == Interfaces for embedding Intervals
 
-interval-algebra is built around three typeclasses designed to separate concerns of constructing,
-relating, and combining types that contain ``Interval``s:
+interval-algebra is built around three typeclasses designed to separate
+concerns of constructing and relating types that contain ``Interval``s:
 
 . `Intervallic` provides an interface to the data structures which contain an `Interval`.
-. `IntervalCombinable` provides an interface to methods of combining two ``Interval``s.
-. `IntervalSizeable` provides methods for measuring and modifying the size of an interval.
+. `SizedIv` provides a generic interface for constructing and manipulating intervals. 
 
 An advantage of nested typeclass design is that users can define a types with embedded ``Interval``s with just the amount of structure that they need.
 
@@ -317,7 +327,7 @@ getInterval :: i a -> Interval a
 setInterval :: i a -> Interval b -> i b
 ----
 
-and accompanying helper functions for getting the starting point and ending point out of an `Interallic` value:
+and accompanying helper functions for getting the starting point and ending point out of an `Intervallic` value:
 
 [source,haskell]
 ----
@@ -379,196 +389,205 @@ setInterval :: PairedInterval b a -> Interval c -> PairedInterval b c
 See the <<_getting_and_setting_the_interval_portion_of_a_pairedinterval>> section for example usages of `Intervallic` methods.
 
 
-=== The IntervalSizeable class
+=== The interval classes
 
-The `IntervalSizeable` class is defined as
+`IntervalAlgebra` defines three classes separating different uses and 
+interpretations of an interval and the interval algebra.
 
-[source,haskell]
-----
-class (Ord a, Num b, Ord b) => IntervalSizeable a b | a -> b
-----
+The `Iv` class is an abstract interface for performing the interval algebra
+as defined in [Allen 1983](http://cse.unl.edu/~choueiry/Documents/Allen-CACM1983.pdf).
 
-with methods
-
-[source,haskell]
-----
-moment :: forall a . b
-duration :: Intervallic i => i a -> b
-add :: b -> a -> a
-diff :: a -> a -> b
-----
-
-In general, for a pair of types `a` and `b`, the `IntervalSizeable` class provides an interface for operations related to calculating the duration of an existing `Intervallic` and other size-related concerns.
-For the important special case of the `Interval` instance of `Intervallic`, the `a` type represents the type used for the starting and ending points of the `Interval`,
-while the `b` type for the interval-algebra defined instances of `IntervalSizeable` represents the type obtained by calculating the "difference" between the starting and ending points,
-as defined by `diff`.
-User-defined instances of `Intervallic` need not maintain this interpretation.
-
-
-==== IntervalSizeable instances
-
-The following instances are provided for `IntervalSizeable`.
+It is defined as
 
 [source,haskell]
 ----
-IntervalSizeable Int Int
-IntervalSizeable Integer Integer
-IntervalSizeable Day Integer
-IntervalSizeable UTCTime NominalDiffTime
+class Iv iv
 ----
 
-As an example, consider the `IntervalSizeable Day Integer` instance with the following methods.
+It has one method defining a predicate for each of the 13 possible relations from Allen 1983,
+and one more method taking a pair of intervals and returning their corresponding `IntervalRelation`.
+
+Any two pair of intervals must satisfy exactly one of the relations.
 
 [source,haskell]
 ----
-moment :: forall a. Integer
-duration :: Intervallic i Day => i Day -> Integer
-add :: Integer -> Day -> Day
-diff :: Day -> Day -> Integer
+ivRelate :: iv -> iv -> IntervalRelation
+ivBefore, ivAfter :: iv -> iv -> Bool
+ivMeets, ivMetBy :: iv -> iv -> Bool
+ivOverlaps, ivOverlappedBy :: iv -> iv -> Bool
+ivStarts, ivStartedBy :: iv -> iv -> Bool
+ivFinishes, ivFinishedBy :: iv -> iv -> Bool
+ivDuring, ivContains :: iv -> iv -> Bool
+ivEquals :: iv -> iv -> Bool
 ----
 
-In the event that we apply `duration` to an `Interval Day` then we get a further specialization of `duration` to the following type.
+Only `ivBefore, ivMeets, ivOverlaps, ivStarts, ivFinishes, ivDuring` must be defined. 
+The rest are defined by complementation, and `ivEquals` must hold whenever none of 
+the others do.
+
+Though we typically think of intervals as segments in a time line, Allen's construction
+is an abstract relation algebra which can be used to perform temporal reasoning in a variety of contexts,
+including where the "intervals" are of a qualitative nature.
+
+An example of such abstract treatment is as follows, adapted from Allen 1983:
+
+We have a collection of temporal events, "intervals", given by `Dinner`, 
+`FoundLetter`, `MadeDecision` and related through the statement
+
+> We found the letter during dinner, after we made the decision.
+
+In this case, it is easiest to define `ivRelate` first, and the
+other methods from that implementation.
+
 [source,haskell]
 ----
-duration :: Interval Day -> Integer
+data GoingsOn = Dinner | FoundLetter | MadeDecision 
+  deriving (Show, Eq)
+
+instance Iv GoingsOn where
+  ivRelate MadeDecision Dinner = Before
+  ivRelate MadeDecision FoundLetter = Before
+  ivRelate FoundLetter Dinner = During
+  ivRelate x y 
+    | x == y = Equals
+    | otherwise = converseRelation (ivRelate y x)
 ----
 
-The following are some example uses of `IntervalSizeable` methods.
+The `PointedIv` class is an interface for intervals that are represented
+by a left (begin) endpoint and right (end) endpoint. The canonical example
+is `Interval a`.
+
+It is defined as
+
+[source,haskell]
+----
+class PointedIv iv
+----
+
+The associated type `Point` determines the type of the endpoints of `iv`,
+
+[source,haskell]
+----
+type Point iv
+----
+
+The `IntervalAlgebra.Core` module defines a blanket implementation 
+for all `Interval a` types, with
+
+[source,haskell]
+----
+type Point (Interval a) = a
+----
+
+For a tutorial on type families and associated types, see this
+https://serokell.io/blog/type-families-haskell[blog post].
+
+`PointedIv` has methods
+
+[source,haskell]
+----
+-- | Access the left "begin" and right "end" endpoints of 'iv'.
+ivBegin, ivEnd :: iv -> Point iv
+----
+
+The `SizedIv` class is a means for manipulating and constructing intervals that can be 
+decomposed as a sequence of moment-length periods, which is a common case in applications. 
+
+It is defined as
+
+[source,haskell]
+----
+class (PointedIv iv) => SizedIv iv
+----
+
+It has an associated type for the smallest unit of measurement of the interval,
+
+[source,haskell]
+----
+type Moment iv
+----
+
+It has methods
+
+[source,haskell]
+----
+moment :: Moment iv
+-- | The duration of an 'iv'.
+duration :: iv -> Moment iv
+ivExpandr, ivExpandl :: Moment iv -> iv -> iv
+----
+
+In the typical case where a type that is `SizedIv` also implements the interval algebra,
+implemented in the `Iv` class, the implementations must be consistent. See the class
+API documentation for a list of properties that must be kept.
+
+In some important cases, the type of `Moment (Interval a)` is not `a`.
+
+`IntervalAlgebra` defines instances of `SizedIv (Interval a)` for some
+common types `a`. A user might wish to define their own instances in cases
+where the usual `Num, Ord` instances for `a` are not those they want to define
+for the interval: An interval representing time in a simple 12-hour clock would
+be an example. An interval representing calendar time whose minimal increment
+is in weeks, not days, is another example.
+
+In the second example, the user could create a `newtype` wrapper around `Day`,
+call it `DayInWeeks`, then define `instance SizedIv (Interval
+DayInWeeks)`, `instance Ord DayInWeeks` etc.
+
+A user might also want to define their own `SizedIv` instance to allow
+for a more efficient or convenient data structure for manipulating an interval
+as a __range__ of values, which is not particularly convenient with `Interval
+a` 's underlying tuple representation. 
+
+For that, a user could write an
+`instance SizedIv (Array a)` using `Array` from the `base` package, or
+similarly `instance SizedIv (Vector a)` using the `vector` package.
+
+Those representations have a cost, however, as the `Array` or `Vector` must 
+be constructed, which is possibly much more costly than constructing an `Interval`.
+
+User-defined instances should satisfy the properties given in the typeclass
+documentation.
+
+==== SizedIv instances
+
+The following instances are provided for `SizedIv`.
+
+[source,haskell]
+----
+SizedIv (Interval Int)
+SizedIv (Interval Integer)
+SizedIv (Interval Double)
+SizedIv (Interval Day)
+SizedIv (Interval UTCTime)
+----
+
+with corresponding `Moment` types of
+
+[source,haskell]
+----
+type Moment (Interval Int) = Int
+type Moment (Interval Integer) = Integer
+type Moment (Interval Double) = Double
+type Moment (Interval Day) = Integer
+type Moment (Interval UTCTime) = NominalDiffTime
+----
+
+In the last two cases, the moment type differs from the point type to be
+consistent with the package `time`: For example, there is not a meaningful way
+to take the difference between two `UTCTime` s and return a `UTCTime`, and
+therefor `UTCTime` cannot have a `Num` instance. Instead, their difference is
+expressed in seconds of `NominalDiffTime`.
+
+The following are some example uses of `SizedIv` methods.
 
 [source,haskell]
 ----
 include::example$TutorialMain.out[tag=intervalsizeable-instance-print]
 ----
 
-
-=== The IntervalCombinable class
-
-The `IntervalCombinable` class is defined as
-
-[source,haskell]
-----
-class Intervallic i => IntervalCombinable i a
-----
-
-with methods
-
-[source,haskell]
-----
-(.+.) :: i a -> i a -> Maybe (i a)
-(><) :: i a -> i a -> Maybe (i a)
-(<+>) :: (Semigroup (f (i a)), Applicative f) => i a -> i a -> f (i a)
-----
-
-
-==== The Interval instance of IntervalCombinable
-
-===== Method types
-
-The following instance (among others) is provided for `IntervalCombinable`:
-
-[source,haskell]
-----
-Ord a => IntervalCombinable Interval a
-----
-
-and the methods specialize to
-
-[source,haskell]
-----
-(.+.) :: Ord a => Interval a -> Interval a -> Maybe (Interval a)
-(><) :: Ord a => Interval a -> Interval a -> Maybe (Interval a)
-(<+>) :: (Ord a, Semigroup (f (Interval a)), Applicative f) =>
-  Interval a -> Interval a -> f (Interval a)
-----
-
-
-===== A brief introduction to 'meets' and 'before'
-
-We don't properly introduce the `meets` and `before` functions that are used by the `IntervalCombinable` methods until the upcoming <<_the_intervalrelation_type_and_associated_predicates>> section.
-But for now it suffices to know that for two ``Interval``s `x` and `y`:
-
-* The result of evaluating `pass:[x `meets` y]` is `True` if the ending point of `x` is equal to the starting point of `y`,
-and `False` otherwise.
-* The result of evaluating `pass:[x `before` y]` is `True` if the ending point of `x` is less than the starting point of `y`,
-and `False` otherwise.
-
-
-===== IntervalCombinable methods for Interval
-
-* The `.+.` method returns a `Just` value if the first input `meets` the second, and `Nothing` otherwise.
-In the case that the value is a `Just` then it contains the `Interval` created by combining the two inputs,
-or more precisely stated it contains the `Interval` with the starting point given by the starting point of the first input,
-and the ending point given by the ending point of the second input.
-* The `><` method returns a `Just` value if the first input is `before` the second, and `Nothing` otherwise.
-In the case that the value is a `Just` then it contains the `Interval` created by spanning the two inputs,
-or more precisely stated it contains the `Interval` with the starting point given by the ending point of the first input,
-and the ending point given by the starting point of the second input.
-* The `<+>` method is a little bit more complicated to reason about since its behavior differs depending on the return type.
-** If we have two inputs where the first input is `before` the second,
-then it lifts the inputs to the return type and combines them by using the `<>` method.
-** If we have two inputs where the first input is _not_ `before` the second,
-then it creates a lifted version of an `Interval` with regards to the output type,
-and where the starting point is the earlier of the two starting points and the ending point is the later of the two ending points.
-
-The following are some example usages of these methods.
-Recall from the <<_additional_interval_data>> section that a variable with a name like e.g. `iv2to5` has a starting point of 2 and an ending point of 5.
-
-[source,haskell]
-----
-include::example$TutorialMain.out[tag=intervalcombinable-interval-print]
-----
-
-
-==== The PairedInterval instance of IntervalCombinable
-
-The following instance (among others) is provided for `IntervalCombinable`:
-
-[source,haskell]
-----
-instance (Ord a, Eq b, Monoid b) => IntervalCombinable (PairedInterval b) a
-----
-
-and the methods specialize to
-
-[source,haskell]
-----
-(.+.) :: (Ord a, Eq b, Monoid b) =>
-  PairedInterval b a -> PairedInterval b a -> Maybe (PairedInterval b a)
-(><) :: (Ord a, Eq b, Monoid b) =>
-  PairedInterval b a -> PairedInterval b a -> Maybe (PairedInterval b a)
-(<+>) :: ((Ord a, Eq b, Monoid b), Semigroup (f (PairedInterval b a)), Applicative f) =>
-  PairedInterval b a -> PairedInterval b a -> f (PairedInterval b a)
-----
-
-In what follows we describe the `IntervalCombinable` methods for `PairedInterval` and provide some examples.
-Note that we don't properly introduce the `meets` and `before` functions that are used by the `IntervalCombinable` methods until the upcoming <<_the_intervalrelation_type_and_associated_predicates>> section,
-but for a short introduction see the <<_a_brief_introduction_to_meets_and_before>> section.
-
-* The `.+.` method returns a `Just` value if the first input `meets` the second, and `Nothing` otherwise.
-In the case that the value is a `Just` then it contains a `PairedInterval` with the data portion given by the data in the second argument to `.+.`,
-and the `Interval` portion obtained by combining the two inputs
-(more precisely stated it contains the `Interval` with the starting point given by the starting point of the first input,
-and the ending point given by the ending point of the second input).
-* The `><` method returns a `Just` value if the first input is `before` the second, and `Nothing` otherwise.
-In the case that the value is a `Just` then it contains the `PairedInterval` with the data portion given by the `mempty` method for the `Monoid` instance of the data type of ``PairedInterval``s,
-and the `Interval` portion obtained by spanning the two inputs
-(or more precisely stated it contains the `Interval` with the starting point given by the ending point of the first input,
-and the ending point given by the starting point of the second input).
-* The `<+>` method is a little bit more complicated to reason about since its behavior differs depending on the return type.
-** If we have two inputs where the first input is `before` the second,
-then it lifts the inputs to the return type and combines them by using the `<>` method.
-** If we have two inputs where the first input is _not_ `before` the second,
-then it creates a lifted version of a `PairedInterval` with regards to the output type,
-where the data is the result of applying `<>` to the data portions of the two inputs,
-and where the `Interval` is such that the starting point is the earlier of the two starting points of the embedded ``Interval``s and the ending point is the later of the two ending points of the embedded ``Interval``s.
-
-The following are some example usages of these methods.
-Recall from the <<_additional_interval_data>> section that a variable with a name like e.g. `iv2to5` has a starting point of 2 and an ending point of 5.
-[source,haskell]
-----
-include::example$TutorialMain.out[tag=intervalcombinable-pairedinterval-print]
-----
-
+`ivBegin, ivEnd, ivExpandr, ivExpandr` have generalizations for members of the
+`Intervallic` class, discussed elsewhere.
 
 == Updating intervals
 
@@ -582,10 +601,10 @@ and where in this context "expanding" means that the endpoints can only be updat
 * `expand` moves an ``Intervallic``'s starting point "to the left" and ending point "to the right." The inputs are two durations and an `Intervallic` value.
 
 If the provided value by which to move either the starting or ending points is less than the minimal amount,
-as defined by the `moment` method for the corresponding `IntervalSizeable` class,
+as defined by the `moment` method for the corresponding `SizedIv` class,
 then the corresponding point is left unchanged.
 This has the effect of ensuring that these methods cannot decrease the duration of the `Interval`,
-as all sensible `IntervalSizeable` instances will have a positive `moment`.
+as all sensible `SizedIv` instances will have a positive `moment`.
 
 [source,haskell]
 ----
@@ -599,9 +618,9 @@ The following functions can be used to create an `Interval` that shares an endpo
 
 * `beginervalFromEnd` creates an interval that has the same starting endpoint as the ending point of an input `Intervallic` value. The inputs are a duration and an `Intervallic` value.
 * `endervalFromBegin` creates an interval that has the same ending point as the starting point of an input `Intervallic` value. The inputs are a duration and an `Intervallic` value.
-* `momentize` creates an interval with the minimum duration for the corresponding `IntervalSizeable` instance that has the same starting point as the starting point of an input `Intervallic` value. The input is an `Intervallic` value.
+* `momentize` creates an interval with the minimum duration for the corresponding `SizedIv` instance that has the same starting point as the starting point of an input `Intervallic` value. The input is an `Intervallic` value.
 
-In the event that any of the provided durations are less than the minimal allowed amount for the endpoint type as defined by the `moment` method for the corresponding `IntervalSizeable` class then the duration is adjusted to be the mimimum duration.
+In the event that any of the provided durations are less than the minimal allowed amount for the endpoint type as defined by the `moment` method for the corresponding `SizedIv` class then the duration is adjusted to be the mimimum duration.
 
 [source,haskell]
 ----
@@ -616,20 +635,20 @@ The `shiftFromBegin` and `shiftFromEnd` functions have the following type signat
 [source,haskell]
 ----
 shiftFromBegin
-  :: (IntervalSizeable a b, Intervallic i0 a)
-  => i0 a -> i1 a -> i1 b
+  :: (Num a, SizedIv (Interval a), Intervallic i0)
+  => i0 a -> i1 a -> i1 a
 
 shiftFromEnd
-  :: (IntervalSizeable a b, Intervallic i0 a)
-  => i0 a -> i1 a -> i1 b
+  :: (Num a, SizedIv (Interval a), Intervallic i0)
+  => i0 a -> i1 a -> i1 a
 ----
 
 For each function, you're creating a new interval with starting and ending points given in units relative to the starting point (in the case of ``ShiftFromBegin``) or ending point (in the case of ``ShiftFromEnd``) of another Intervallic.
 This can be useful when you don't care about the abolute time of when something happened, but rather when it happened relative to some other event.
 In more detail, `shiftFromBegin` and `shiftFromEnd` have the following behavior:
 
-* `shiftfromBegin` ``diff``s the starting point from the first input from both the starting and ending point of the second input.
-* `shiftfromEnd` is similar to `shiftfromBegin` except that it applies the `diff` to the *ending* point of its first input.
+* `shiftfromBegin` takes the difference via `(-)` to the starting point from the first input from both the starting and ending point of the second input.
+* `shiftfromEnd` is similar to `shiftfromBegin` except that it applies the difference to the *ending* point of its first input.
 
 In the examples below we see various combinations of types that can be provided as inputs for `shiftFromBegin` and `shiftFromEnd`.
 Recall from the <<_additional_interval_data>> section that a variable with a name like e.g. `iv2to4` has a starting point of 2 and an ending point of 4.

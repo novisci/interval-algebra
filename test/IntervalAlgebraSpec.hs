@@ -1,11 +1,14 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
 module IntervalAlgebraSpec
   ( spec
   ) where
 
+import           Control.Applicative       (liftA2)
 import           Data.Either               (isRight)
 import           Data.Fixed                (Pico)
 import           Data.Maybe                (fromJust, isJust, isNothing)
@@ -18,46 +21,87 @@ import           Data.Time                 as DT (Day (..), DiffTime,
                                                   secondsToDiffTime)
 import           GHC.Real                  (Rational (..), Real (..))
 import           IntervalAlgebra           as IA
-import           IntervalAlgebra.Arbitrary ()
+import           IntervalAlgebra.Arbitrary (genDay)
 import           Test.Hspec                (Spec, describe, hspec, it, shouldBe)
 import           Test.Hspec.QuickCheck     (modifyMaxDiscardRatio,
                                             modifyMaxSuccess)
 import           Test.QuickCheck           (Arbitrary (arbitrary), Gen (..),
                                             Property, Testable (property),
-                                            generate, quickCheck, (===), (==>))
+                                            forAll, generate, quickCheck,
+                                            (.&&.), (===), (==>))
+
+-- Convenience aliases
+interval :: (iv ~ Interval a, SizedIv iv, Ord a, Ord (Moment iv)) => a -> a -> iv
+interval = curry safeInterval
 
 mkIntrvl :: Int -> Int -> Interval Int
 mkIntrvl = beginerval
 
 prop_expandl_end
-  :: (IntervalSizeable a b, Show a) => b -> Interval a -> Property
+  :: (SizedIv (Interval a), Show a, Eq a) => Moment (Interval a) -> Interval a -> Property
 prop_expandl_end d i = end (expandl d i) === end i
 
 
 prop_expandr_begin
-  :: (IntervalSizeable a b, Show a) => b -> Interval a -> Property
+  :: (SizedIv (Interval a), Show a, Eq a) => Moment (Interval a) -> Interval a -> Property
 prop_expandr_begin d i = begin (expandr d i) === begin i
 
 -- | The relation between x and z should be an element of the set of the
 --   composed relations between x y and between y z.
-prop_compose :: Ord a => Interval a -> Interval a -> Interval a -> Property
+prop_compose :: (Ord a, SizedIv (Interval a)) => Interval a -> Interval a -> Interval a -> Property
 prop_compose x y z =
   member (relate x z) (compose (relate x y) (relate y z)) === True
 
 -- | If two intervals are disjoint and not meeting, then there should be a gap
 -- between the two (by ><), after the intervals are sorted.
-prop_combinable_gap_exists :: Ord a => Interval a -> Interval a -> Property
+prop_combinable_gap_exists :: (Ord a, SizedIv (Interval a), Ord (Moment (Interval a))) => Interval a -> Interval a -> Property
 prop_combinable_gap_exists x y =
   (before <|> after) x y ==> isJust ((><) (min x y) (max x y))
 
 -- | If two intervals are not disjoint or meeting, then there should be NO gap
 -- between the two (by ><), after the intervals are sorted.
-prop_combinable_nogap_exists :: Ord a => Interval a -> Interval a -> Property
+prop_combinable_nogap_exists :: (Ord a, SizedIv (Interval a), Ord (Moment (Interval a))) => Interval a -> Interval a -> Property
 prop_combinable_nogap_exists x y =
   (predicate $ complement $ fromList [Before, After]) x y
     ==> isNothing ((><) (min x y) (max x y))
 
+  {- Properties of SizedIv -}
 
+-- When @Point iv@ is @Ord@,
+--
+-- prop> ivBegin i < ivEnd i
+prop_validIv :: forall a. (SizedIv (Interval a), Ord a, Show a, Ord (Moment (Interval a))) => a -> a -> Property
+prop_validIv b e = (ivBegin i < ivEnd i) === True where i = safeInterval (b, e)
+
+-- When @iv@ is @Eq@,
+--
+-- prop> interval (ivBegin i) (ivEnd i) == i
+prop_validIv' :: forall a. (SizedIv (Interval a), Ord a, Show a, Ord (Moment (Interval a))) => a -> a -> Property
+prop_validIv' b e = interval (ivBegin i) (ivEnd i) === i where i = interval b e
+
+-- When @iv@ is @Ord@, for all @i == interval b e@,
+--
+-- prop> ivExpandr d i >= i
+-- prop> ivExpandl d i <= i
+prop_ivExpandr, prop_ivExpandl :: forall a. (SizedIv (Interval a), Ord (Interval a), Show (Interval a)) => Moment (Interval a) -> Interval a -> Property
+prop_ivExpandr d i = (ivExpandr d i >= i) === True
+prop_ivExpandl d i = (ivExpandl d i <= i) === True
+
+-- When @Moment iv@ is @Ord@,
+--
+-- prop> duration (interval b e) >= moment
+-- prop> duration (ivExpandr d i) >= duration i
+-- prop> duration (ivExpandl d i) >= duration i
+prop_duration :: forall a. (SizedIv (Interval a), Ord a, Ord (Moment (Interval a)), Show (Interval a)) => Moment (Interval a) -> a -> a -> Property
+prop_duration d b e = p1 .&&. p2 .&&. p3
+  where i = interval b e
+        m = moment @(Interval a)
+        dur = duration i
+        p1 = (dur >= m) === True
+        p2 = (duration (ivExpandr d i) >= dur) === True
+        p3 = (duration (ivExpandl d i) >= dur) === True
+
+{- Specs -}
 spec :: Spec
 spec = do
   describe "Basic Interval unit tests of typeclass and creation methods" $ do
@@ -80,10 +124,10 @@ spec = do
 
     it "beginervalMoment duration is moment"
       $          duration (beginervalMoment (-13 :: Int))
-      `shouldBe` (moment @Int)
+      `shouldBe` (moment @(Interval Int))
     it "endervalMoment duration is moment"
       $          duration (endervalMoment (26 :: Int))
-      `shouldBe` (moment @Int)
+      `shouldBe` (moment @(Interval Int))
 
     it "parsing fails on bad inputs" $ parseInterval 10 0 `shouldBe` Left
       (IA.ParseErrorInterval "0<=10")
@@ -180,8 +224,8 @@ spec = do
       $          intersection (fromList [Before]) (fromList [After])
       `shouldBe` fromList []
 
-  describe "IntervalSizeable tests" $ do
-    it "moment is 1" $ moment @Int `shouldBe` 1
+  describe "SizedIv tests" $ do
+    it "moment is 1" $ moment @(Interval Int) `shouldBe` 1
     it "expandl doesn't change end" $ property (prop_expandl_end @Int)
     it "expandr doesn't change begin" $ property (prop_expandr_begin @Int)
     it "expand 0 5 Interval (0, 1) should be Interval (0, 6)"
@@ -200,7 +244,7 @@ spec = do
       $          expand 5 (-5) (beginerval (1 :: Int) (0 :: Int))
       `shouldBe` beginerval (6 :: Int) (-5 :: Int)
     it "expand moment 0 Interval (0, 1) should be Interval (-1, 1)"
-      $          expand (moment @Int) 0 (beginerval (1 :: Int) (0 :: Int))
+      $          expand (moment @(Interval Int)) 0 (beginerval (1 :: Int) (0 :: Int))
       `shouldBe` beginerval (2 :: Int) (-1 :: Int)
 
     it "beginerval 2 10 should be Interval (10, 12)"
@@ -230,19 +274,28 @@ spec = do
       $          shiftFromEnd (beginerval 2 (4 :: Int)) (beginerval 2 10)
       `shouldBe` beginerval 2 4 -- (4, 6)
 
-    it "shiftFromBegin can convert Interval Day to Interval Integer"
-      $          shiftFromBegin (beginerval 2 (fromGregorian 2001 1 1))
-                                (beginerval 2 (fromGregorian 2001 1 10))
-      `shouldBe` beginerval 2 9 -- (9, 11)
-
-    it "shiftFromEnd can convert Interval Day to Interval Integer"
-      $          shiftFromEnd (beginerval 2 (fromGregorian 2001 1 1))
-                              (beginerval 2 (fromGregorian 2001 1 10))
-      `shouldBe` beginerval 2 7 -- (7, 9)
-
     it "momentize works"
       $          momentize (beginerval 2 (fromGregorian 2001 1 1))
       `shouldBe` beginerval 1 (fromGregorian 2001 1 1)
+
+  describe "SizedIv properties for Interval Int" $ do
+    it "validIv" $ property (prop_validIv @Int)
+    it "validIv'" $ property (prop_validIv' @Int)
+    it "ivExpandr" $ property (prop_ivExpandr @Int)
+    it "ivExpandl" $ property (prop_ivExpandl @Int)
+    it "duration" $ property (prop_duration @Int)
+
+  describe "SizedIv properties for Interval Day" $ do
+    it "validIv" $ forAll (liftA2 (,) genDay genDay) (uncurry prop_validIv)
+    it "validIv'" $ forAll (liftA2 (,) genDay genDay) (uncurry prop_validIv')
+    it "ivExpandr" $ property (prop_ivExpandr @Day)
+    it "ivExpandl" $ property (prop_ivExpandl @Day)
+    it "duration" $ forAll (do
+      m <- arbitrary
+      b <- genDay
+      e <- genDay
+      pure (m, b, e)
+      ) (\(m, b, e) -> prop_duration m b e)
 
 
   describe "Intervallic tests" $
@@ -267,7 +320,7 @@ spec = do
                                                              (mkIntrvl 2 3)
     it "prop_compose holds" $ property (prop_compose @Int)
 
-  describe "IntervalCombinable tests" $ do
+  describe "(.+.) tests" $ do
     it "join non-meeting intervals is Nothing"
       $          beginerval 2 (0 :: Int)
       .+.        beginerval 6 5
@@ -311,3 +364,4 @@ spec = do
     it "concur matches notDisjoint"
       $          concur (beginerval 1 0) (beginerval 10 (0 :: Int))
       `shouldBe` notDisjoint (beginerval 1 0) (beginerval 10 (0 :: Int))
+

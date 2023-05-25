@@ -1,9 +1,11 @@
 {-|
 Module      : Interval Algebra
 Description : Implementation of Allen's interval algebra
-Copyright   : (c) NoviSci, Inc 2020
+Copyright   : (c) NoviSci, Inc 2020-2022
+                  TargetRWE, 2023
 License     : BSD3
-Maintainer  : bsaul@novisci.com
+Maintainer  : bsaul@novisci.com 2020-2022
+              bbrown@targetrwe.com 2023
 
 The @IntervalAlgebra@ module provides data types and related classes for the
 interval-based temporal logic described in [Allen (1983)](https://doi.org/10.1145/182.358434)
@@ -16,14 +18,13 @@ going for most cases.
 
 -}
 
-{-# LANGUAGE Safe #-}
 module IntervalAlgebra
   ( module IntervalAlgebra.Core
   , module IntervalAlgebra.IntervalUtilities
   , module IntervalAlgebra.PairedInterval
   ) where
 
-import safe           IntervalAlgebra.Core
-import safe           IntervalAlgebra.IntervalDiagram
-import safe           IntervalAlgebra.IntervalUtilities
-import safe           IntervalAlgebra.PairedInterval
+import           IntervalAlgebra.Core
+import           IntervalAlgebra.IntervalDiagram
+import           IntervalAlgebra.IntervalUtilities
+import           IntervalAlgebra.PairedInterval

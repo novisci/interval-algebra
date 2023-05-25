@@ -1,4 +1,10 @@
 {-|
+Module      : IntervalAlgebra.IntervalDiagram
+Description : Tools for visualizing intervals
+Copyright   : (c) NoviSci, Inc 2020-2022
+                  TargetRWE, 2023
+License     : BSD3
+Maintainer  : bsaul@novisci.com 2020-2022, bbrown@targetrwe.com 2023
 
 This module provides functions for creating diagrams of intervals as text.
 For example,
@@ -9,13 +15,6 @@ For example,
 --
           -----
                 ------
-==============================
-
->>> let ref = bi 30 (fromGregorian 2022 5 6)
->>> let ivs = [ bi 2 (fromGregorian 2022 5 6), bi 5 (fromGregorian 2022 5 10)]
->>> pretty $ simpleIntervalDiagram ref ivs
---
-    -----
 ==============================
 
 Such diagrams are useful for documentation, examples,
@@ -81,7 +80,7 @@ import           Prettyprinter
 
 -- $setup
 -- >>> :set -XTypeApplications -XFlexibleContexts -XOverloadedStrings
--- >>> import IntervalAlgebra.IntervalUtilities (gapsWithin)
+-- >>> import IntervalAlgebra.IntervalUtilities
 -- >>> import Data.Time
 
 {-
@@ -118,7 +117,7 @@ instance Intervallic IntervalText where
   getInterval (MkIntervalText x) = getInterval x
   setInterval (MkIntervalText x) i = MkIntervalText $ setInterval x i
 
-instance (Enum b, IntervalSizeable a b) => Pretty (IntervalText a) where
+instance (Enum (Moment (Interval a)), SizedIv (Interval a)) => Pretty (IntervalText a) where
   pretty (MkIntervalText x) = pretty $ replicate (fromEnum (duration i)) c
    where
     c = getPairData x
@@ -507,7 +506,7 @@ data IntervalDiagramParseError =
   | IntervalLineError IntervalTextLineParseError
   deriving (Eq, Show)
 
-instance (IntervalSizeable a b) => Pretty (IntervalDiagram a) where
+instance (SizedIv (Interval a)) => Pretty (IntervalDiagram a) where
   pretty (MkIntervalDiagram _ axis ivs opts) = do
 
     -- Create a list of pretty IntervalLines
@@ -527,7 +526,7 @@ instance (IntervalSizeable a b) => Pretty (IntervalDiagram a) where
     -- See use of makeIntervalLine in parseIntervalTextLine.
     -- This why the intervalLineEnd function is used to determine
     -- the end of the intervals in a line.
-    let labelIndents  = fmap (diff refDur . intervalLineEnd) ivs
+    let labelIndents  = fmap ((-) refDur . intervalLineEnd) ivs
 
     -- Create a list of the line label docs
     let labelLines =
@@ -555,7 +554,7 @@ instance (IntervalSizeable a b) => Pretty (IntervalDiagram a) where
       then emptyDoc
       else space <> pretty ("<-" :: Text) <> space <> pretty t
 
-instance (IntervalSizeable a b) =>
+instance (SizedIv (Interval a)) =>
   Pretty (Either IntervalDiagramParseError (IntervalDiagram a)) where
   pretty (Left  e) = pretty $ show e
   pretty (Right d) = pretty d
@@ -623,7 +622,7 @@ See 'IntervalDiagramParseError' for all the cases handled.
 
 -}
 parseIntervalDiagram
-  :: (Ord a, IntervalSizeable a b, Enum b)
+  :: (Ord a, SizedIv (Interval a), Enum a, Num a, Enum (Moment (Interval a)))
   => IntervalDiagramOptions
   -- ^ Document options (see 'IntervalDiagramOptions')
   -> [(Int, Char)]
@@ -670,7 +669,7 @@ parseIntervalDiagram opts labels placement ref ivs =
  where
   extendsBeyond =
     before <|> meets <|> overlaps <|> overlappedBy <|> metBy <|> after
-  checkAvailableChar (AvailablePerLine i _) = fromEnum (duration ref) > i
+  checkAvailableChar (AvailablePerLine i _) = fromEnum (duration $ getInterval ref) > i
   checkAvailableChar Unbounded              = True
   {-
     Shifts the endpoints of an interval to be referenced from another interval,
@@ -704,16 +703,9 @@ using the 'defaultIntervalDiagramOptions'.
           -----
                 ------
 ==============================
-
->>> pretty $ simpleIntervalDiagram ref (fromMaybe [] (gapsWithin ref ivs))
-  --------
-               -
-                      --------
-==============================
-
 -}
 simpleIntervalDiagram
-  :: (Ord a, IntervalSizeable a b, Intervallic i, Enum b)
+  :: (Ord a, SizedIv (Interval a), Intervallic i, Enum a, Num a, Enum (Moment (Interval a)))
   => i a -- ^ The axis interval
   -> [i a] -- ^ List of intervals to be printed one per line
   -> Either IntervalDiagramParseError (IntervalDiagram a)
@@ -734,11 +726,11 @@ sequence of additional rows with one row per list element in the second input
 and such that each row displays each interval provided in the intervals list and
 label pair.
 
->>> x1 = si (1, 5)
->>> x2 = si (7, 10)
->>> x3 = si (13, 15)
+>>> x1 = beginerval 4 1
+>>> x2 = beginerval 3 7
+>>> x3 = beginerval 2 13
 >>> ivs = [x1, x2, x3]
->>> gaps = [si (5, 7), si (10, 13)]
+>>> gaps = [beginerval 2 5, beginerval 3 10]
 >>> :{
 pretty $ standardExampleDiagram (zip ivs ["x1", "x2", "x3"]) [(gaps, "gaps")]
 :}
@@ -764,7 +756,7 @@ pretty $ standardExampleDiagram (zip ivs ["x1", "x2", "x3"]) []
 IntervalsExtendBeyondAxis
 -}
 standardExampleDiagram
-  :: (Num a, Ord a, Enum b, IntervalSizeable a b)
+  :: (Num a, Enum a, Ord a, Enum (Moment (Interval a)), Ord (Moment (Interval a)), SizedIv (Interval a))
   => [(Interval a, String)]
   -> [([Interval a], String)]
   -> Either IntervalDiagramParseError (IntervalDiagram a)
