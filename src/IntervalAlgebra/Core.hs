@@ -946,7 +946,7 @@ converse = Data.Set.map converseRelation
 -- ivBegin i < ivEnd i
 -- @
 --
--- [Allen 1983](https://cse.unl.edu/~choueiry/Documents/Allen-CACM1983.pdf)
+-- [Allen 1983](https://dl.acm.org/doi/10.1145/182.358434)
 -- defines the 'IntervalRelation' s for such cases, which is provided in this module
 -- for the canonical representation @'Interval' a@.
 --
@@ -1575,7 +1575,7 @@ instance PointedIv (Interval a) where
 
 -- | Implements the interval algebra for intervals represented as left and right endpoints,
 -- with points in a totally ordered set, as prescribed in
--- [Allen 1983](https://cse.unl.edu/~choueiry/Documents/Allen-CACM1983.pdf).
+-- [Allen 1983](https://dl.acm.org/doi/10.1145/182.358434).
 instance (Ord a) => Iv (Interval a) where
   ivBefore x y = ivEnd x < ivBegin y
   ivMeets x y = ivEnd x == ivBegin y
