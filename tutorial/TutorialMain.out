@@ -107,7 +107,7 @@ print pairListstringInteger
 print $ getInterval pairListstringInteger
 ---> (2, 6)
 
-print $ setInterval pairListstringInteger (safeInterval (4, 9) :: Interval Integer)
+print $ setInterval pairListstringInteger (interval 4 9 :: Interval Integer)
 ---> {(4, 9), ["John","Paul","George","Ringo"]}
 
 print $ intervals [pairListstringInteger, pairListstringInteger]
@@ -152,17 +152,26 @@ print $ end ivInteger
 print ivDay
 ---> (1967-01-18, 1967-01-24)
 
-print $ moment @Day
+print $ moment @(Interval Day)
 ---> 1
+
+print $ interval (ivBegin ivDay) (ivEnd ivDay)
+---> (1967-01-18, 1967-01-24)
+
+print $ interval (ivEnd ivDay) (ivBegin ivDay)
+---> (1967-01-24, 1967-01-25)
 
 print $ duration ivDay
 ---> 6
 
-print $ add 15 (begin ivDay)
----> 1967-02-02
+print $ ivExpandr 15 ivDay
+---> (1967-01-18, 1967-02-08)
 
-print $ diff (add 15 (begin ivDay)) (begin ivDay)
----> 15
+print $ ivExpandl 0 ivDay
+---> (1967-01-18, 1967-01-24)
+
+print $ ivExpandl 10 ivDay
+---> (1967-01-08, 1967-01-24)
 -- end::intervalsizeable-instance-print[]
 -- tag::intervalcombinable-interval-print[]
 
@@ -188,7 +197,7 @@ print $ iv0to2 >< iv2to5
 -- The Just Interval formed from combining the Intervals and taking the data
 -- portion from the second argument, since iv0to2 `meets` iv2to5
 print $ makePairedInterval "a" iv0to2 .+. makePairedInterval "b" iv2to5
----> Just {(0, 5), "b"}
+---> Just (0, 5)
 
 -- A Nothing since iv0to2 doesn't `meets` iv5to8
 print $ makePairedInterval "a" iv0to2 .+. makePairedInterval "b" iv5to8
@@ -198,7 +207,7 @@ print $ makePairedInterval "a" iv0to2 .+. makePairedInterval "b" iv5to8
 -- portion from the `mempty` method of the Monoid String instance, since
 -- iv0to2 is `before` iv5to8
 print $ makePairedInterval "a" iv0to2 >< makePairedInterval "b" iv5to8
----> Just {(2, 5), ""}
+---> Just (2, 5)
 
 -- A Nothing since iv0to2 isn't `before` iv2to5
 print $ makePairedInterval "a" iv0to2 >< makePairedInterval "b" iv2to5
@@ -252,20 +261,11 @@ print $ momentize ivInteger
 print [iv2to4, iv5to8]
 ---> [(2, 4),(5, 8)]
 
-print ivDay
----> (1967-01-18, 1967-01-24)
-
 print $ shiftFromBegin iv2to4 iv5to8
 ---> (3, 6)
 
-print $ shiftFromBegin ivDay ivDay
----> (0, 6)
-
 print $ shiftFromEnd iv2to4 iv5to8
 ---> (1, 4)
-
-print $ shiftFromEnd ivDay ivDay
----> (-6, 0)
 -- end::shifting-intervals-print[]
 -- tag::relations-variables-diagram-print[]
 --       <- [iv0to2]

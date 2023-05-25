@@ -7,7 +7,7 @@ module RelationPropertiesSpec
   ) where
 
 import           Data.Time
-import           IntervalAlgebra.RelationProperties (IntervalRelationProperties (..))
+import           IntervalAlgebra.RelationProperties
 import           Test.Hspec                         (Spec, describe, hspec, it)
 import           Test.Hspec.QuickCheck              (modifyMaxSuccess)
 import           Test.QuickCheck

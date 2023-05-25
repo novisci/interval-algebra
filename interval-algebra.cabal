@@ -6,13 +6,11 @@ description:    Please see the README on GitHub at <https://github.com/novisci/i
 category:       Algebra,Time
 homepage:       https://github.com/novisci/interval-algebra#readme
 bug-reports:    https://github.com/novisci/interval-algebra/issues
-author:         Bradley Saul
-                Brendan Brown
-maintainer:     bsaul@novisci.com, 2020-2022
-                bbrown@targetrwe.com, 2023
+author:         Bradley Saul, Brendan Brown
+maintainer:     <bsaul@novisci.com> 2020-2022, <bbrown@targetrwe.com> 2023
 
-copyright:      (c) NoviSci, 2020-2022
-                Target RWE, 2023
+copyright:      (c) NoviSci 2020-2022,
+                    Target RWE 2023
 license:        BSD-3-Clause
 license-file:   LICENSE
 build-type:     Simple
