@@ -32,7 +32,6 @@ import           IntervalAlgebra.Core (ComparativePredicateOf1, Interval,
                                        Intervallic (..), SizedIv (..), before,
                                        extenterval)
 import           Test.QuickCheck      (Arbitrary (..))
-import           Witherable           (Filterable (filter))
 
 -- | An @Interval a@ paired with some other data of type @b@.
 newtype PairedInterval b a

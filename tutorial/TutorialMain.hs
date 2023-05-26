@@ -23,7 +23,6 @@ import           Data.Time                      ( Day
                                                 , fromGregorian
                                                 , secondsToDiffTime
                                                 )
-import           Witch                          ( into )
 -- end::import-declarations[]
 
 -- tag::safeInterval-alias[]

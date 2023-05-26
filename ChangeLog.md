@@ -1,5 +1,29 @@
 # Changelog for interval-algebra
 
+## 2.2.0
+
+* Redesigns the core typeclasses:
+  * Decouples the interval algebra functionality from that of defining and
+    manipulating intervals as pairs of points.
+  * New `Iv` class to implement the relation algebra from Allen 1983, over any 
+    abstract interval type `iv`.
+  * `PointedIv` class for intervals that can be cast to the canonical `Interval`.
+  * `SizedIv` class for intervals that can be manipulated, providing stronger tools
+    to create intervals that are consistent with the interval algebra when more
+    structure is available. In effect replaces the `b` in the old
+    `IntervalSizeable b a` with an associated `Moment` type of `SizedIv`.
+* Reimplements various interval constructors, such as `safeInterval`, to use
+  the new typeclass methods while maintaining the previous implementation's 
+  behavior.
+* Removes the `Safe` pragma.
+* Removes `witch`, `witherable` and `safe` package dependencies.
+* Cleans up the `IntervalAlgebra.IntervalUtilities` module, removing many
+  esoteric functions and tidying the type signatures and implementations of the
+  remaining ones.
+* Fixes a bug in the `gaps` utility.
+* Fixes the `Arbitrary` for constructing valid intervals, which was made easier
+  by the switch from `IntervalSizeable` to the redesigned `SizedIv`.
+
 ## 2.1.3
 
 * Removes the version constraints on the `witch` package.

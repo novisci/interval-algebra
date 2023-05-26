@@ -23,31 +23,29 @@
 --
 -- = Design
 --
--- The module is built around three typeclasses designed to separate concerns of
--- constructing, relating, and combining types that contain @'Interval'@s:
+-- The module provides an 'Interval' type wrapping a canonical interval to be used with the
+-- relation algebra defined in the papers cited above. @'Interval' a@
+-- wraps @(a, a)@, giving the interval's 'begin' and 'end' points.
 --
--- 1. @'Intervallic'@ provides an interface to the data structures which contain an
---    @'Interval'@.
--- 2. @'SizedIv'@ provides a generic interface for creating and manipulating intervals.
---
--- 'SizedIv' types can be related via one of the 'IntervalRelation' s,
--- and 'Intervallic' types can be related via their underlying 'Interval' s, so
--- long as those are 'SizedIv'.
---
+-- However, the module provides typeclasses to generalize an 'Interval' and the
+-- interval algebra for temporal logic, such that it could be used in settings
+-- where there is no need for continguity between the begin and end points, or
+-- where the "intervals" are qualitative and do not have a begin or end. See
+-- 'Iv' for an example.
+
 -- Many exports of this module require `FlexibleContexts` and `TypeFamilies`
 -- extensions to be enabled.
 module IntervalAlgebra.Core
-  ( -- * Intervals
+  ( -- * Canonical intervals
     Interval,
-    SizedIv (..),
-    Iv (..),
     PointedIv (..),
+    SizedIv (..),
     Intervallic (..),
-    ParseErrorInterval (..),
     begin,
     end,
 
     -- ** Create new intervals
+    ParseErrorInterval (..),
     parseInterval,
     prsi,
     beginerval,
@@ -62,7 +60,11 @@ module IntervalAlgebra.Core
     expandl,
     expandr,
 
+    -- ** Combine two intervals
+    extenterval,
+
     -- * Interval Algebra
+    Iv (..),
 
     -- ** Interval Relations and Predicates
     IntervalRelation (..),
@@ -116,9 +118,6 @@ module IntervalAlgebra.Core
     intersection,
     converse,
     converseRelation,
-
-    -- * Combine two intervals
-    extenterval,
   )
 where
 
@@ -141,7 +140,6 @@ import           Data.Tuple          (fst, snd)
 import           GHC.Generics        (Generic)
 import           GHC.IO.Handle       (NewlineMode (inputNL))
 import           Test.QuickCheck     (Arbitrary (..), resize, sized, suchThat)
-import           Witch.Utility       (as)
 
 -- $setup
 -- >>> import IntervalAlgebra.IntervalDiagram
@@ -576,7 +574,7 @@ disjoint ::
   ComparativePredicateOf2 (i0 a) (i1 a)
 disjoint = predicate disjointRelations
 
--- | Does x `concur` with y? Is x `notDisjoint` with y?); This is
+-- | Does @x `concur` y@, meaning @x@ and @y@ share some support? Is @x `notDisjoint` y@? This is
 -- the 'complement' of 'disjoint'.
 --
 -- Example data with corresponding diagram:
@@ -1111,6 +1109,7 @@ class PointedIv iv where
 -- In addition, using 'Interval' as example, the following must hold:
 --
 -- When @iv@ is @Ord@, for all @i == Interval (b, e)@,
+--
 -- @
 -- ivExpandr d i >= i
 -- ivExpandl d i <= i
