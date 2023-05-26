@@ -45,7 +45,6 @@ import           Test.QuickCheck                   (Arbitrary (arbitrary, shrink
                                                     orderedList, resize,
                                                     sublistOf, suchThat, (===),
                                                     (==>))
-import           Witherable                        (Filterable)
 
 -- Types for testing
 

@@ -53,7 +53,8 @@ import           Data.Foldable                  (Foldable (foldl', foldr, null, 
                                                  all, any, or)
 import           Data.Function                  (flip, ($), (.))
 import           Data.List                      (map, reverse, sortOn)
-import           Data.Maybe                     (Maybe (..), maybe, maybeToList)
+import           Data.Maybe                     (Maybe (..), mapMaybe, maybe,
+                                                 maybeToList)
 import           Data.Monoid                    (Monoid (mempty))
 import           Data.Ord                       (Ord (max, min), (<), (>=))
 import           Data.Semigroup                 (Semigroup ((<>)))
@@ -65,11 +66,6 @@ import           IntervalAlgebra.Core
 import           IntervalAlgebra.PairedInterval (PairedInterval, equalPairData,
                                                  getPairData,
                                                  makePairedInterval)
-import           Safe                           (headMay, initSafe, lastMay,
-                                                 tailSafe)
-import           Witherable                     (Filterable (filter),
-                                                 Witherable (..), catMaybes,
-                                                 mapMaybe)
 
 {- $setup
 >>> import GHC.List ( (++), zip )
